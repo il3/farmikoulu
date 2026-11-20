@@ -178,7 +178,7 @@ body.phone #bossCv,body.phone #dodgeCv{width:min(100%,460px)}
 <div id="game">
   <div id="hud">
     <div id="coll"></div>
-    <div id="stats"><span id="stTasks" title="Tehtyjä tehtäviä">📝 0</span><span id="stAcc" title="Oikeat vastaukset">✔ –</span><span id="stTime" title="Peliaika">⏱️ 0:00</span></div>
+    <div id="stats"><span id="stTasks" title="Tehtyjä tehtäviä">📝 0</span><span id="stAcc" title="Oikeat vastaukset">✔ –</span><span id="stTime" title="Peliaika">⏱️ 0:00</span><span id="stWho" hidden></span></div>
     <div id="btns">
       <button class="ib" id="bMenu" title="Aloitusvalikko">🏠</button>
       <button class="ib" id="bMusic" title="Musiikki päälle/pois">♪</button>
@@ -1066,6 +1066,7 @@ function updateHUD(){
   ANIMALS.forEach(a=>{const n=state.owned[a.id]||0;a.slot.classList.toggle('miss',!n);a.cnt.textContent=n>1?'×'+n:'';a.slot.title=n?L2(a.name):L('??? – vielä löytämättä','??? – not found yet');});
   $('#stTasks').textContent='📝 '+state.tasks;
   updateTimeHUD();
+  {const w=$('#stWho');if(w){w.hidden=!(ADMIN&&ACC);if(ADMIN&&ACC){w.textContent='👑→'+ACC.name;w.title=L('Ylläpitäjä pelaa tämän pelaajan peliä','Admin is playing this player’s game');}}}
   $('#stAcc').textContent='✔ '+(state.answered?Math.round(state.correct/state.answered*100)+' %':'–');
 }
 function applyLang(){
@@ -1997,8 +1998,8 @@ async function switchToAccount(id){
     if(a.save)applySave(a.save);else{applySave(Object.assign(freshState(),{name:ACC.name}));}
     state.name=ACC.name;state.owner=id;
     settings.account={id,name:ACC.name,hash:a.pinHash,salt:a.salt};settings.admin=ADMIN?{...ADMIN}:null;saveSettings();
-    sfx.ok();toast(id===ADMIN_ID?L('👑 Palasit omaan käyttäjääsi.','👑 Back to your own user.'):L(`👑 Olet nyt käyttäjänä ${ACC.name}.`,`👑 You are now playing as ${ACC.name}.`));
-    showTitle();
+    sfx.ok();closeModal();started=true;updateHUD();
+    toast(id===ADMIN_ID?L('👑 Palasit omaan peliisi.','👑 Back in your own game.'):L(`👑 Olet nyt pelaajan ${ACC.name} pelissä. Muutokset tallentuvat hänen peliinsä.`,`👑 You are now in ${ACC.name}’s game. Changes are saved to their game.`));
   }catch(e){toast(L('Vaihto epäonnistui.','Switch failed.'));}
 }
 async function showAdmin(){
@@ -2022,14 +2023,14 @@ async function showAdmin(){
 }
 async function submitScore(){
   if(state.cheated)return null;
-  const rec={name:state.name||'?',time:Math.round(state.time||0),level:state.level,date:new Date().toISOString().slice(0,10)};
-  const loc=localScores();loc.push(rec);loc.sort((a,b)=>a.time-b.time);try{localStorage.setItem(LKEY,JSON.stringify(loc.slice(0,50)));}catch(e){}
+  const acc=ACC?ACC.id:'',rec={name:state.name||'?',time:Math.round(state.time||0),level:state.level,date:new Date().toISOString().slice(0,10),acc};
+  const loc=localScores();loc.push(rec);loc.sort((a,b)=>a.time-b.time);try{localStorage.setItem(LKEY,JSON.stringify(loc.slice(0,200)));}catch(e){}
   let res={time:rec.time,rank:loc.indexOf(rec)+1,shared:false,best:loc[0]===rec};
+  // Jokainen läpipeluu omana rivinään, joten kaikkien pelaajien parhaat suoritukset näkyvät.
   try{const d=await Promise.race([dbReady,new Promise(r=>setTimeout(()=>r(null),10000))]);
-    if(d){const ref=d.doc('scores/'+ME),old=await ref.get();
-      if(!old.exists||!(old.data().time<=rec.time))await ref.set(rec);
-      const all=await d.collection('scores').orderBy('time').limit(200).get();
-      const idx=all.docs.findIndex(x=>x.id===ME);if(idx>=0)res={time:rec.time,rank:idx+1,shared:true,best:idx===0};}}catch(e){}
+    if(d){const rid=(acc||'p')+'-'+Date.now().toString(36);await d.doc('scores/'+rid).set(rec);
+      const all=await d.collection('scores').orderBy('time').limit(1000).get();
+      const idx=all.docs.findIndex(x=>x.id===rid);if(idx>=0)res={time:rec.time,rank:idx+1,shared:true,best:idx===0};}}catch(e){}
   return res;
 }
 let boardTab='shared';
@@ -2037,7 +2038,7 @@ const shortLevel=lv=>lv===78?'7–8':lv===34?'3–4':String(lv);
 const shortDate=d=>{const m=String(d||'').match(/^(\d{4})-(\d\d)-(\d\d)/);return m?(settings.lang==='en'?`${+m[3]}/${+m[2]}/${m[1].slice(2)}`:`${+m[3]}.${+m[2]}.${m[1].slice(2)}`):'';};
 function showBoard(back){
   const backFn=back||closeModal;
-  openModal('board',`<h2>🏆 ${L('Tulostaulu – nopeimmat suoritukset','Leaderboard – fastest runs')}</h2>
+  openModal('board',`<h2>🏆 ${L('Tulostaulu – kaikki parhaat suoritukset','Leaderboard – all the best runs')}</h2>
   <p class="lbNote">${L('Aika pelin alusta siihen, kun Perunapomo kaatuu ensimmäisen kerran.','Time from the start of the game until the Potato Boss falls for the first time.')}</p>
   <div class="lbTabs"><button class="btn" id="lbS">🌍 ${L('Kaikki pelaajat','All players')}</button><button class="btn" id="lbL">📱 ${L('Tämä laite','This device')}</button></div>
   <div id="lbBody"><p>${L('Ladataan…','Loading…')}</p></div>
@@ -2053,14 +2054,14 @@ function boardTable(rows,meId){
 async function fillBoard(){
   const body=$('#lbBody');if(!body)return;
   $('#lbS').classList.toggle('on',boardTab==='shared');$('#lbL').classList.toggle('on',boardTab==='local');
-  if(boardTab==='local'){body.innerHTML=boardTable(localScores().slice(0,20));return;}
+  if(boardTab==='local'){body.innerHTML=boardTable(localScores().slice(0,100).map(v=>({...v,_me:!!(ACC&&v.acc===ACC.id)})));return;}
   body.innerHTML=`<p>${L('Ladataan…','Loading…')}</p>`;
   const d=await Promise.race([dbReady,new Promise(r=>setTimeout(()=>r(null),10000))]);
   if(!$('#lbBody')||boardTab!=='shared')return;
   if(!d){boardTab='local';fillBoard();$('#lbBody').insertAdjacentHTML('afterbegin',`<p class="lbNote">${L('Yhteinen tulostaulu ei ole käytettävissä tässä versiossa, joten näet tämän laitteen tulokset.','The shared leaderboard isn’t available in this version, so you see this device’s results.')}</p>`);return;}
-  try{const all=await Promise.race([d.collection('scores').orderBy('time').limit(20).get(),new Promise((_,j)=>setTimeout(()=>j(new Error('timeout')),10000))]);
+  try{const all=await Promise.race([d.collection('scores').orderBy('time').limit(100).get(),new Promise((_,j)=>setTimeout(()=>j(new Error('timeout')),10000))]);
     if(!$('#lbBody')||boardTab!=='shared')return;
-    body.innerHTML=boardTable(all.docs.map(x=>({...x.data(),_me:x.id===ME})));
+    body.innerHTML=boardTable(all.docs.map(x=>{const v=x.data();return {...v,_me:ACC?v.acc===ACC.id:(!v.acc&&x.id===ME)};}));
   }catch(e){if($('#lbBody'))body.innerHTML=`<p class="lbNote">${L('Tulostaulua ei saatu ladattua juuri nyt.','Couldn’t load the leaderboard right now.')}</p>`;}
 }
 
