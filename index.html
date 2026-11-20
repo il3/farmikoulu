@@ -263,8 +263,10 @@ SPR.apple=makeSprite(["..g.",".rr.","rrrr","rrrr",".rr."],{g:'#3f9a3f',r:'#d6332
 /* ---------- ÄÄNET ---------- */
 let AC=null,master,musicGain,sfxGain,NB=null,musTimer=null,musStep=0,musNext=0;
 const SKEY='farmikoulu-v1',OKEY='farmikoulu-asetukset';
-let settings={music:true,sfx:true,lang:'fi',device:null,name:'',admin:null};
+let settings={music:true,sfx:true,lang:'fi',device:null,name:'',admin:null,devId:''};
 try{const s=JSON.parse(localStorage.getItem(OKEY));if(s)settings=Object.assign(settings,s);}catch(e){}
+// Tämän laitteen tunniste: sen avulla peli tunnistaa muiden laitteiden (esim. ylläpitäjän) tekemät muutokset.
+function devId(){if(!settings.devId){settings.devId=Math.random().toString(36).slice(2,10);saveSettings();}return settings.devId;}
 function saveSettings(){try{localStorage.setItem(OKEY,JSON.stringify(settings));}catch(e){}}
 function initAudio(){
   if(AC){if(AC.state==='suspended')AC.resume();return;}
@@ -1008,7 +1010,7 @@ const BG2=buildBG2();
 /* ---------- TILA ---------- */
 function freshState(level){return {owned:{},tasks:0,correct:0,answered:0,last:null,dup:0,won:false,chests:0,restarts:0,level:level||5,boss:'none',bossTries:0,doneSt:[],stone:false,unlocked78:false,farm:1,farm2:false,crops:{},dup2:0,farm2Done:false,name:'',time:0,cheated:false};}
 function loadState(){try{const s=JSON.parse(localStorage.getItem(SKEY));if(s&&s.owned)return Object.assign(freshState(),s);}catch(e){}return null;}
-function save(){state.updated=Date.now();try{localStorage.setItem(SKEY,JSON.stringify(state));}catch(e){}if(typeof cloudSave==='function')cloudSave();}
+function save(){state.updated=Date.now();state.dev=devId();try{localStorage.setItem(SKEY,JSON.stringify(state));}catch(e){}if(typeof cloudSave==='function')cloudSave();}
 let state=loadState()||freshState();
 const allAnimals=()=>ANIMALS.every(a=>state.owned[a.id]);
 if(allAnimals()&&state.boss!=='beaten')state.boss='awake';
@@ -1918,7 +1920,7 @@ const cloudMode=()=>(!!SDB&&ACCDB===SDB)||SUPA;
 const hasSave=sv=>sv&&typeof sv==='object'&&Object.keys(sv).length>0;
 /* ---------- KÄYTTÄJÄ: NIMI + PIN (yhteinen tallennus, toimii Claude-julkaisussa) ----------
    PIN suojaa vain vahingoilta: tallennus on jaettu kaikkien pelaajien kesken, eikä se ole oikea tietoturvajärjestelmä. */
-let ACC=null,ADMIN=null,cloudTimer=0,cloudBusy=false,cloudDirty=false;
+let ACC=null,ADMIN=null,cloudTimer=0,cloudBusy=false,cloudDirty=false,syncBase=0;
 // Ylläpitäjä: käyttäjä leetu1234. PIN-koodia ei ole koodissa selväkielisenä, vain sen tiiviste.
 const ADMIN_ID='leetu1234',ADMIN_SALT='admin-v1',ADMIN_HASH='d2d3c49bb6022d67e1b1d8012442544eca41656c2f9ba383a5f3d3443c80ce84';
 const isAdmin=()=>!!ADMIN||!!(ACC&&(ACC.admin||(ACC.id===ADMIN_ID&&ACC.hash===ADMIN_HASH)));
@@ -1930,6 +1932,7 @@ async function pinHash(id,pin,salt){
 }
 const packState=()=>JSON.parse(JSON.stringify(state));
 function applySave(sv){
+  syncBase=(sv&&sv.updated)||0;
   state=Object.assign(freshState(),sv);if(!state.crops)state.crops={};
   try{localStorage.setItem(SKEY,JSON.stringify(state));}catch(e){}
   rebuildAnimals();bossRise=bossOnFarm()?1:0;stoneRise=1;pendingLevel=state.level;
@@ -1985,12 +1988,49 @@ function logout(){
 }
 // Pilvitallennus: korkeintaan kerran 3 sekunnissa, yksi kirjoitus kerrallaan.
 function cloudSave(){if(!ACC||!ACCDB)return;cloudDirty=true;if(!cloudTimer)cloudTimer=setTimeout(flushCloud,3000);}
+// ---- Synkronointi laitteiden välillä ----
+// Jos toinen laite (esim. ylläpitäjä) on tallentanut peliin myöhemmin, sen muutokset otetaan käyttöön
+// eikä niitä kirjoiteta yli. Tarkistus tehdään ennen jokaista tallennusta ja 15 sekunnin välein.
+async function fetchRemote(){
+  if(!ACC||!ACCDB)return null;
+  if(SUPA){const r=await rpc('fk_resume',{p_id:ACC.id,p_token:ACC.token});return r&&r.ok&&hasSave(r.save)?r.save:null;}
+  const sn=await ACCDB.doc('accounts/'+ACC.id).get();return sn.exists&&hasSave(sn.data().save)?sn.data().save:null;
+}
+// syncBase = sen pilviversion aikaleima, johon tämän laitteen tila perustuu.
+const isForeignNewer=rs=>!!(rs&&rs.dev&&rs.dev!==devId()&&(rs.updated||0)!==syncBase);
+const busyModal=()=>['quiz','chest','boss','bossintro','dodge','result'].includes(modalType);
+function applyRemote(rs){
+  if(busyModal())return false;
+  const px=P.x,py=P.y,farm=state.farm,acc=ACC&&ACC.id;
+  applySave(rs);state.owner=acc;if(ACC)state.name=ACC.name;
+  if(state.farm===farm){P.x=px;P.y=py;}
+  try{localStorage.setItem(SKEY,JSON.stringify(state));}catch(e){}
+  if(modalType==='title')showTitle();
+  toast(L('☁️ Peliäsi muutettiin toisella laitteella – muutokset päivitetty.','☁️ Your game was changed on another device – changes updated.'));
+  return true;
+}
+let syncBusy=false;
+async function syncNow(){
+  if(syncBusy||cloudBusy||!ACC||!ACCDB||(!SUPA&&ACCDB===LOCALDB))return;
+  syncBusy=true;
+  try{const rs=await fetchRemote();if(isForeignNewer(rs))applyRemote(rs);}catch(e){}
+  syncBusy=false;
+}
+setInterval(()=>{if(!document.hidden)syncNow();},15000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncNow();});
 async function flushCloud(){
   clearTimeout(cloudTimer);cloudTimer=0;
-  if(!ACC||!ACCDB||!cloudDirty)return;if(cloudBusy){cloudTimer=setTimeout(flushCloud,1000);return;}
+  if(!ACC||!ACCDB||!cloudDirty)return;
+  while(cloudBusy)await new Promise(r=>setTimeout(r,100));   // odota edellinen tallennus loppuun (esim. käyttäjää vaihdettaessa)
+  if(!cloudDirty||!ACC)return;
   cloudBusy=true;cloudDirty=false;
-  try{if(SUPA){const r=await rpc('fk_save',{p_id:ACC.id,p_token:ACC.token,p_save:packState()});if(!r||!r.ok)throw new Error('save');}
-    else await ACCDB.doc('accounts/'+ACC.id).set({name:ACC.name,pinHash:ACC.hash,salt:ACC.salt,save:packState(),updated:Date.now()});}catch(e){cloudDirty=true;}
+  // Toisen laitteen uudemmat muutokset voittavat: otetaan ne käyttöön eikä kirjoiteta päälle.
+  if(ACCDB!==LOCALDB){try{const rs=await fetchRemote();
+    if(isForeignNewer(rs)){if(applyRemote(rs)){cloudBusy=false;return;}cloudDirty=true;cloudBusy=false;cloudTimer=setTimeout(flushCloud,4000);return;}}catch(e){}}
+  const snap=packState();
+  try{if(SUPA){const r=await rpc('fk_save',{p_id:ACC.id,p_token:ACC.token,p_save:snap});if(!r||!r.ok)throw new Error('save');}
+    else await ACCDB.doc('accounts/'+ACC.id).set({name:ACC.name,pinHash:ACC.hash,salt:ACC.salt,save:snap,updated:Date.now()});
+    syncBase=snap.updated||0;}catch(e){cloudDirty=true;}
   cloudBusy=false;
 }
 // Automaattinen kirjautuminen samalla laitteella ja uudemman tallennuksen valinta.
@@ -2003,7 +2043,7 @@ ACCS.then(async d=>{
         ACC={id:acc.id,name:cleanName(r.name)||acc.name,token:acc.token,admin:!!r.admin};
         if(settings.admin&&settings.admin.mode==='supa'&&settings.admin.token)ADMIN={...settings.admin};
         if(hasSave(r.save)&&(r.save.updated||r.updated||0)>(state.updated||0)){applySave(r.save);toast(L('☁️ Edistys ladattu pilvestä.','☁️ Progress loaded from the cloud.'));}
-        else{state.name=ACC.name;save();}
+        else{syncBase=(r.save&&r.save.updated)||0;state.name=ACC.name;save();}
       }else{settings.account=null;settings.admin=null;saveSettings();}
     }catch(e){}}
     if(modalType==='title')showTitle();return;
@@ -2014,7 +2054,7 @@ ACCS.then(async d=>{
     if(snap.exists&&snap.data().pinHash===acc.hash){
       const a=snap.data();ACC={id:acc.id,name:cleanName(a.name)||acc.name,hash:acc.hash,salt:a.salt};
       if(a.save&&(a.save.updated||a.updated||0)>(state.updated||0)){applySave(a.save);toast(L('☁️ Edistys ladattu pilvestä.','☁️ Progress loaded from the cloud.'));}
-      else{state.name=ACC.name;save();}
+      else{syncBase=(a.save&&a.save.updated)||0;state.name=ACC.name;save();}
     }else{settings.account=null;saveSettings();}
   }catch(e){}}
   if(modalType==='title')showTitle();
