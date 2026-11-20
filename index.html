@@ -193,7 +193,12 @@ label.rpick:has(input:checked){background:#ffe08a;border-color:#8a5a2b}.rcols{di
 .panel.bossintro #bossCv{width:min(50%,300px)}
 .stats div{font-size:.85em;overflow-wrap:anywhere}
 .panel.boss .qtext{min-height:1.2em;margin:.2em 0 .4em}
-.shake{animation:shake .35s}
+.shake{animation:shake .35s}body.noshake .shake{animation:none}
+#srBox{position:absolute;top:6px;right:6px;z-index:11;pointer-events:none;background:rgba(20,14,6,.78);color:#fff3d0;border:2px solid #ffd34d;padding:3px 7px;font-family:'Press Start 2P',ui-monospace,monospace;text-align:right;min-width:9em}
+#srT{font-size:14px;letter-spacing:1px}#srT.done{color:#7dff6a}#srS{font-size:9px;line-height:1.5}#srS .ahead{color:#7dff6a}#srS .behind{color:#ff7a6a}
+body.phone #srT{font-size:11px}body.phone #srS{font-size:8px}
+.setRow{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;text-align:left;padding:.35em .2em;border-bottom:2px dashed #d9bf8a}
+.setRow small{display:block;opacity:.75;font-size:.8em}.setRow input[type=range]{width:150px}
 @keyframes shake{20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
 @media (max-width:560px){.opts{grid-template-columns:1fr}#hud{font-size:18px;gap:4px 8px}#coll{flex-basis:100%;gap:3px}.slot{width:36px;height:32px}.slot canvas{max-width:30px}#stats{flex:1}.ib{width:31px;height:30px;font-size:16px}#bLang{font-size:8px}}
 </style>
@@ -210,6 +215,7 @@ label.rpick:has(input:checked){background:#ffe08a;border-color:#8a5a2b}.rcols{di
       <button class="ib" id="bSfx" title="Äänet päälle/pois">🔊</button>
       <button class="ib" id="bLang" title="Kieli / Language">EN</button>
       <button class="ib" id="bFarm" title="Vaihda farmia" hidden>🚜</button>
+      <button class="ib" id="bSet" title="Asetukset">⚙️</button>
       <button class="ib" id="bHelp" title="Ohjeet">?</button>
     </div>
   </div>
@@ -217,6 +223,7 @@ label.rpick:has(input:checked){background:#ffe08a;border-color:#8a5a2b}.rcols{di
     <canvas id="cv" width="320" height="208"></canvas>
     <div id="prompt" hidden></div>
     <div id="toast"></div>
+    <div id="srBox" hidden><div id="srT">0:00.00</div><div id="srS"></div></div>
     <div id="ctrlBan" hidden>👑 <span class="adminName">leetu</span> is now on control</div>
     <div id="cmd" hidden><div id="cmdLog"></div><div class="cmdrow"><span>&gt;</span><input id="cmdIn" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Komento"><button id="cmdX" title="Sulje">✕</button></div></div>
     <div id="tirppa" hidden></div>
@@ -293,7 +300,7 @@ SPR.apple=makeSprite(["..g.",".rr.","rrrr","rrrr",".rr."],{g:'#3f9a3f',r:'#d6332
 /* ---------- ÄÄNET ---------- */
 let AC=null,master,musicGain,sfxGain,NB=null,musTimer=null,musStep=0,musNext=0;
 const SKEY='farmikoulu-v1',OKEY='farmikoulu-asetukset';
-let settings={music:true,sfx:true,lang:'fi',device:null,name:'',admin:null,devId:''};
+let settings={music:true,sfx:true,lang:'fi',device:null,name:'',admin:null,devId:'',vol:80,shake:true,speedrun:false};
 try{const s=JSON.parse(localStorage.getItem(OKEY));if(s)settings=Object.assign(settings,s);}catch(e){}
 // Tämän laitteen tunniste: sen avulla peli tunnistaa muiden laitteiden (esim. ylläpitäjän) tekemät muutokset.
 function devId(){if(!settings.devId){settings.devId=Math.random().toString(36).slice(2,10);saveSettings();}return settings.devId;}
@@ -309,7 +316,8 @@ function initAudio(){
   }catch(e){AC=null;}
 }
 function applyVolumes(){
-  if(AC){musicGain.gain.value=settings.music?.33:0;sfxGain.gain.value=settings.sfx?.55:0;}
+  if(AC){musicGain.gain.value=settings.music?.33:0;sfxGain.gain.value=settings.sfx?.55:0;master.gain.value=Math.max(0,Math.min(100,settings.vol==null?80:settings.vol))/100;}
+  document.body.classList.toggle('noshake',settings.shake===false);
   $('#bMusic').classList.toggle('off',!settings.music);$('#bSfx').classList.toggle('off',!settings.sfx);
 }
 function tone(o){
@@ -1110,7 +1118,7 @@ function updateHUD(){
 function applyLang(){
   document.documentElement.lang=settings.lang;
   $('#bLang').textContent=settings.lang==='en'?'FI':'EN';
-  $('#bMusic').title=L('Musiikki päälle/pois','Music on/off');$('#bSfx').title=L('Äänet päälle/pois','Sounds on/off');$('#bHelp').title=L('Ohjeet','How to play');$('#bMenu').title=L('Aloitusvalikko (Esc)','Main menu (Esc)');
+  $('#bMusic').title=L('Musiikki päälle/pois','Music on/off');$('#bSfx').title=L('Äänet päälle/pois','Sounds on/off');$('#bHelp').title=L('Ohjeet','How to play');$('#bMenu').title=L('Aloitusvalikko (Esc)','Main menu (Esc)');$('#bSet').title=L('Asetukset','Settings');
   $('#stTasks').title=L('Tehtyjä tehtäviä','Tasks done');$('#stAcc').title=L('Oikeat vastaukset','Correct answers');
   $('#foot').textContent=isPhone()?L('Ristiohjain tai napautus = liiku · ✋ = tee tehtävä · napauta eläimiä!','D-pad or tap = move · ✋ = do a task · tap the animals!')
     :L('Nuolet / WASD tai napautus = liiku · E = tee tehtävä · klikkaa eläimiä!','Arrows / WASD or tap = move · E = do a task · click the animals!');
@@ -1176,12 +1184,12 @@ function showTitle(){
   <canvas id="parade" width="160" height="26"></canvas>
   ${pickerHTML()}
   <div class="row">${has?`<button class="btn big" id="tCont">▶ ${L('Jatka peliä','Continue')}</button><button class="btn" id="tNew">${L('Uusi peli','New game')}</button>`:`<button class="btn big" id="tNew">▶ ${L('Aloita peli','Start game')}</button>`}
-  <button class="btn" id="tHelp">${L('Ohjeet','How to play')}</button><button class="btn" id="tBoard">🏆 ${L('Tulostaulu','Leaderboard')}</button></div>
+  <button class="btn" id="tHelp">${L('Ohjeet','How to play')}</button><button class="btn" id="tBoard">🏆 ${L('Tulostaulu','Leaderboard')}</button><button class="btn" id="tSet">⚙️ ${L('Asetukset','Settings')}</button></div>
   <p class="credit">${L('Tekijä','Made by')}: <b>leetu1234</b></p>`);
   bindPicker();
   const ni=$('#pName');ni.addEventListener('input',()=>{settings.name=cleanName(ni.value);saveSettings();});
   ni.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();($('#tCont')||$('#tNew')).click();}});
-  bind('tBoard',()=>showBoard(showTitle));
+  bind('tBoard',()=>showBoard(showTitle));bind('tSet',()=>showSettings(showTitle));
   bind('aOut',logout);bind('adOpen',showAdmin);bind('adHome',()=>switchToAccount(ADMIN_ID));
   const pin=$('#pPin');
   const doLogin=async()=>{const m=$('#aMsg'),btn=$('#aIn');if(btn)btn.disabled=true;if(m)m.textContent=L('Kirjaudutaan…','Logging in…');
@@ -1193,10 +1201,64 @@ function showTitle(){
     if(!ACC){needLogin();return;}
     const nm=cleanName(ni.value);if(!nm){needName();return;}
     if(has&&!b.dataset.sure){b.dataset.sure=1;b.textContent=L('Varmasti? Edistys nollataan','Sure? Progress will be reset');return;}
-    state=freshState(pendingLevel);state.name=ACC?ACC.name:nm;settings.name=nm;saveSettings();state.unlocked78=pendingLevel===78;bossRise=0;rebuildAnimals();updateHUD();save();P.x=150;P.y=100;started=true;closeModal();sfx.ui();
+    state=freshState(pendingLevel);state.sr=!!settings.speedrun;state.srSplits={};srFlash=[];state.name=ACC?ACC.name:nm;settings.name=nm;saveSettings();state.unlocked78=pendingLevel===78;bossRise=0;rebuildAnimals();updateHUD();save();P.x=150;P.y=100;started=true;closeModal();sfx.ui();
     setTimeout(()=>toast(isPhone()?L('Kävele ❗-merkin luo ja paina ✋!','Walk to a ❗ sign and press ✋!'):L('Kävele ❗-merkin luo ja paina E!','Walk to a ❗ sign and press E!')),300);});
   bind('tHelp',showHelp);
 }
+/* ---------- ASETUKSET ---------- */
+function showSettings(back){
+  const on=v=>v?'on':'',sr=!!settings.speedrun;
+  openModal('settings',`<h2>⚙️ ${L('Asetukset','Settings')}</h2>
+  <div class="setRow"><span>🌐 ${L('Kieli','Language')}</span><span><button class="btn ${on(settings.lang==='fi')}" id="sFi">Suomi</button><button class="btn ${on(settings.lang==='en')}" id="sEn">English</button></span></div>
+  <div class="setRow"><span>♪ ${L('Musiikki','Music')}</span><span><button class="btn ${on(settings.music)}" id="sMu1">${L('Päällä','On')}</button><button class="btn ${on(!settings.music)}" id="sMu0">${L('Pois','Off')}</button></span></div>
+  <div class="setRow"><span>🔊 ${L('Ääniefektit','Sound effects')}</span><span><button class="btn ${on(settings.sfx)}" id="sFx1">${L('Päällä','On')}</button><button class="btn ${on(!settings.sfx)}" id="sFx0">${L('Pois','Off')}</button></span></div>
+  <div class="setRow"><span>🎚️ ${L('Äänenvoimakkuus','Volume')}</span><span><input type="range" id="sVol" min="0" max="100" step="5" value="${settings.vol==null?80:settings.vol}"> <b id="sVolN">${settings.vol==null?80:settings.vol}</b> %</span></div>
+  <div class="setRow"><span>📳 ${L('Ruudun tärinä','Screen shake')}<small>${L('Ruutu heiluu osumista ja vääristä vastauksista','The screen shakes on hits and wrong answers')}</small></span><span><button class="btn ${on(settings.shake!==false)}" id="sSh1">${L('Päällä','On')}</button><button class="btn ${on(settings.shake===false)}" id="sSh0">${L('Pois','Off')}</button></span></div>
+  <div class="setRow"><span>🖥️ ${L('Laite','Device')}</span><span><button class="btn ${on(!isPhone())}" id="sPc">💻 ${L('Tietokone','Computer')}</button><button class="btn ${on(isPhone())}" id="sPh">📱 ${L('Puhelin','Phone')}</button></span></div>
+  <div class="setRow" style="border-bottom:none"><span>⚡ <b>${L('Speedrun-tila','Speedrun mode')}</b><small>${L('Tarkka ajastin sadasosineen, väliajat jokaisesta eläimestä ja pomosta, vertailu omaan ennätykseen (PB). Arkut aukeavat heti ja oikean vastauksen jälkeen siirrytään automaattisesti eteenpäin.','Precise timer with hundredths, splits for every animal and the boss, comparison to your personal best (PB). Chests open instantly and correct answers auto-advance.')}</small></span>
+   <span><button class="btn ${on(sr)}" id="sSr1">${L('Päällä','On')}</button><button class="btn ${on(!sr)}" id="sSr0">${L('Pois','Off')}</button></span></div>
+  ${sr&&!state.sr&&hasProgress()?`<p class="lbNote">⚡ ${L('Tämä peli alkoi ilman speedrun-tilaa, joten virallinen ⚡-ajo alkaa vasta <b>uudesta pelistä</b>.','This game started without speedrun mode, so an official ⚡ run starts with a <b>new game</b>.')}</p>`:''}
+  ${srPBLine()}
+  <div class="row"><button class="btn big" id="sOk">${L('Valmis','Done')}</button></div>`);
+  const re=()=>showSettings(back),ss=()=>{saveSettings();initAudio();applyVolumes();};
+  bind('sFi',()=>{settings.lang='fi';saveSettings();applyLang();re();});bind('sEn',()=>{settings.lang='en';saveSettings();applyLang();re();});
+  bind('sMu1',()=>{settings.music=true;ss();re();});bind('sMu0',()=>{settings.music=false;ss();re();});
+  bind('sFx1',()=>{settings.sfx=true;ss();sfx.ui();re();});bind('sFx0',()=>{settings.sfx=false;ss();re();});
+  bind('sSh1',()=>{settings.shake=true;ss();re();});bind('sSh0',()=>{settings.shake=false;ss();re();});
+  bind('sPc',()=>{settings.device='pc';saveSettings();applyDevice();re();});bind('sPh',()=>{settings.device='phone';saveSettings();applyDevice();re();});
+  bind('sSr1',()=>{settings.speedrun=true;saveSettings();sfx.ok();renderSr();re();});bind('sSr0',()=>{settings.speedrun=false;saveSettings();renderSr();re();});
+  const v=$('#sVol');v.oninput=()=>{settings.vol=+v.value;$('#sVolN').textContent=v.value;ss();};v.onchange=()=>sfx.ui();
+  bind('sOk',()=>{sfx.ui();back?back():closeModal();});
+}
+/* ---------- SPEEDRUN ---------- */
+const PBKEY='farmikoulu-pb';
+const fmtMs=t=>{t=Math.max(0,t||0);const m=Math.floor(t/60),sec=Math.floor(t%60),cs=Math.floor(t*100%100);return m+':'+String(sec).padStart(2,'0')+'.'+String(cs).padStart(2,'0');};
+const fmtDiff=d=>(d<0?'−':'+')+(Math.abs(d)<60?Math.abs(d).toFixed(2):fmtMs(Math.abs(d)));
+function pbAll(){try{return JSON.parse(localStorage.getItem(PBKEY)||'{}')||{};}catch(e){return {};}}
+function pbKey(){return (ACC?ACC.id:'_')+'@'+(state.level||5);}
+function pbGet(){return pbAll()[pbKey()]||null;}
+function srPBLine(){const pb=pbGet();return settings.speedrun?`<p class="lbNote">🏅 PB (${esc(levelName(state.level))}): <b>${pb?fmtMs(pb.time):L('ei vielä','none yet')}</b></p>`:'';}
+const SR_ICON=k=>k==='boss'?'👑':{sorsa:'🦆',possu:'🐷',kana:'🐔',lehma:'🐄',lammas:'🐑',peruna:'🥔'}[k]||'•';
+let srFlash=[];
+function srSplit(k){
+  if(!state.sr||state.won)return;state.srSplits=state.srSplits||{};if(state.srSplits[k]!=null)return;
+  const t=state.time||0;state.srSplits[k]=t;const pb=pbGet(),pt=pb&&pb.splits&&pb.splits[k];
+  srFlash.unshift({k,t,d:pt!=null?t-pt:null,at:performance.now()});srFlash=srFlash.slice(0,3);save();
+}
+function srFinish(){
+  if(!state.sr)return null;srSplit('boss');const t=state.time||0,pb=pbGet(),res={t,pb:pb?pb.time:null,newPB:false,cheated:!!state.cheated};
+  if(!state.cheated&&(!pb||t<pb.time)){const all=pbAll();all[pbKey()]={time:t,splits:{...state.srSplits},date:new Date().toISOString().slice(0,10)};try{localStorage.setItem(PBKEY,JSON.stringify(all));}catch(e){}res.newPB=true;}
+  return res;
+}
+let lastSr=null;
+function renderSr(){
+  const box=$('#srBox');if(!box)return;const show=!!settings.speedrun&&started&&!!ACC&&modalType!=='title';box.hidden=!show;if(!show)return;
+  const tt=$('#srT');tt.textContent=(state.sr?'⚡ ':'')+fmtMs(state.time);tt.classList.toggle('done',!!state.won);
+  const now=performance.now();srFlash=srFlash.filter(f=>now-f.at<6000);
+  $('#srS').innerHTML=srFlash.map(f=>`<div>${SR_ICON(f.k)} ${fmtMs(f.t)}${f.d!=null?` <span class="${f.d<=0?'ahead':'behind'}">${fmtDiff(f.d)}</span>`:''}</div>`).join('')
+    +(state.sr?'':`<div style="opacity:.7">${L('ei virallinen','unofficial')}</div>`);
+}
+const SR=()=>!!settings.speedrun;
 function showHelp(){
   openModal('help',`<h2>${L('Näin pelaat','How to play')}</h2><ul class="help">${L(`
   <li>🚶 Liiku <b>nuolinäppäimillä / WASD</b> tai <b>napauttamalla</b> maata. Puhelimella käytä <b>ristiohjainta</b> ja tee tehtävä <b>✋</b>-napista. Laitteen voi valita aloitusvalikosta.</li>
@@ -1206,6 +1268,7 @@ function showHelp(){
   <li>🏆 Kirjoita alussa <b>pelaajanimi</b>. Kun voitat Perunapomon ensimmäisen kerran, aikasi tallentuu <b>tulostauluun</b>. Komentopalkin apukomennoilla pelattu peli ei pääse tulostauluun.</li>
   <li>🏠 Aloitusvalikkoon pääset milloin vain yläpalkin 🏠-napista tai Esc-näppäimellä.</li>
   <li>🚪 Voit poistua tehtävästä milloin vain <b>✕ Poistu</b> -napista tai Esc-näppäimellä.</li>
+  <li>⚙️ <b>Asetuksista</b> voit säätää kieltä, ääniä, äänenvoimakkuutta, ruudun tärinää ja laitetta. Siellä on myös <b>⚡ speedrun-tila</b>: tarkka ajastin, väliajat ja oma ennätys (PB).</li>
   <li>✅ Tehtävässä pitää saada <b>3 oikeaa vastausta</b>. Jokaisessa kysymyksessä on 4 vaihtoehtoa (näppäimet 1–4).</li>
   <li>❤️ Sinulla on <b>3 yritystä</b>. Väärästä vastauksesta menetät yhden, ja kysymys vaihtuu uuteen. Jos kaikki 3 yritystä menevät, tehtävä alkaa alusta.</li>
   <li>🎁 Jokaisessa arkussa on <b>1 eläin</b>. Ilman yhtään virhettä saat kultaisen arkun, josta tulee useammin uusi eläin.</li>
@@ -1223,6 +1286,7 @@ function showHelp(){
   <li>🏆 Type a <b>player name</b> at the start. When you beat the Potato Boss for the first time, your time goes on the <b>leaderboard</b>. Games that used command-bar helpers don’t go on the leaderboard.</li>
   <li>🏠 Go to the main menu any time with the 🏠 button at the top or Esc.</li>
   <li>🚪 You can leave a task any time with the <b>✕ Leave</b> button or Esc.</li>
+  <li>⚙️ In <b>Settings</b> you can change language, sounds, volume, screen shake and device. There’s also <b>⚡ speedrun mode</b>: precise timer, splits and personal best (PB).</li>
   <li>✅ Get <b>3 correct answers</b> to finish a task. Every question has 4 options (keys 1–4).</li>
   <li>❤️ You have <b>3 tries</b>. A wrong answer costs one try and the question changes. If all 3 tries are used, the task starts over.</li>
   <li>🎁 Every chest holds <b>1 animal</b>. With no mistakes you get a golden chest, which gives a new animal more often.</li>
@@ -1285,6 +1349,7 @@ function answer(i){
   const n=$('#qNext');
   n.textContent=ok?(quiz.done>=NEED?L('Valmis ▶','Done ▶'):L('Seuraava ▶','Next ▶')):(quiz.lives<=0?L('Jatka ▶','Continue ▶'):L('Uusi kysymys ▶','New question ▶'));
   n.hidden=false;n.focus({preventScroll:true});
+  if(SR()&&ok){const q0=quiz;setTimeout(()=>{if(quiz===q0&&quiz.answered&&modalType==='quiz')nextQuestion();},450);}
   updateHUD();save();
 }
 function nextQuestion(){
@@ -1312,6 +1377,7 @@ function finishQuiz(){
     :L(`Hyvä! Ansaitsit <b>puuarkun</b>! (virheitä: ${quiz.mistakes})`,`Well done! You earned a <b>wooden chest</b>! (mistakes: ${quiz.mistakes})`)}</p>
   <div class="row"><button class="btn big" id="rGo">${L('Avaa arkku! 🗝️','Open the chest! 🗝️')}</button></div>`);
   bind('rGo',()=>openChest(gold));sfx.pop();
+  if(SR()&&!stoneNow)setTimeout(()=>{const b=$('#rGo');if(b&&modalType==='result')b.click();},400);
   updateHUD();save();
 }
 
@@ -1332,11 +1398,13 @@ function rollCrop(gold){
 }
 function openChest(gold){
   const crop=state.farm===2,store=crop?state.crops:state.owned,id=crop?rollCrop(gold):rollAnimal(gold),isNew=!store[id];
+  if(!crop&&isNew)srSplit(id);
   store[id]=(store[id]||0)+1;state.chests++;save();
   openModal('chest',`<h2>${gold?L('Kultainen arkku','Golden chest'):L('Puuarkku','Wooden chest')}</h2><canvas id="chestCv" width="64" height="60"></canvas>
   <p id="chestTxt">${L('Napauta arkkua avataksesi sen!','Tap the chest to open it!')}</p><div class="row" id="chestRow"></div>`);
   chest={gold,id,isNew,crop,phase:'idle',t:0,tick:-1,voiced:false,revealed:false};
   $('#chestCv').onclick=startChest;
+  if(SR())setTimeout(startChest,60);
 }
 function startChest(){if(chest&&chest.phase==='idle'){initAudio();chest.phase='shake';chest.t=0;}}
 function revealChest(){
@@ -1346,7 +1414,7 @@ function revealChest(){
     :L(`Sait: <b>${nm}</b> – nyt sinulla on ${n} kpl. Uusi eläin voi tulla seuraavasta arkusta!`,`You got: <b>${nm}</b> – now you have ${n}. The next chest may hold a new animal!`);
   $('#chestTxt').insertAdjacentHTML('afterend',`<div class="fact">💡 ${L2(A.fact)}</div>`);
   $('#chestRow').innerHTML=`<button class="btn big" id="cGo">${chest.crop?L('Istuta pellolle ▶','Plant it ▶'):L('Vie farmille ▶','To the farm ▶')}</button>`;
-  bind('cGo',closeChest);setTimeout(()=>{const b=$('#cGo');if(b)b.focus({preventScroll:true});},30);
+  bind('cGo',closeChest);if(SR()){const c0=chest;setTimeout(()=>{if(chest===c0&&modalType==='chest')closeChest();},700);}setTimeout(()=>{const b=$('#cGo');if(b)b.focus({preventScroll:true});},30);
 }
 function closeChest(){
   const id=chest.id;
@@ -1361,8 +1429,8 @@ function closeChest(){
 function drawChest(dt){
   const c=$('#chestCv');if(!c||!chest)return;const g=c.getContext('2d');g.imageSmoothingEnabled=false;
   chest.t+=dt;
-  if(chest.phase==='shake'){const tk=Math.floor(chest.t*9);if(tk!==chest.tick){chest.tick=tk;sfx.tick();}if(chest.t>.9){chest.phase='open';chest.t=0;sfx.fanfare();}}
-  if(chest.phase==='open'&&!chest.voiced&&chest.t>.65){chest.voiced=true;(chest.crop?cropSnd:ANIM[chest.id].snd)();revealChest();}
+  if(chest.phase==='shake'){const tk=Math.floor(chest.t*9);if(tk!==chest.tick){chest.tick=tk;sfx.tick();}if(chest.t>(SR()?.2:.9)){chest.phase='open';chest.t=0;sfx.fanfare();}}
+  if(chest.phase==='open'&&!chest.voiced&&chest.t>(SR()?.15:.65)){chest.voiced=true;(chest.crop?cropSnd:ANIM[chest.id].snd)();revealChest();}
   g.clearRect(0,0,64,60);
   const open=chest.phase==='open';
   if(open){g.save();g.translate(32,40);g.rotate(chest.t*.7);for(let k=0;k<8;k++){g.fillStyle=k%2?'rgba(255,220,100,.55)':'rgba(255,255,255,.4)';g.beginPath();g.moveTo(0,0);g.arc(0,0,48,k*Math.PI/4,k*Math.PI/4+Math.PI/8);g.closePath();g.fill();}g.restore();}
@@ -1455,6 +1523,7 @@ function bossAnswer(i){
   const willWin=ok&&fight.hp-(fight.t>=BOSS_TIME-8?15:10)<=0, lost=fight.hearts<=0;
   const n=$('#qNext');n.textContent=willWin?L('Viimeistele! ▶','Finish it! ▶'):lost?L('Jatka ▶','Continue ▶'):L('Seuraava ▶','Next ▶');
   n.hidden=false;n.focus({preventScroll:true});
+  if(SR()&&ok){const f0=fight;let tries=0;const go=()=>{if(fight!==f0||!fight.answered||modalType!=='boss')return;if(fight.anims.some(a=>a.kind==='shot')&&tries++<30)return setTimeout(go,100);bossNext();};setTimeout(go,500);}
   updateHUD();save();
 }
 function bossNext(){
@@ -1477,6 +1546,7 @@ function bossWin(){
   const record=hearts>(state.bestHearts||0);if(record)state.bestHearts=hearts;
   state.silver=(state.silver||0)+1;
   lastBossResult={hearts,record,first};save();closeModal();silverFromBarn();updateHUD();
+  lastSr=first?srFinish():null;
   if(first)lastRun=submitScore();
   for(let i=0;i<40;i++)parts.push({x:BOSS.x,y:BOSS.y-20,vx:(rand()-.5)*90,vy:(rand()-.9)*70,life:1.3,max:1.3,kind:'spark',color:pick(['#fff6a0','#ffffff','#c9995a'])});
   setTimeout(first?showWin:showRematchWin,600);
@@ -1549,9 +1619,10 @@ function showWin(){
   <div class="row"><button class="btn big" id="wFarm">🚜 ${L('Seuraavalle farmille','To the next farm')}</button></div>
   <div class="row" style="font-size:.85em"><button class="btn" id="wCont">${L('Jatka farmilla','Keep playing')}</button><button class="btn" id="wAgain">⚔️ ${L('Pomo uudelleen','Boss again')}</button><button class="btn" id="wNew">${L('Uusi peli','New game')}</button><button class="btn" id="wBoard">🏆 ${L('Tulostaulu','Leaderboard')}</button></div>`);
   bind('wBoard',()=>showBoard(null));
+  if(lastSr){const r=lastSr,el=$('#lbLine');if(el)el.insertAdjacentHTML('afterend',`<p class="fact">⚡ Speedrun: <b>${fmtMs(r.t)}</b>${r.cheated?` · ${L('apukomennot käytössä – ei ennätystä','cheats used – no PB')}`:r.newPB?` · <b class="good">🏅 ${L('UUSI ENNÄTYS!','NEW PB!')}</b>${r.pb!=null?` (${fmtDiff(r.t-r.pb)})`:''}`:` · PB ${fmtMs(r.pb)} (${fmtDiff(r.t-r.pb)})`}</p>`);}
   if(lastRun)lastRun.then(r=>{const el=$('#lbLine');if(!el||!r)return;el.innerHTML=`⏱️ ${L('Aikasi','Your time')}: <b>${fmtClock(r.time)}</b> · ${L('sijoitus','rank')} <b>#${r.rank}</b> ${r.shared?L('tulostaululla','on the leaderboard'):L('tällä laitteella','on this device')}${r.best?' 🏅':''}`;});
   bind('wCont',closeModal);bind('wAgain',startFight);bind('wFarm',()=>{closeModal();goFarm(2);});
-  bind('wNew',()=>{state=freshState(state.level);bossRise=0;rebuildAnimals();updateHUD();save();P.x=150;P.y=100;closeModal();});
+  bind('wNew',()=>{state=freshState(state.level);state.sr=!!settings.speedrun;state.srSplits={};srFlash=[];bossRise=0;rebuildAnimals();updateHUD();save();P.x=150;P.y=100;closeModal();});
 }
 function drawParade(){
   const c=$('#parade');if(!c)return;const g=c.getContext('2d');g.imageSmoothingEnabled=false;g.clearRect(0,0,160,26);
@@ -1565,7 +1636,8 @@ addEventListener('keydown',e=>{
   if(e.target&&(e.target.id==='cmdIn'||e.target.tagName==='INPUT'))return;
   const k=e.key.toLowerCase();
   if(modalType){
-    if(k==='escape'){if(modalType==='title'&&started&&ACC){closeModal();e.preventDefault();return;}if(['quiz','boss','dodge'].includes(modalType))exitTask();else if(['help','bossintro','board','admin'].includes(modalType)){if(modalType==='bossintro'&&robotForced()){e.preventDefault();return;}(started?closeModal():showTitle());}e.preventDefault();return;}
+    if(k==='escape'){if(modalType==='title'&&started&&ACC){closeModal();e.preventDefault();return;}if(['quiz','boss','dodge'].includes(modalType))exitTask();else if(modalType==='settings'){const b=$('#sOk');if(b)b.click();}
+    else if(['help','bossintro','board','admin'].includes(modalType)){if(modalType==='bossintro'&&robotForced()){e.preventDefault();return;}(started?closeModal():showTitle());}e.preventDefault();return;}
     if(modalType==='dodge'&&['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(k)){keys.add(k);e.preventDefault();return;}
     if(modalType==='quiz'&&quiz){
       if(['1','2','3','4'].includes(k)&&!quiz.answered){answer(+k-1);e.preventDefault();}
@@ -1990,6 +2062,7 @@ function goMenu(){
   menuSure=0;initAudio();if(modalType)closeModal();closeCmd();$('#tirppa').hidden=true;save();sfx.ui();showTitle();
 }
 $('#bMenu').onclick=goMenu;
+$('#bSet').onclick=()=>{if(busyModal()||modalType==='admin')return toast(L('Avaa asetukset tehtävän jälkeen.','Open settings after the task.'));initAudio();const t=modalType==='title';showSettings(t?showTitle:null);};
 $('#bHelp').onclick=()=>{if(['quiz','chest','result','boss','bossintro'].includes(modalType))return;initAudio();showHelp();};
 
 /* ---------- PÄIVITYS ---------- */
@@ -2000,7 +2073,7 @@ function blocked(x,y){
   const dx=(x-POND.cx)/(POND.rx-2),dy=(y-POND.cy)/(POND.ry-2);return dx*dx+dy*dy<1;
 }
 function update(dt){
-  if(started&&!state.won&&!['title','help','board'].includes(modalType)){state.time=(state.time||0)+dt;}
+  if(started&&!state.won&&!['title','help','board','settings'].includes(modalType)){state.time=(state.time||0)+dt;}
   if(!modalType){
     let dx=0,dy=0;
     if(keys.has('arrowleft')||keys.has('a'))dx--;if(keys.has('arrowright')||keys.has('d'))dx++;
@@ -2477,7 +2550,7 @@ async function admRenderStats(){
 $('#bAdmin').onclick=()=>{if(busyModal())return;initAudio();showAdminPanel(admTab);};
 async function submitScore(){
   if(state.cheated)return null;
-  const acc=ACC?ACC.id:'',rec={name:state.name||'?',time:Math.round(state.time||0),level:state.level,date:new Date().toISOString().slice(0,10),acc};
+  const acc=ACC?ACC.id:'',rec={name:state.name||'?',time:Math.round(state.time||0),level:state.level,date:new Date().toISOString().slice(0,10),acc};if(state.sr)rec.sr=true;
   const loc=localScores();loc.push(rec);loc.sort((a,b)=>a.time-b.time);try{localStorage.setItem(LKEY,JSON.stringify(loc.slice(0,200)));}catch(e){}
   let res={time:rec.time,rank:loc.indexOf(rec)+1,shared:false,best:loc[0]===rec};
   // Jokainen läpipeluu omana rivinään, joten kaikkien pelaajien parhaat suoritukset näkyvät.
@@ -2511,7 +2584,7 @@ function medalRows(rows){
 function boardTable(rows,meId){
   if(!rows.length)return `<p>${L('Ei vielä tuloksia. Ole ensimmäinen!','No results yet. Be the first!')}</p>`;
   return `<table class="lb"><tr><th>#</th><th>${L('Nimi','Name')}</th><th class="r">${L('Aika','Time')}</th><th>${L('Lk','Gr.')}</th><th>${L('Päivä','Date')}</th></tr>`+
-    medalRows(rows).map((r,i)=>`<tr class="${r._me?'me':''}${r._medal?' m'+r._medal:''}"><td>${i+1}</td><td>${nameHTML(r.name,r.acc)}${r._medal?` <span class="medal" title="${[L('Kulta','Gold'),L('Hopea','Silver'),L('Pronssi','Bronze')][r._medal-1]}">${['🥇','🥈','🥉'][r._medal-1]}</span>`:''}</td><td class="r">${fmtClock(+r.time||0)}</td><td>${esc(shortLevel(+r.level||5))}</td><td>${esc(shortDate(r.date))}</td></tr>`).join('')+'</table>';
+    medalRows(rows).map((r,i)=>`<tr class="${r._me?'me':''}${r._medal?' m'+r._medal:''}"><td>${i+1}</td><td>${nameHTML(r.name,r.acc)}${r.sr?' <span title="Speedrun">⚡</span>':''}${r._medal?` <span class="medal" title="${[L('Kulta','Gold'),L('Hopea','Silver'),L('Pronssi','Bronze')][r._medal-1]}">${['🥇','🥈','🥉'][r._medal-1]}</span>`:''}</td><td class="r">${fmtClock(+r.time||0)}</td><td>${esc(shortLevel(+r.level||5))}</td><td>${esc(shortDate(r.date))}</td></tr>`).join('')+'</table>';
 }
 async function fillBoard(){
   const body=$('#lbBody');if(!body)return;
@@ -2636,6 +2709,7 @@ function loop(now){
   if(modalType==='boss'||modalType==='bossintro')updateFight(dt);
   if(modalType==='dodge')updateDodge(dt);
   if(modalType==='title'||modalType==='win')drawParade();
+  renderSr();
   requestAnimationFrame(loop);
 }
 addEventListener('pagehide',()=>{if(started)save();flushCloud();});
