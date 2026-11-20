@@ -1,6 +1,6 @@
 # 🐔 Farmikoulu
 
-Retrotyylinen selainpeli 5.–6.-luokkalaisille. Tee koulutehtäviä 2D-farmilla, ansaitse arkkuja ja kerää kaikki farmin eläimet. Lopuksi odottaa Perunapomo!
+Retrotyylinen selainpeli 3.–6.-luokkalaisille. Tee koulutehtäviä 2D-farmilla, ansaitse arkkuja ja kerää kaikki farmin eläimet. Lopuksi odottaa Perunapomo!
 
 **▶ Pelaa:** https://il3.github.io/farmikoulu/
 
@@ -29,7 +29,7 @@ Retrotyylinen selainpeli 5.–6.-luokkalaisille. Tee koulutehtäviä 2D-farmilla
 | 🍎 Omenapuu | Ympäristöoppi |
 | 🪧 Tienviitta | Historia ja maantieto |
 
-Tasot: 5. luokka, 6. luokka ja avattava 7.–8. luokka. Pelin kieleksi voi valita suomen tai englannin.
+Tasot: 3.–4. luokka, 5. luokka, 6. luokka ja avattava 7.–8. luokka. Taso koskee kaikkia aineita. Pelin kieleksi voi valita suomen tai englannin.
 
 ## Tekniikka
 
@@ -47,6 +47,6 @@ Pelin voi pelata myös ilman nettiä: lataa `index.html` ja avaa se selaimessa.
 
 ## English
 
-**Farmikoulu** ("Farm School") is a retro browser game for grades 5–6. Do school tasks on a 2D farm, earn chests, collect every farm animal and finally beat the Potato Boss. The game is available in Finnish and English. **Play:** https://il3.github.io/farmikoulu/
+**Farmikoulu** ("Farm School") is a retro browser game for grades 3–6. Do school tasks on a 2D farm, earn chests, collect every farm animal and finally beat the Potato Boss. The game is available in Finnish and English. **Play:** https://il3.github.io/farmikoulu/
 
 Made by **leetu1234**.

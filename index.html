@@ -521,6 +521,7 @@ function numOpts(ans,cands,neg){
 // Matematiikka: kertotaulu, jakolasku, yhteenlasku, vähennyslasku – taso 5. tai 6. luokka
 function genMath(){
   if(state.level===78)return genMath78();
+  if(state.level===34)return genMath34();
   const g6=state.level===6,en=settings.lang==='en';
   const MUL=en?'×':'·',DIV=en?'÷':':';
   const kind=pick(['mul','div','add','sub']),story=rand()<.3;
@@ -662,13 +663,132 @@ his:[
  {q:'Who led the Soviet Union during the Second World War?',c:'Joseph Stalin',w:['Vladimir Lenin','Nikita Khrushchev','Mikhail Gorbachev','Leon Trotsky']},
  {q:'Which continent has the most people?',c:'Asia',w:['Africa','Europe','North America','South America']},
  {q:'What is Finland’s currency today?',c:'the euro',w:['the markka','the krona','the dollar','the rouble']}]};
-function bankQ78(id){
-  if(!state.decks)state.decks={};const key=id+'78';let d=state.decks[key];
-  if(!Array.isArray(d)||!d.length||d.some(i=>i>=B78[id].length))d=state.decks[key]=shuffle(B78[id].map((_,i)=>i));
-  const idx=d.pop(),src=(settings.lang==='en'&&B78_EN[id])?B78_EN[id]:B78[id],r=src[idx];
+function bankQX(id,B,BEN,tag){
+  if(!state.decks)state.decks={};const key=id+tag;let d=state.decks[key];
+  if(!Array.isArray(d)||!d.length||d.some(i=>i>=B[id].length))d=state.decks[key]=shuffle(B[id].map((_,i)=>i));
+  const idx=d.pop(),src=(settings.lang==='en'&&BEN[id])?BEN[id]:B[id],r=src[idx];
   return {q:r.q,correct:r.c,opts:shuffle([r.c,...shuffle(r.w).slice(0,3)]),ex:r.ex||null};
 }
-const nextQ=id=>id==='mat'?mathQ():(state.level===78?bankQ78(id):bankQ(id));
+const bankQ78=id=>bankQX(id,B78,B78_EN,'78');
+
+// ---- 3.–4. luokan taso ----
+function genMath34(){
+  const en=settings.lang==='en',MUL=en?'×':'·',DIV=en?'÷':':';
+  const kind=pick(['mul','div','add','sub']),story=rand()<.3;let q,o,ex=null;
+  if(kind==='mul'){const a=pick([2,3,4,5,10]),b=ri(1,10),ans=a*b;
+    q=story?L(`Farmilla on ${b} lammasta. Jokaisella on ${a} kelloa kaulassa. Montako kelloa on yhteensä?`,`The farm has ${b} sheep. Each one has ${a} bells. How many bells are there altogether?`):`${b} ${MUL} ${a} = ?`;
+    o=numOpts(ans,[ans+a,ans-a,ans+1,ans-1,a+b]);ex=L(`${a}:n kertotaulu`,`the ${a} times table`);}
+  else if(kind==='div'){const b=pick([2,3,4,5,10]),c=ri(1,10),a=b*c;
+    q=story?L(`${a} omenaa jaetaan tasan ${b} lapselle. Montako omenaa saa yksi lapsi?`,`${a} apples are shared equally between ${b} children. How many apples does each child get?`):`${a} ${DIV} ${b} = ?`;
+    o=numOpts(c,[c+1,c-1,c+2,b]);ex=L(`Tarkistus: ${c} ${MUL} ${b} = ${a}`,`Check: ${c} ${MUL} ${b} = ${a}`);}
+  else if(kind==='add'){const a=ri(5,50),b=ri(2,40),ans=a+b;
+    q=story?L(`Kanat munivat aamulla ${a} munaa ja illalla ${b} munaa. Montako munaa yhteensä?`,`The hens laid ${a} eggs in the morning and ${b} in the evening. How many eggs in total?`):`${a} + ${b} = ?`;
+    o=numOpts(ans,[ans+10,ans-10,ans+1,ans-1,ans+2]);}
+  else{const a=ri(15,60),b=ri(2,a-3),ans=a-b;
+    q=story?L(`Pellolla oli ${a} perunaa. Possu söi ${b}. Montako perunaa jäi?`,`There were ${a} potatoes in the field. The pig ate ${b}. How many potatoes are left?`):`${a} − ${b} = ?`;
+    o=numOpts(ans,[ans+10,ans-10,ans+1,ans-1,a+b]);ex=L(`Tarkistus: ${ans} + ${b} = ${a}`,`Check: ${ans} + ${b} = ${a}`);}
+  return {q,correct:o.correct,opts:o.opts,ex};
+}
+const B34={
+aid:[
+ {q:'Mikä sana kirjoitetaan isolla alkukirjaimella?',c:'Matti',w:['koira','talo','juosta','kissa']},
+ {q:'Montako tavua on sanassa ”kana”?',c:'2',w:['1','3','4','5'],ex:'ka-na'},
+ {q:'Montako tavua on sanassa ”perunat”?',c:'3',w:['2','4','1','5'],ex:'pe-ru-nat'},
+ {q:'Mikä näistä on vokaali?',c:'a',w:['k','s','t','p','m']},
+ {q:'Mikä näistä on konsonantti?',c:'s',w:['a','e','i','o','u']},
+ {q:'Mikä sana on aakkosjärjestyksessä ensimmäisenä?',c:'ankka',w:['kana','possu','lehmä','sorsa']},
+ {q:'Mikä on sanan ”iso” vastakohta?',c:'pieni',w:['suuri','pitkä','kova','vihreä']},
+ {q:'Mikä sana on monikossa?',c:'lehmät',w:['lehmä','lehmän','lehmää']},
+ {q:'Mikä sana kertoo tekemisestä (verbi)?',c:'hyppää',w:['pallo','kaunis','sininen','talo']},
+ {q:'Mikä merkki tulee tavallisen lauseen loppuun?',c:'.',w:['?',',',':','-']},
+ {q:'Miten kirjoitetaan eläin, joka sanoo ”hau”?',c:'koira',w:['koria','kojra','kora','koirra']},
+ {q:'Mikä sana rimmaa sanan ”kala” kanssa?',c:'pala',w:['kuu','talo','sika','lammas']},
+ {q:'Mikä sana on yhdyssana?',c:'kanatalo',w:['kana','talo','iso','juoksee']}],
+eng:[
+ {q:'Mitä on ”kissa” englanniksi?',c:'cat',w:['dog','cow','hen','fish']},
+ {q:'Mitä on ”koira” englanniksi?',c:'dog',w:['cat','pig','duck','horse']},
+ {q:'Mitä on ”punainen” englanniksi?',c:'red',w:['blue','green','yellow','black']},
+ {q:'Mitä on ”sininen” englanniksi?',c:'blue',w:['red','green','white','pink']},
+ {q:'Mitä on ”kolme” englanniksi?',c:'three',w:['two','four','tree','five']},
+ {q:'Mitä on ”omena” englanniksi?',c:'apple',w:['banana','orange','pear','egg']},
+ {q:'Mitä tarkoittaa ”hello”?',c:'hei',w:['kiitos','näkemiin','anteeksi','hyvää yötä']},
+ {q:'Mitä tarkoittaa ”thank you”?',c:'kiitos',w:['hei','ole hyvä','anteeksi','huomenta']},
+ {q:'Mitä tarkoittaa ”horse”?',c:'hevonen',w:['talo','lehmä','hiiri','kana']},
+ {q:'Mitä on ”äiti” englanniksi?',c:'mother',w:['father','sister','brother','baby']},
+ {q:'Mitä on ”iso” englanniksi?',c:'big',w:['small','long','old','new']},
+ {q:'Mitä on ”kymmenen” englanniksi?',c:'ten',w:['two','one','nine','twelve']}],
+ymp:[
+ {q:'Mitä kasvi tarvitsee kasvaakseen?',c:'valoa ja vettä',w:['pimeää ja kiviä','vain hiekkaa','muovia','jäätä']},
+ {q:'Mikä eläin munii munia?',c:'kana',w:['lehmä','possu','lammas','hevonen']},
+ {q:'Mikä eläin antaa maitoa, jota juomme?',c:'lehmä',w:['kana','sorsa','kala','mehiläinen']},
+ {q:'Mikä vuodenaika tulee talven jälkeen?',c:'kevät',w:['kesä','syksy','joulu']},
+ {q:'Miksi kutsutaan jäätynyttä vettä?',c:'jää',w:['höyry','hiekka','sade','tuuli']},
+ {q:'Montako jalkaa lehmällä on?',c:'4',w:['2','6','8','3']},
+ {q:'Mikä aisti toimii nenällä?',c:'haju',w:['näkö','kuulo','maku','tunto']},
+ {q:'Missä kala elää?',c:'vedessä',w:['puussa','maan alla','pilvessä','pesässä']},
+ {q:'Mikä näistä on hedelmä?',c:'omena',w:['peruna','porkkana','lanttu','sipuli']},
+ {q:'Mikä lintu ui lammella?',c:'sorsa',w:['kana','varis','pöllö','tikka']},
+ {q:'Milloin lehdet putoavat puista?',c:'syksyllä',w:['keväällä','kesällä','juhannuksena']},
+ {q:'Mikä näistä on nisäkäs?',c:'possu',w:['kana','sorsa','kala','perhonen']},
+ {q:'Mikä antaa Maalle valoa ja lämpöä?',c:'Aurinko',w:['Kuu','pilvet','tuuli','meri']}],
+his:[
+ {q:'Mikä on Suomen pääkaupunki?',c:'Helsinki',w:['Tampere','Turku','Oulu','Kotka']},
+ {q:'Minkä värinen on Suomen lipun risti?',c:'sininen',w:['punainen','keltainen','vihreä','musta']},
+ {q:'Milloin on Suomen itsenäisyyspäivä?',c:'6. joulukuuta',w:['24. joulukuuta','1. toukokuuta','6. tammikuuta','24. kesäkuuta']},
+ {q:'Mistä ilmansuunnasta aurinko nousee?',c:'idästä',w:['lännestä','pohjoisesta','etelästä']},
+ {q:'Mikä näistä on maanosa?',c:'Eurooppa',w:['Suomi','Helsinki','Ruotsi','Lappi']},
+ {q:'Mikä on Suomen pohjoisin maakunta?',c:'Lappi',w:['Uusimaa','Pirkanmaa','Kymenlaakso','Ahvenanmaa']},
+ {q:'Mitä kartan sininen väri yleensä tarkoittaa?',c:'vettä',w:['metsää','peltoa','vuoria','teitä']},
+ {q:'Mikä maa on Suomen länsinaapuri?',c:'Ruotsi',w:['Venäjä','Viro','Saksa','Tanska']},
+ {q:'Mikä maa on Suomen itänaapuri?',c:'Venäjä',w:['Ruotsi','Viro','Tanska','Islanti']},
+ {q:'Mitä juhlitaan juhannuksena?',c:'keskikesää',w:['joulua','vappua','pääsiäistä','uutta vuotta']},
+ {q:'Mitkä ovat Suomen kaksi virallista kieltä?',c:'suomi ja ruotsi',w:['suomi ja englanti','suomi ja viro','ruotsi ja norja','englanti ja saksa']},
+ {q:'Mikä on Suomen kansalliseläin?',c:'karhu',w:['hirvi','susi','kettu','poro']},
+ {q:'Missä kohtaa karttaa pohjoinen yleensä on?',c:'ylhäällä',w:['alhaalla','vasemmalla','oikealla','keskellä']}]};
+const B34_EN={
+eng:[
+ {q:'What is ”kissa” in English?',c:'cat',w:['dog','cow','hen','fish']},
+ {q:'What is ”koira” in English?',c:'dog',w:['cat','pig','duck','horse']},
+ {q:'What is ”punainen” in English?',c:'red',w:['blue','green','yellow','black']},
+ {q:'What is ”sininen” in English?',c:'blue',w:['red','green','white','pink']},
+ {q:'What is ”kolme” in English?',c:'three',w:['two','four','tree','five']},
+ {q:'What is ”omena” in English?',c:'apple',w:['banana','orange','pear','egg']},
+ {q:'What does ”hello” mean in Finnish?',c:'hei',w:['kiitos','näkemiin','anteeksi','hyvää yötä']},
+ {q:'What does ”thank you” mean in Finnish?',c:'kiitos',w:['hei','ole hyvä','anteeksi','huomenta']},
+ {q:'What does ”horse” mean in Finnish?',c:'hevonen',w:['talo','lehmä','hiiri','kana']},
+ {q:'What is ”äiti” in English?',c:'mother',w:['father','sister','brother','baby']},
+ {q:'What is ”iso” in English?',c:'big',w:['small','long','old','new']},
+ {q:'What is ”kymmenen” in English?',c:'ten',w:['two','one','nine','twelve']}],
+ymp:[
+ {q:'What does a plant need to grow?',c:'light and water',w:['darkness and stones','only sand','plastic','ice']},
+ {q:'Which animal lays eggs?',c:'chicken',w:['cow','pig','sheep','horse']},
+ {q:'Which animal gives the milk we drink?',c:'cow',w:['chicken','duck','fish','bee']},
+ {q:'Which season comes after winter?',c:'spring',w:['summer','autumn','Christmas']},
+ {q:'What do we call frozen water?',c:'ice',w:['steam','sand','rain','wind']},
+ {q:'How many legs does a cow have?',c:'4',w:['2','6','8','3']},
+ {q:'Which sense do we use our nose for?',c:'smell',w:['sight','hearing','taste','touch']},
+ {q:'Where does a fish live?',c:'in water',w:['in a tree','underground','in a cloud','in a nest']},
+ {q:'Which of these is a fruit?',c:'apple',w:['potato','carrot','swede','onion']},
+ {q:'Which bird swims on the pond?',c:'duck',w:['chicken','crow','owl','woodpecker']},
+ {q:'When do leaves fall from the trees?',c:'in autumn',w:['in spring','in summer','at Midsummer']},
+ {q:'Which of these is a mammal?',c:'pig',w:['chicken','duck','fish','butterfly']},
+ {q:'What gives the Earth light and warmth?',c:'the Sun',w:['the Moon','clouds','wind','the sea']}],
+his:[
+ {q:'What is the capital of Finland?',c:'Helsinki',w:['Tampere','Turku','Oulu','Kotka']},
+ {q:'What colour is the cross on the Finnish flag?',c:'blue',w:['red','yellow','green','black']},
+ {q:'When is Finland’s Independence Day?',c:'6 December',w:['24 December','1 May','6 January','24 June']},
+ {q:'In which direction does the sun rise?',c:'in the east',w:['in the west','in the north','in the south']},
+ {q:'Which of these is a continent?',c:'Europe',w:['Finland','Helsinki','Sweden','Lapland']},
+ {q:'Which is Finland’s northernmost region?',c:'Lapland',w:['Uusimaa','Pirkanmaa','Kymenlaakso','Åland']},
+ {q:'What does the colour blue usually mean on a map?',c:'water',w:['forest','fields','mountains','roads']},
+ {q:'Which country is Finland’s western neighbour?',c:'Sweden',w:['Russia','Estonia','Germany','Denmark']},
+ {q:'Which country is Finland’s eastern neighbour?',c:'Russia',w:['Sweden','Estonia','Denmark','Iceland']},
+ {q:'What is celebrated at Juhannus?',c:'Midsummer',w:['Christmas','May Day','Easter','New Year']},
+ {q:'What are Finland’s two official languages?',c:'Finnish and Swedish',w:['Finnish and English','Finnish and Estonian','Swedish and Norwegian','English and German']},
+ {q:'What is Finland’s national animal?',c:'the bear',w:['the elk','the wolf','the fox','the reindeer']},
+ {q:'Where is north usually on a map?',c:'at the top',w:['at the bottom','on the left','on the right','in the middle']}]};
+const bankQ34=id=>bankQX(id,B34,B34_EN,'34');
+const nextQ=id=>id==='mat'?mathQ():(state.level===78?bankQ78(id):state.level===34?bankQ34(id):bankQ(id));
 
 /* ---------- MAAILMA ---------- */
 const POND={cx:58,cy:162,rx:38,ry:24};
@@ -843,11 +963,12 @@ function pickerHTML(){
   return `<div class="pick">${L('Kieli','Language')}:
     <button class="btn ${settings.lang==='fi'?'on':''}" id="pFi">Suomi</button><button class="btn ${settings.lang==='en'?'on':''}" id="pEn">English</button></div>
   <div class="pick">${L('Tehtävien taso','Task level')}:
-    <button class="btn ${pendingLevel===5?'on':''}" id="p5">${L('5. luokka','Grade 5')}</button><button class="btn ${pendingLevel===6?'on':''}" id="p6">${L('6. luokka','Grade 6')}</button>${state.unlocked78?`<button class="btn ${pendingLevel===78?'on':''}" id="p78">🪨 ${L('7.–8. luokka','Grade 7–8')}</button>`:''}</div>`;
+    <button class="btn ${pendingLevel===34?'on':''}" id="p34">${L('3.–4. luokka','Grade 3–4')}</button><button class="btn ${pendingLevel===5?'on':''}" id="p5">${L('5. luokka','Grade 5')}</button><button class="btn ${pendingLevel===6?'on':''}" id="p6">${L('6. luokka','Grade 6')}</button>${state.unlocked78?`<button class="btn ${pendingLevel===78?'on':''}" id="p78">🪨 ${L('7.–8. luokka','Grade 7–8')}</button>`:''}</div>`;
 }
 function bindPicker(){
   bind('pFi',()=>{settings.lang='fi';saveSettings();applyLang();});
   bind('pEn',()=>{settings.lang='en';saveSettings();applyLang();});
+  bind('p34',()=>{pendingLevel=34;if(started||hasProgress())state.level=34,save();showTitle();});
   bind('p5',()=>{pendingLevel=5;if(started||hasProgress())state.level=5,save();showTitle();});
   bind('p6',()=>{pendingLevel=6;if(started||hasProgress())state.level=6,save();showTitle();});
   bind('p78',()=>{pendingLevel=78;state.level=78;save();showTitle();});
@@ -1032,7 +1153,7 @@ let stoneRise=1;
 const STONE_IMG=(()=>{const c=document.createElement('canvas');c.width=22;c.height=18;const g=c.getContext('2d');
   fillCircle(g,11,11,8,'#6f7176');fillCircle(g,8,9,6,'#8d8f94');fillCircle(g,14,12,6,'#7c7e83');fillCircle(g,10,8,4,'#a3a5aa');
   R(g,3,16,17,2,'#5a5c60');R(g,6,3,6,1,'#6fa84a');R(g,5,4,3,1,'#5f9a3f');R(g,13,5,3,1,'#6fa84a');R(g,16,13,1,2,'#5a5c60');R(g,5,12,2,1,'#5a5c60');return c;})();
-const levelName=lv=>lv===78?L('7.–8. luokka','grade 7–8'):L(`${lv}. luokka`,`grade ${lv}`);
+const levelName=lv=>lv===78?L('7.–8. luokka','grade 7–8'):lv===34?L('3.–4. luokka','grade 3–4'):L(`${lv}. luokka`,`grade ${lv}`);
 function showStone(){
   initAudio();state.stoneSeen=true;save();tone({f:330,f2:660,d:.6,v:.2,type:'sine'});
   const is78=state.level===78;
@@ -1408,7 +1529,7 @@ function runCmd(raw){
   sydämet          – täydet sydämet pomotaistelussa
   aika <s>         – lisää aikaa nykyiseen pomokysymykseen
   lepo             – kaikki tehtäväpisteet taas käytössä
-  taso 5 / 6 / 78  – tehtävien taso
+  taso 34/5/6/78   – tehtävien taso
   kieli fi / kieli en
   nopeus <1–4>     – kävelynopeus
   tila             – näytä pelin tila
@@ -1423,7 +1544,7 @@ function runCmd(raw){
   hearts           – full hearts in the boss fight
   time <s>         – add time to the current boss question
   rest             – all task points usable again
-  level 5 / 6 / 78 – task level
+  level 34/5/6/78  – task level
   lang fi / lang en
   speed <1–4>      – walking speed
   status           – show game status
@@ -1454,8 +1575,8 @@ function runCmd(raw){
     fight.t+=n;ok(L(`+${n} s`,`+${n} s`));break;}
   case 'lepo':case 'rest':state.last=null;nearSt=null;save();ok(L('Kaikki tehtäväpisteet ovat taas käytössä.','All task points are usable again.'));break;
   case 'taso':case 'level':
-    {const lv=a==='5'?5:a==='6'?6:['7','8','78','7-8','7–8'].includes(a)?78:0;
-    if(!lv)return err(L('Käytä: taso 5, taso 6 tai taso 78','Use: level 5, level 6 or level 78'));
+    {const lv=['3','4','34','3-4','3–4'].includes(a)?34:a==='5'?5:a==='6'?6:['7','8','78','7-8','7–8'].includes(a)?78:0;
+    if(!lv)return err(L('Käytä: taso 34, 5, 6 tai 78','Use: level 34, 5, 6 or 78'));
     if(lv===78){state.prevLevel=state.level===78?state.prevLevel:state.level;state.unlocked78=true;}
     state.level=lv;pendingLevel=lv;save();ok(L(`Tehtävien taso: ${levelName(lv)}`,`Task level: ${levelName(lv)}`));}break;
   case 'kieli':case 'lang':
