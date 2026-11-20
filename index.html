@@ -172,7 +172,7 @@ body.phone #admBody{--ms:min(30px,calc((100vw - 70px)/9))}
 .admGrid .btn{font-size:.9em}
 .admStats{display:grid;grid-template-columns:repeat(3,1fr);gap:.4em;margin:.4em 0}
 .admStats div{background:#fff8e1;border:3px solid var(--wood2);padding:.2em}.admStats b{display:block;font-size:1.4em}
-.panel.admin{max-width:760px;font-size:clamp(13px,2.35cqw,20px)}
+.panel.admin,.panel.extras{max-width:760px;font-size:clamp(13px,2.35cqw,20px)}
 .panel.admin .lbTabs{flex-wrap:wrap;gap:.3em}.panel.admin .lbTabs .btn{font-size:.85em;padding:.05em .5em}
 .panel.admin .admGrid .btn{font-size:.85em;padding:.1em .4em}
 .panel.admin h2{margin:.2em 0 .4em}
@@ -1662,6 +1662,7 @@ addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
   if(modalType){
     if(k==='escape'){if(modalType==='title'&&started&&ACC){closeModal();e.preventDefault();return;}if(['quiz','boss','dodge'].includes(modalType))exitTask();else if(modalType==='settings'){const b=$('#sOk');if(b)b.click();}
+    else if(modalType==='extras'){const b=$('#exClose');if(b)b.click();}
     else if(['help','bossintro','board','admin'].includes(modalType)){if(modalType==='bossintro'&&robotForced()){e.preventDefault();return;}(started?closeModal():showTitle());}e.preventDefault();return;}
     if(modalType==='dodge'&&['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(k)){keys.add(k);e.preventDefault();return;}
     if(modalType==='quiz'&&quiz){
@@ -2009,6 +2010,7 @@ function runCmd(raw){
   nollaa           – aloita koko peli alusta
   kivi             – tuo 7.–8. luokan kivi heti
   farmi 1 / farmi 2 – siirry farmille
+  extrat           – minipelit (miinaharava, shakki, tammi, pokeri, ajopeli)
   tyhjennä / sulje`,`Commands:
   animals          – get every animal now
   give <animal>    – one animal (duck, pig, chicken, cow, sheep, potato)
@@ -2025,6 +2027,7 @@ function runCmd(raw){
   reset            – start the whole game over
   stone            – bring the grade 7–8 stone now
   farm 1 / farm 2  – go to a farm
+  extras           – mini games (minesweeper, chess, checkers, poker, racing)
   clear / close`));break;
   case 'eläimet':case 'elaimet':case 'animals':{
     let n=0;for(const A of ANIMALS)if(!state.owned[A.id]){state.owned[A.id]=1;spawnAnimal(A.id,true);n++;}
@@ -2072,6 +2075,9 @@ function runCmd(raw){
   case 'farmi':case 'farm':{const n=+a;if(n!==1&&n!==2)return err(L('Käytä: farmi 1 tai farmi 2','Use: farm 1 or farm 2'));
     if(['quiz','boss','chest','result','dodge'].includes(modalType))return err(L('Sulje ensin avoin ikkuna.','Close the open window first.'));
     if(n===2&&!state.farm2){state.farm2=true;}if(modalType)closeModal();started=true;goFarm(n);ok(L(`🚜 Farmi ${n}`,`🚜 Farm ${n}`));break;}
+  case 'extrat':case 'extras':case 'extra':
+    if(['quiz','chest','boss','dodge','result','bossintro'].includes(modalType)||robotForced())return err(L('Avaa extrat vasta tehtävän jälkeen.','Open the extras after the task.'));
+    closeCmd();showExtras();ok(L('🎲 Extrat avattu!','🎲 Extras opened!'));break;
   case 'hevonen':case 'horse':{
     const who=ADMIN?ADMIN_ID:(ACC&&ACC.id);
     if(!['suuppe',ADMIN_ID].includes(who))return err(L(`Tuntematon komento "${c}". Kirjoita "apua".`,`Unknown command "${c}". Type "help".`));
@@ -2110,7 +2116,7 @@ function blocked(x,y){
   const dx=(x-POND.cx)/(POND.rx-2),dy=(y-POND.cy)/(POND.ry-2);return dx*dx+dy*dy<1;
 }
 function update(dt){
-  if(started&&!state.won&&!['title','help','board','settings'].includes(modalType)){state.time=(state.time||0)+dt;}
+  if(started&&!state.won&&!['title','help','board','settings','extras'].includes(modalType)){state.time=(state.time||0)+dt;}
   if(!modalType){
     let dx=0,dy=0;
     if(keys.has('arrowleft')||keys.has('a'))dx--;if(keys.has('arrowright')||keys.has('d'))dx++;
@@ -2551,7 +2557,11 @@ const EX_GAMES=[
  {id:'poker',e:'🃏',n:['Pokeri','Poker'],d:['Videopokeri: pidä kortit ja vaihda','Video poker: hold cards and draw']},
  {id:'race',e:'🏎️',n:['Ajopeli','Racing'],d:['Väistele autoja ja kerää kolikoita','Dodge cars and collect coins']}];
 const exEl=()=>$('#exBody');
-const exOn=id=>admTab==='extra'&&modalType==='admin'&&EX.game===id&&!!exEl();
+const exOn=id=>(modalType==='extras'||(admTab==='extra'&&modalType==='admin'))&&EX.game===id&&!!exEl();
+// Komentopaneelin "extrat": samat minipelit kenelle tahansa, omassa ikkunassaan
+function showExtras(){initAudio();EX.game=null;
+  openModal('extras',`<h2>🎲 ${L('Extrat','Extras')}</h2><div id="admBody"></div><div class="row"><button class="btn big" id="exClose">${L('Sulje','Close')}</button></div>`);
+  bind('exClose',()=>{exStop();closeModal();if(!started)showTitle();});admRenderExtra();}
 function admRenderExtra(){
   const body=$('#admBody');exStop();
   if(!EX.game){
