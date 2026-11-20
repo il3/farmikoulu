@@ -109,7 +109,28 @@ body.phone #bossCv{width:min(100%,460px)}body.phone #dodgeCv{width:min(100%,380p
 label.rpick{display:block;text-align:left;padding:.25em .4em;margin:.15em 0;border:2px solid #c9a46a;border-radius:4px;background:#fff8e6;cursor:pointer;font-size:.85em;line-height:1.25}
 label.rpick:has(input:checked){background:#ffe08a;border-color:#8a5a2b}.rcols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 @media (max-width:560px){.rcols{grid-template-columns:1fr}}
-#admBody{--ms:28px}.msTop,.msBar{display:flex;justify-content:center;align-items:center;gap:10px;margin:.25em 0;flex-wrap:wrap}
+#admBody{--ms:28px;--sq:max(26px,min(44px,calc((100vw - 60px)/8),calc((100dvh - 300px)/8)))}
+body:not(.phone) #admBody{--sq:36px}body:not(.phone) #rcCv{height:290px}
+.exGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:.3em 0}
+.exCard{font:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;padding:.6em .4em;background:#fff8e6;border:3px solid var(--wood2);box-shadow:0 3px 0 var(--wood2);cursor:pointer;color:var(--ink)}
+.exCard:hover{background:#ffe9a8}.exCard .exE{font-size:2em;line-height:1.1}.exCard small{opacity:.75;font-size:.75em}
+.exHead{display:flex;align-items:center;gap:10px;margin:.2em 0}
+.exBoardWrap{display:flex;justify-content:center}.exBoard{display:grid;grid-template-columns:repeat(8,var(--sq));border:4px solid #5a3a1a;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.exSq{width:var(--sq);height:var(--sq);padding:0;margin:0;border:0;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent}
+.exSq.lt{background:#f0d9a8}.exSq.dk{background:#b5824e}.exSq.lm{box-shadow:inset 0 0 0 100px rgba(255,230,80,.35)}.exSq.sel{box-shadow:inset 0 0 0 3px #2a7de1,inset 0 0 0 100px rgba(80,160,255,.35)}
+.exSq.tg::after{content:'';width:30%;height:30%;border-radius:50%;background:rgba(30,90,30,.55);position:absolute}.exSq.cap::after{width:86%;height:86%;background:none;border:3px solid rgba(30,90,30,.7)}
+.exSq.chk{box-shadow:inset 0 0 0 100px rgba(255,40,40,.55)}.exSq.mv{box-shadow:inset 0 0 0 3px rgba(255,230,80,.9)}
+.pc{font-size:calc(var(--sq)*.78);line-height:1;font-family:'Segoe UI Symbol','DejaVu Sans','Noto Sans Symbols2',serif}.pc.w{color:#fff;text-shadow:0 0 1px #000,1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000}.pc.b{color:#1a1a1a;text-shadow:0 0 1px #fff8}
+.ckp{width:76%;height:76%;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:calc(var(--sq)*.4);box-shadow:inset 0 -4px 0 rgba(0,0,0,.3)}
+.ckp.w{background:#f6efe0;border:2px solid #8a7a60}.ckp.b{background:#2a2420;border:2px solid #000}
+.pkPay{max-width:340px;margin:.2em auto;font-size:.8em}.pkPay td{padding:1px 8px}
+.pkHand{display:flex;justify-content:center;gap:6px;margin:.4em 0;flex-wrap:nowrap}
+.pkC{font:inherit;width:min(62px,17vw);height:min(88px,24vw);background:#fff;border:3px solid #333;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;color:#111;box-shadow:0 3px 0 #333}
+.pkC b{font-size:1.4em;line-height:1}.pkC span{font-size:1.5em;line-height:1}.pkC.red{color:#d1281f}.pkC.held{transform:translateY(-6px);border-color:#2a7de1;box-shadow:0 3px 0 #2a7de1}
+.pkC em{position:absolute;bottom:-1.6em;font-style:normal;font-size:.6em;background:#2a7de1;color:#fff;padding:1px 4px}.pkC.back{background:repeating-linear-gradient(45deg,#c9995a 0 6px,#a8763e 6px 12px);font-size:1.6em}
+#rcCv{height:max(220px,min(calc(100dvh - 330px),440px));image-rendering:pixelated;display:block;margin:.2em auto;border:3px solid var(--wood2)}
+.rcCtl{display:flex;justify-content:center;gap:10px}.rcCtl .btn{touch-action:none;user-select:none;-webkit-user-select:none}#rcL,#rcR{font-size:1.4em;min-width:2.6em}
+.msTop,.msBar{display:flex;justify-content:center;align-items:center;gap:10px;margin:.25em 0;flex-wrap:wrap}
 .msBar>span{font-family:'Press Start 2P',ui-monospace,monospace;font-size:.75em;background:#2b1d0e;color:#ff5a4a;padding:4px 7px;border:2px solid #8a5a2b}
 #msFace{font-size:1.3em;padding:0 .4em}#msMode.on{background:#ffb0a0}
 .msWrap{overflow:auto;max-width:100%;display:flex;justify-content:center}
@@ -2454,12 +2475,13 @@ function showAdminPanel(tab){
   if(!isAdmin()){toast(L('Admin-paneeli on vain ylläpitäjälle.','The admin panel is for the admin only.'));return;}
   admTab=tab||admTab;
   openModal('admin',`<h2>👑 ${L('Admin-paneeli','Admin panel')}</h2>
-  <div class="lbTabs"><button class="btn" data-at="users">👥 ${L('Käyttäjät','Users')}</button><button class="btn" data-at="scores">🏆 ${L('Tulostaulu','Leaderboard')}</button><button class="btn" data-at="game">🎮 ${L('Pelitoiminnot','Game tools')}</button><button class="btn" data-at="stats">📊 ${L('Tilastot','Stats')}</button><button class="btn" data-at="mines">💣 ${L('Miinaharava','Minesweeper')}</button></div>
+  <div class="lbTabs"><button class="btn" data-at="users">👥 ${L('Käyttäjät','Users')}</button><button class="btn" data-at="scores">🏆 ${L('Tulostaulu','Leaderboard')}</button><button class="btn" data-at="game">🎮 ${L('Pelitoiminnot','Game tools')}</button><button class="btn" data-at="stats">📊 ${L('Tilastot','Stats')}</button><button class="btn" data-at="extra">🎲 ${L('Extrat','Extras')}</button></div>
   <div id="admBody"><p>${L('Ladataan…','Loading…')}</p></div>
   <div class="row"><button class="btn big" id="admClose">${L('Sulje','Close')}</button></div>`);
   panel.querySelectorAll('[data-at]').forEach(b=>{b.classList.toggle('on',b.dataset.at===admTab);b.onclick=()=>{initAudio();showAdminPanel(b.dataset.at);};});
   bind('admClose',()=>{closeModal();if(!started)showTitle();});
-  ({users:admRenderUsers,scores:admRenderScores,game:admRenderGame,stats:admRenderStats,mines:admRenderMines})[admTab]();
+  if(admTab==='mines')admTab='extra';if(admTab!=='extra')exStop();
+  ({users:admRenderUsers,scores:admRenderScores,game:admRenderGame,stats:admRenderStats,extra:admRenderExtra})[admTab]();
 }
 /* ---------- MIINAHARAVA (admin-paneelissa) ---------- */
 const MS_LV={easy:{w:9,h:9,m:10,n:['Helppo','Easy']},mid:{w:12,h:12,m:24,n:['Keskitaso','Medium']},hard:{w:16,h:16,m:40,n:['Vaikea','Hard']}};
@@ -2506,20 +2528,244 @@ function msBindCells(){$('#msGrid').querySelectorAll('.msC').forEach(e=>{const i
   ['pointerup','pointerleave','pointercancel'].forEach(t=>e.addEventListener(t,()=>clearTimeout(lp)));});}
 function admRenderMines(){
   if(!MS)msNew('easy');const best=msBest();
-  $('#admBody').innerHTML=`<div class="msTop">${Object.entries(MS_LV).map(([k,v])=>`<button class="btn ${MS.lv===k?'on':''}" data-ml="${k}">${L2(v.n)}</button>`).join('')}</div>
+  exEl().innerHTML=`<div class="msTop">${Object.entries(MS_LV).map(([k,v])=>`<button class="btn ${MS.lv===k?'on':''}" data-ml="${k}">${L2(v.n)}</button>`).join('')}</div>
    <div class="msBar"><span>💣 <b id="msLeft">000</b></span><button class="btn" id="msFace" title="${L('Uusi peli','New game')}">🙂</button><span>⏱️ <b id="msTime">0</b></span></div>
    <div class="msWrap"><div id="msGrid" class="msGrid"></div></div>
    <div class="msBar"><button class="btn" id="msMode">🚩 ${L('Lippu-tila','Flag mode')}</button><span class="lbNote" style="margin:0">🏅 ${L('Ennätys','Best')}: <b>${best[MS.lv]!=null?best[MS.lv].toFixed(1)+' s':'–'}</b></span></div>
    <p id="msMsg" style="margin:.2em 0;min-height:1.2em"></p>
    <p class="lbNote" style="margin:0">${isPhone()?L('Napauta = avaa · pitkä painallus tai 🚩-tila = lippu · napauta numeroa = avaa ympäriltä','Tap = open · long press or 🚩 mode = flag · tap a number = open around it'):L('Vasen klikkaus = avaa · oikea klikkaus = lippu · klikkaa numeroa = avaa ympäriltä','Left click = open · right click = flag · click a number = open around it')}</p>`;
   $('#msGrid').innerHTML='';
-  $('#admBody').querySelectorAll('[data-ml]').forEach(b=>b.onclick=()=>{initAudio();sfx.ui();msNew(b.dataset.ml);admRenderMines();});
+  exEl().querySelectorAll('[data-ml]').forEach(b=>b.onclick=()=>{initAudio();sfx.ui();msNew(b.dataset.ml);admRenderMines();});
   bind('msFace',()=>{sfx.ui();msNew(MS.lv);msDraw();});
   bind('msMode',()=>{MS.flagMode=!MS.flagMode;sfx.ui();msDraw();});
   msDraw();clearInterval(msTimer);
-  msTimer=setInterval(()=>{const t=$('#msTime');if(!t||admTab!=='mines'||modalType!=='admin'){clearInterval(msTimer);return;}
+  msTimer=setInterval(()=>{const t=$('#msTime');if(!t||!exOn('mines')){clearInterval(msTimer);return;}
     t.textContent=MS.first?0:Math.min(999,Math.floor(MS.over?MS.t:(performance.now()-MS.t0)/1000));},250);
 }
+/* ---------- EXTRAT (admin-paneelin minipelit) ---------- */
+const EX={game:null};
+const EX_GAMES=[
+ {id:'mines',e:'💣',n:['Miinaharava','Minesweeper'],d:['Etsi miinat liputtamalla','Find the mines with flags']},
+ {id:'chess',e:'♞',n:['Shakki','Chess'],d:['Tietokonetta tai kaveria vastaan','Against the computer or a friend']},
+ {id:'checkers',e:'⛀',n:['Tammi','Checkers'],d:['Hyppää vastustajan nappuloiden yli','Jump over the opponent’s pieces']},
+ {id:'poker',e:'🃏',n:['Pokeri','Poker'],d:['Videopokeri: pidä kortit ja vaihda','Video poker: hold cards and draw']},
+ {id:'race',e:'🏎️',n:['Ajopeli','Racing'],d:['Väistele autoja ja kerää kolikoita','Dodge cars and collect coins']}];
+const exEl=()=>$('#exBody');
+const exOn=id=>admTab==='extra'&&modalType==='admin'&&EX.game===id&&!!exEl();
+function admRenderExtra(){
+  const body=$('#admBody');exStop();
+  if(!EX.game){
+    body.innerHTML=`<p class="lbNote" style="margin:.2em 0">🎲 ${L('Valitse peli','Choose a game')}</p><div class="exGrid">${EX_GAMES.map(g=>`<button class="exCard" data-ex="${g.id}"><span class="exE">${g.e}</span><b>${L2(g.n)}</b><small>${L2(g.d)}</small></button>`).join('')}</div>`;
+    body.querySelectorAll('[data-ex]').forEach(b=>b.onclick=()=>{initAudio();sfx.ui();EX.game=b.dataset.ex;admRenderExtra();});return;}
+  const g=EX_GAMES.find(x=>x.id===EX.game);
+  body.innerHTML=`<div class="exHead"><button class="btn" id="exBack">← ${L('Extrat','Extras')}</button><b>${g.e} ${L2(g.n)}</b></div><div id="exBody"></div>`;
+  bind('exBack',()=>{sfx.ui();EX.game=null;admRenderExtra();});
+  ({mines:admRenderMines,chess:chessRender,checkers:ckRender,poker:pkRender,race:raceRender})[EX.game]();
+}
+function exStop(){clearInterval(msTimer);raceStop();}
+function exBest(k,v,lower){const key='farmikoulu-extrat';let b={};try{b=JSON.parse(localStorage.getItem(key)||'{}')||{};}catch(e){}
+  if(v===undefined)return b[k];if(b[k]==null||(lower?v<b[k]:v>b[k])){b[k]=v;try{localStorage.setItem(key,JSON.stringify(b));}catch(e){}return true;}return false;}
+
+/* ===== SHAKKI ===== */
+let CH=null;
+const CH_GLYPH={k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'},CH_VAL={p:100,n:300,b:320,r:500,q:900,k:0};
+const chColor=pc=>pc?(pc===pc.toUpperCase()?'w':'b'):null;
+function chNew(mode){CH={mode:mode||(CH&&CH.mode)||'ai',pos:{b:[...'rnbqkbnrpppppppp'+' '.repeat(32)+'PPPPPPPPRNBQKBNR'].map(c=>c===' '?'':c),turn:'w',cas:'KQkq',ep:-1},sel:-1,last:null,over:'',busy:false,hist:0};}
+function chAttacked(b,sq,by){
+  const x=sq%8,y=sq>>3,at=(xx,yy)=>xx>=0&&xx<8&&yy>=0&&yy<8?b[yy*8+xx]:null,own=c=>c&&chColor(c)===by;
+  const pd=by==='w'?1:-1;for(const dx of[-1,1]){const c=at(x+dx,y+pd);if(own(c)&&c.toLowerCase()==='p')return true;}
+  for(const[dx,dy]of[[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]]){const c=at(x+dx,y+dy);if(own(c)&&c.toLowerCase()==='n')return true;}
+  for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){if(!dx&&!dy)continue;const c=at(x+dx,y+dy);if(own(c)&&c.toLowerCase()==='k')return true;
+    let xx=x+dx,yy=y+dy;while(xx>=0&&xx<8&&yy>=0&&yy<8){const c2=b[yy*8+xx];if(c2){if(own(c2)){const t=c2.toLowerCase();if(t==='q'||(dx&&dy?t==='b':t==='r'))return true;}break;}xx+=dx;yy+=dy;}}
+  return false;}
+function chPseudo(p,col){
+  const b=p.b,ms=[],opp=col==='w'?'b':'w';
+  for(let s=0;s<64;s++){const pc=b[s];if(!pc||chColor(pc)!==col)continue;const t=pc.toLowerCase(),x=s%8,y=s>>3;
+    const add=(to,ex)=>ms.push(Object.assign({f:s,t:to},ex||{}));
+    if(t==='p'){const d=col==='w'?-1:1,y2=y+d,last=col==='w'?0:7;
+      if(y2>=0&&y2<8&&!b[y2*8+x]){add(y2*8+x,y2===last?{pr:'q'}:null);const st=col==='w'?6:1;if(y===st&&!b[(y+2*d)*8+x])add((y+2*d)*8+x,{dbl:1});}
+      for(const dx of[-1,1]){const x2=x+dx;if(x2<0||x2>7||y2<0||y2>7)continue;const to=y2*8+x2;if(b[to]&&chColor(b[to])===opp)add(to,y2===last?{pr:'q'}:null);else if(to===p.ep)add(to,{ep:1});}}
+    else if(t==='n'||t==='k'){const D=t==='n'?[[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]]:[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+      for(const[dx,dy]of D){const xx=x+dx,yy=y+dy;if(xx<0||xx>7||yy<0||yy>7)continue;const to=yy*8+xx;if(!b[to]||chColor(b[to])===opp)add(to);}
+      if(t==='k'){const r=col==='w'?7:0,K=col==='w'?'K':'k',Q=col==='w'?'Q':'q';
+        if(s===r*8+4&&!chAttacked(b,s,opp)){
+          if(p.cas.includes(K)&&!b[r*8+5]&&!b[r*8+6]&&!chAttacked(b,r*8+5,opp)&&!chAttacked(b,r*8+6,opp))add(r*8+6,{cs:'k'});
+          if(p.cas.includes(Q)&&!b[r*8+3]&&!b[r*8+2]&&!b[r*8+1]&&!chAttacked(b,r*8+3,opp)&&!chAttacked(b,r*8+2,opp))add(r*8+2,{cs:'q'});}}}
+    else{const D=t==='b'?[[1,1],[1,-1],[-1,1],[-1,-1]]:t==='r'?[[1,0],[-1,0],[0,1],[0,-1]]:[[1,1],[1,-1],[-1,1],[-1,-1],[1,0],[-1,0],[0,1],[0,-1]];
+      for(const[dx,dy]of D){let xx=x+dx,yy=y+dy;while(xx>=0&&xx<8&&yy>=0&&yy<8){const to=yy*8+xx;if(b[to]){if(chColor(b[to])===opp)add(to);break;}add(to);xx+=dx;yy+=dy;}}}}
+  return ms;}
+function chMake(p,m){const b=p.b.slice(),pc=b[m.f],col=chColor(pc);let cas=p.cas;
+  b[m.t]=m.pr?(col==='w'?m.pr.toUpperCase():m.pr):pc;b[m.f]='';
+  if(m.ep)b[m.t+(col==='w'?8:-8)]='';
+  if(m.cs){const r=col==='w'?7:0;if(m.cs==='k'){b[r*8+5]=b[r*8+7];b[r*8+7]='';}else{b[r*8+3]=b[r*8];b[r*8]='';}}
+  if(pc==='K')cas=cas.replace(/[KQ]/g,'');if(pc==='k')cas=cas.replace(/[kq]/g,'');
+  for(const[sq,c]of[[63,'K'],[56,'Q'],[7,'k'],[0,'q']])if(m.f===sq||m.t===sq)cas=cas.replace(c,'');
+  return {b,turn:col==='w'?'b':'w',cas,ep:m.dbl?(m.f+m.t)/2:-1};}
+function chLegal(p){const col=p.turn,opp=col==='w'?'b':'w';return chPseudo(p,col).filter(m=>{const n=chMake(p,m);return !chAttacked(n.b,n.b.indexOf(col==='w'?'K':'k'),opp);});}
+function chInCheck(p){const opp=p.turn==='w'?'b':'w';return chAttacked(p.b,p.b.indexOf(p.turn==='w'?'K':'k'),opp);}
+function chEval(b){let s=0;for(let i=0;i<64;i++){const pc=b[i];if(!pc)continue;const t=pc.toLowerCase(),x=i%8,y=i>>3;let v=CH_VAL[t];
+    if(t==='p')v+=(pc==='P'?6-y:y-1)*8;if(t==='n'||t==='b')v+=12-(Math.abs(3.5-x)+Math.abs(3.5-y))*3;s+=pc===pc.toUpperCase()?v:-v;}return s;}
+function chSearch(p,d,a,bb){if(!d)return chEval(p.b);const ms=chLegal(p);if(!ms.length)return chInCheck(p)?(p.turn==='w'?-99999-d:99999+d):0;
+  ms.sort((m1,m2)=>(p.b[m2.t]?CH_VAL[p.b[m2.t].toLowerCase()]:0)-(p.b[m1.t]?CH_VAL[p.b[m1.t].toLowerCase()]:0));
+  if(p.turn==='w'){let v=-1e9;for(const m of ms){v=Math.max(v,chSearch(chMake(p,m),d-1,a,bb));a=Math.max(a,v);if(a>=bb)break;}return v;}
+  let v=1e9;for(const m of ms){v=Math.min(v,chSearch(chMake(p,m),d-1,a,bb));bb=Math.min(bb,v);if(a>=bb)break;}return v;}
+function chAI(){const p=CH.pos,ms=chLegal(p);let best=null,bv=1e9;
+  for(const m of ms.sort(()=>rand()-.5)){const v=chSearch(chMake(p,m),2,-1e9,1e9);if(v<bv){bv=v;best=m;}}return best;}
+function chDo(m){const cap=!!CH.pos.b[m.t]||m.ep;CH.pos=chMake(CH.pos,m);CH.last=m;CH.sel=-1;cap?sfx.bossHit():sfx.tick();
+  const ms=chLegal(CH.pos);if(!ms.length)CH.over=chInCheck(CH.pos)?(CH.pos.turn==='w'?'b':'w'):'draw';else if(chInCheck(CH.pos))sfx.deny();
+  if(CH.over){CH.over==='draw'?sfx.ui():(CH.mode==='ai'&&CH.over==='b'?sfx.bad():sfx.win());if(CH.mode==='ai'&&CH.over==='w')exBest('chessWins',(exBest('chessWins')||0)+1);}
+  chDraw();
+  if(!CH.over&&CH.mode==='ai'&&CH.pos.turn==='b'){CH.busy=true;chDraw();setTimeout(()=>{if(!CH||CH.pos.turn!=='b')return;const m2=chAI();CH.busy=false;if(m2)chDo(m2);},250);}}
+function chClick(i){if(!CH||CH.over||CH.busy)return;const p=CH.pos,pc=p.b[i];if(CH.mode==='ai'&&p.turn!=='w')return;
+  if(CH.sel>=0){const m=chLegal(p).find(x=>x.f===CH.sel&&x.t===i);if(m)return chDo(m);}
+  CH.sel=pc&&chColor(pc)===p.turn?i:-1;if(CH.sel>=0)sfx.pop();chDraw();}
+function chessRender(){if(!CH)chNew('ai');
+  exEl().innerHTML=`<div class="msTop"><button class="btn ${CH.mode==='ai'?'on':''}" id="chAi">🤖 ${L('Tietokonetta vastaan','vs computer')}</button><button class="btn ${CH.mode==='2p'?'on':''}" id="ch2p">👥 ${L('2 pelaajaa','2 players')}</button><button class="btn" id="chNew">🔄 ${L('Uusi peli','New game')}</button></div>
+   <p id="chMsg" style="margin:.2em 0;min-height:1.2em"></p><div class="exBoardWrap"><div id="chBoard" class="exBoard"></div></div>
+   <p class="lbNote" style="margin:.2em 0">${L('Valitse nappula ja sitten ruutu. Sotilas korotetaan automaattisesti kuningattareksi.','Pick a piece, then a square. Pawns promote to a queen automatically.')} · 🏆 ${L('Voitot konetta vastaan','Wins vs computer')}: <b>${exBest('chessWins')||0}</b></p>`;
+  bind('chAi',()=>{chNew('ai');chessRender();});bind('ch2p',()=>{chNew('2p');chessRender();});bind('chNew',()=>{sfx.ui();chNew();chessRender();});
+  const g=$('#chBoard');g.innerHTML=Array.from({length:64},(_,i)=>`<button class="exSq ${((i%8)+(i>>3))%2?'dk':'lt'}" data-i="${i}"></button>`).join('');
+  g.querySelectorAll('.exSq').forEach(e=>e.onclick=()=>{initAudio();chClick(+e.dataset.i);});chDraw();}
+function chDraw(){const g=$('#chBoard');if(!g||!CH)return;const p=CH.pos,tg=CH.sel>=0?chLegal(p).filter(m=>m.f===CH.sel).map(m=>m.t):[],chk=chInCheck(p)?p.b.indexOf(p.turn==='w'?'K':'k'):-1;
+  [...g.children].forEach((e,i)=>{const pc=p.b[i];e.innerHTML=pc?`<span class="pc ${chColor(pc)}">${CH_GLYPH[pc.toLowerCase()]}︎</span>`:'';
+    e.classList.toggle('sel',i===CH.sel);e.classList.toggle('tg',tg.includes(i));e.classList.toggle('cap',tg.includes(i)&&!!pc);
+    e.classList.toggle('lm',!!CH.last&&(CH.last.f===i||CH.last.t===i));e.classList.toggle('chk',i===chk);});
+  const W=L('Valkoinen','White'),B=L('Musta','Black');
+  $('#chMsg').innerHTML=CH.over?(CH.over==='draw'?`🤝 ${L('Patti – tasapeli!','Stalemate – draw!')}`:`<span class="good">🏆 ${L('Shakkimatti!','Checkmate!')} ${CH.over==='w'?W:B} ${L('voitti','wins')}</span>`)
+    :CH.busy?`🤖 ${L('Kone miettii…','Computer thinking…')}`:`${p.turn==='w'?'⚪ '+W:'⚫ '+B} ${L('siirtää','to move')}${chk>=0?` · <span class="bad">${L('SHAKKI!','CHECK!')}</span>`:''}`;}
+
+/* ===== TAMMI ===== */
+let CK=null;
+function ckNew(mode){const b=Array(64).fill('');for(let i=0;i<64;i++){const x=i%8,y=i>>3;if((x+y)%2){if(y<3)b[i]='b';else if(y>4)b[i]='w';}}
+  CK={mode:mode||(CK&&CK.mode)||'ai',b,turn:'w',sel:-1,path:[],over:'',busy:false,last:[]};}
+function ckSeqs(b,col){
+  const opp=col==='w'?'b':'w',isK=pc=>pc===pc.toUpperCase(),own=pc=>pc&&pc.toLowerCase()===col,foe=pc=>pc&&pc.toLowerCase()===opp,res=[],caps=[];
+  const fw=col==='w'?-1:1;
+  for(let s=0;s<64;s++){const pc=b[s];if(!own(pc))continue;
+    const jump=(bb,at,path,taken,king)=>{let any=false;const x=at%8,y=at>>3;
+      for(const[dx,dy]of[[1,1],[1,-1],[-1,1],[-1,-1]]){const mx=x+dx,my=y+dy,tx=x+2*dx,ty=y+2*dy;if(tx<0||tx>7||ty<0||ty>7)continue;
+        const mid=my*8+mx,to=ty*8+tx;if(foe(bb[mid])&&!taken.includes(mid)&&!bb[to]){any=true;const nb=bb.slice();nb[to]=nb[at];nb[at]='';
+          const promo=!king&&(ty===(col==='w'?0:7));if(promo)caps.push({path:[...path,to],taken:[...taken,mid]});else jump(nb,to,[...path,to],[...taken,mid],king);}}
+      if(!any&&taken.length)caps.push({path,taken});};
+    jump(b,s,[s],[],isK(pc));
+    const x=s%8,y=s>>3;for(const[dx,dy]of[[1,1],[1,-1],[-1,1],[-1,-1]]){if(!isK(pc)&&dy!==fw)continue;const tx=x+dx,ty=y+dy;if(tx<0||tx>7||ty<0||ty>7)continue;if(!b[ty*8+tx])res.push({path:[s,ty*8+tx],taken:[]});}}
+  return caps.length?caps:res;}
+function ckApply(b,mv){const nb=b.slice(),f=mv.path[0],t=mv.path[mv.path.length-1];let pc=nb[f];nb[f]='';mv.taken.forEach(i=>nb[i]='');
+  const ty=t>>3;if(pc==='w'&&ty===0)pc='W';if(pc==='b'&&ty===7)pc='B';nb[t]=pc;return nb;}
+function ckEval(b){let s=0;for(const pc of b){if(pc==='w')s+=10;else if(pc==='W')s+=17;else if(pc==='b')s-=10;else if(pc==='B')s-=17;}return s;}
+function ckSearch(b,col,d,a,bb){const ms=ckSeqs(b,col);if(!ms.length)return col==='w'?-999-d:999+d;if(!d)return ckEval(b);const nx=col==='w'?'b':'w';
+  if(col==='w'){let v=-1e9;for(const m of ms){v=Math.max(v,ckSearch(ckApply(b,m),nx,d-1,a,bb));a=Math.max(a,v);if(a>=bb)break;}return v;}
+  let v=1e9;for(const m of ms){v=Math.min(v,ckSearch(ckApply(b,m),nx,d-1,a,bb));bb=Math.min(bb,v);if(a>=bb)break;}return v;}
+function ckDo(mv){CK.b=ckApply(CK.b,mv);CK.last=mv.path;CK.sel=-1;CK.path=[];mv.taken.length?sfx.bossHit():sfx.tick();CK.turn=CK.turn==='w'?'b':'w';
+  if(!ckSeqs(CK.b,CK.turn).length){CK.over=CK.turn==='w'?'b':'w';(CK.mode==='ai'&&CK.over==='b')?sfx.bad():sfx.win();if(CK.mode==='ai'&&CK.over==='w')exBest('ckWins',(exBest('ckWins')||0)+1);}
+  ckDraw();
+  if(!CK.over&&CK.mode==='ai'&&CK.turn==='b'){CK.busy=true;ckDraw();setTimeout(()=>{if(!CK||CK.turn!=='b')return;const ms=ckSeqs(CK.b,'b');let best=null,bv=1e9;
+    for(const m of ms.sort(()=>rand()-.5)){const v=ckSearch(ckApply(CK.b,m),'w',3,-1e9,1e9);if(v<bv){bv=v;best=m;}}CK.busy=false;if(best)ckDo(best);},300);}}
+function ckClick(i){if(!CK||CK.over||CK.busy)return;if(CK.mode==='ai'&&CK.turn!=='w')return;const ms=ckSeqs(CK.b,CK.turn);
+  if(CK.path.length){const pre=[...CK.path,i],mt=ms.filter(m=>pre.every((s,k)=>m.path[k]===s));
+    if(mt.length){CK.path=pre;const done=mt.find(m=>m.path.length===pre.length);if(done&&mt.length===1)return ckDo(done);if(done&&mt.every(m=>m.path.length===pre.length))return ckDo(done);sfx.pop();return ckDraw();}}
+  CK.path=ms.some(m=>m.path[0]===i)?[i]:[];CK.sel=CK.path.length?i:-1;if(CK.sel<0&&CK.b[i]&&CK.b[i].toLowerCase()===CK.turn&&ms[0]&&ms[0].taken.length){toast(L('Lyönti on pakollinen!','Capturing is mandatory!'));sfx.deny();}else if(CK.sel>=0)sfx.pop();ckDraw();}
+function ckRender(){if(!CK)ckNew('ai');
+  exEl().innerHTML=`<div class="msTop"><button class="btn ${CK.mode==='ai'?'on':''}" id="ckAi">🤖 ${L('Tietokonetta vastaan','vs computer')}</button><button class="btn ${CK.mode==='2p'?'on':''}" id="ck2p">👥 ${L('2 pelaajaa','2 players')}</button><button class="btn" id="ckNew">🔄 ${L('Uusi peli','New game')}</button></div>
+   <p id="ckMsg" style="margin:.2em 0;min-height:1.2em"></p><div class="exBoardWrap"><div id="ckBoard" class="exBoard"></div></div>
+   <p class="lbNote" style="margin:.2em 0">${L('Nappulat liikkuvat vinottain eteenpäin ja lyövät hyppäämällä (myös taaksepäin). Lyönti on pakollinen ja useamman voi lyödä putkeen. Päätyrivillä nappulasta tulee kuningas 👑.','Pieces move diagonally forward and capture by jumping (also backwards). Capturing is mandatory and you can chain jumps. Reach the far row to become a king 👑.')} · 🏆 ${L('Voitot','Wins')}: <b>${exBest('ckWins')||0}</b></p>`;
+  bind('ckAi',()=>{ckNew('ai');ckRender();});bind('ck2p',()=>{ckNew('2p');ckRender();});bind('ckNew',()=>{sfx.ui();ckNew();ckRender();});
+  const g=$('#ckBoard');g.innerHTML=Array.from({length:64},(_,i)=>`<button class="exSq ${((i%8)+(i>>3))%2?'dk ck':'lt ck'}" data-i="${i}"></button>`).join('');
+  g.querySelectorAll('.exSq').forEach(e=>e.onclick=()=>{initAudio();ckClick(+e.dataset.i);});ckDraw();}
+function ckDraw(){const g=$('#ckBoard');if(!g||!CK)return;const ms=CK.over?[]:ckSeqs(CK.b,CK.turn),pre=CK.path;
+  const tg=pre.length?ms.filter(m=>pre.every((s,k)=>m.path[k]===s)&&m.path.length>pre.length).map(m=>m.path[pre.length]):[];
+  const movable=CK.mode==='ai'&&CK.turn==='b'?[]:[...new Set(ms.map(m=>m.path[0]))];
+  [...g.children].forEach((e,i)=>{const pc=CK.b[i];e.innerHTML=pc?`<span class="ckp ${pc.toLowerCase()}">${pc===pc.toUpperCase()?'👑':''}</span>`:'';
+    e.classList.toggle('sel',pre.includes(i));e.classList.toggle('tg',tg.includes(i));e.classList.toggle('mv',!pre.length&&movable.includes(i));e.classList.toggle('lm',CK.last.includes(i));});
+  const W=L('Valkoinen','White'),B=L('Musta','Black');
+  $('#ckMsg').innerHTML=CK.over?`<span class="good">🏆 ${CK.over==='w'?W:B} ${L('voitti!','wins!')}</span>`:CK.busy?`🤖 ${L('Kone miettii…','Computer thinking…')}`:`${CK.turn==='w'?'⚪ '+W:'⚫ '+B} ${L('siirtää','to move')}${ms[0]&&ms[0].taken.length?` · <span class="bad">${L('lyö!','must capture!')}</span>`:''}`;}
+
+/* ===== POKERI (videopokeri, Jacks or Better) ===== */
+let PK=null;
+const PK_PAY=[['royal',['Kuningasvärisuora','Royal flush'],250],['sflush',['Värisuora','Straight flush'],50],['four',['Neloset','Four of a kind'],25],['full',['Täyskäsi','Full house'],9],['flush',['Väri','Flush'],6],['straight',['Suora','Straight'],4],['three',['Kolmoset','Three of a kind'],3],['two',['Kaksi paria','Two pair'],2],['jacks',['Jätkäpari tai parempi','Jacks or better'],1]];
+const PK_KEY='farmikoulu-pokeri';
+function pkInit(){if(PK)return;let cr=100;try{const v=+localStorage.getItem(PK_KEY);if(v>0)cr=v;}catch(e){}PK={cr,bet:1,hand:[],hold:[false,false,false,false,false],phase:'bet',deck:[],res:null,win:0};}
+function pkSave(){try{localStorage.setItem(PK_KEY,String(PK.cr));}catch(e){}}
+function pkDeck(){const d=[];for(const s of'♠♥♦♣')for(let r=2;r<=14;r++)d.push({r,s});for(let i=d.length-1;i>0;i--){const j=Math.floor(rand()*(i+1));[d[i],d[j]]=[d[j],d[i]];}return d;}
+function pkEval(h){const rs=h.map(c=>c.r).sort((a,b)=>a-b),cnt={};rs.forEach(r=>cnt[r]=(cnt[r]||0)+1);const v=Object.values(cnt).sort((a,b)=>b-a);
+  const flush=h.every(c=>c.s===h[0].s),uniq=v.length===5,wheel=rs.join()==='2,3,4,5,14',straight=uniq&&(rs[4]-rs[0]===4||wheel);
+  if(straight&&flush)return rs[0]===10?'royal':'sflush';if(v[0]===4)return 'four';if(v[0]===3&&v[1]===2)return 'full';if(flush)return 'flush';if(straight)return 'straight';
+  if(v[0]===3)return 'three';if(v[0]===2&&v[1]===2)return 'two';if(v[0]===2){const pr=+Object.keys(cnt).find(k=>cnt[k]===2);if(pr>=11)return 'jacks';}return null;}
+const pkRank=r=>({11:'J',12:'Q',13:'K',14:'A'})[r]||String(r);
+function pkDeal(){if(PK.phase==='draw')return pkDraw();if(PK.cr<PK.bet){sfx.deny();return toast(L('Ei tarpeeksi pelimerkkejä.','Not enough credits.'));}
+  PK.cr-=PK.bet;PK.deck=pkDeck();PK.hand=PK.deck.splice(0,5);PK.hold=[false,false,false,false,false];PK.phase='draw';PK.res=null;PK.win=0;
+  const pre=pkEval(PK.hand);if(pre)PK.hold=pkAutoHold(PK.hand,pre);pkSave();sfx.pop();pkDraw2();}
+function pkAutoHold(h,res){if(['royal','sflush','four','full','flush','straight'].includes(res))return [true,true,true,true,true];
+  const cnt={};h.forEach(c=>cnt[c.r]=(cnt[c.r]||0)+1);return h.map(c=>cnt[c.r]>=2);}
+function pkDraw(){PK.hand=PK.hand.map((c,i)=>PK.hold[i]?c:PK.deck.shift());const res=pkEval(PK.hand);PK.res=res;
+  const row=PK_PAY.find(p=>p[0]===res);PK.win=row?(res==='royal'&&PK.bet===5?4000:row[2]*PK.bet):0;PK.cr+=PK.win;PK.phase='bet';pkSave();
+  PK.win?(PK.win>=PK.bet*6?sfx.win():sfx.ok()):sfx.bad();if(PK.win)exBest('pokerBest',PK.win);pkDraw2();}
+function pkRender(){pkInit();
+  exEl().innerHTML=`<table class="lb pkPay" id="pkPay"></table>
+   <div class="pkHand" id="pkHand"></div><p id="pkMsg" style="margin:.2em 0;min-height:1.3em"></p>
+   <div class="msBar"><span>💰 <b id="pkCr"></b></span><button class="btn" id="pkBetBtn">${L('Panos','Bet')}: <b id="pkBet"></b></button><button class="btn" id="pkMax">${L('Max','Max')}</button><button class="btn big" id="pkDeal"></button></div>
+   <p class="lbNote" style="margin:.2em 0">${L('Jaa kortit, napauta pidettäviä kortteja ja vaihda loput. Voitto tulee vähintään jätkäparista.','Deal, tap the cards you want to hold and draw the rest. Jacks or better wins.')} · 🏅 ${L('Suurin voitto','Biggest win')}: <b>${exBest('pokerBest')||0}</b></p>`;
+  bind('pkBetBtn',()=>{if(PK.phase==='draw')return;PK.bet=PK.bet%5+1;sfx.ui();pkDraw2();});
+  bind('pkMax',()=>{if(PK.phase==='draw')return;PK.bet=5;sfx.ui();pkDraw2();});
+  bind('pkDeal',()=>{if(PK.cr<=0&&PK.phase==='bet'){PK.cr=100;pkSave();sfx.ok();toast(L('💰 Sait 100 uutta pelimerkkiä!','💰 You got 100 new credits!'));return pkDraw2();}pkDeal();});
+  pkDraw2();}
+function pkDraw2(){if(!$('#pkHand'))return;
+  $('#pkPay').innerHTML=PK_PAY.map(p=>`<tr class="${PK.res===p[0]&&PK.phase==='bet'?'me':''}"><td>${L2(p[1])}</td><td class="r">${p[0]==='royal'&&PK.bet===5?4000:p[2]*PK.bet}</td></tr>`).join('');
+  $('#pkHand').innerHTML=(PK.hand.length?PK.hand:Array(5).fill(null)).map((c,i)=>c?`<button class="pkC ${'♥♦'.includes(c.s)?'red':''} ${PK.hold[i]?'held':''}" data-i="${i}"><b>${pkRank(c.r)}</b><span>${c.s}</span>${PK.hold[i]&&PK.phase==='draw'?`<em>${L('PIDÄ','HOLD')}</em>`:''}</button>`:`<button class="pkC back" disabled>🥔</button>`).join('');
+  $('#pkHand').querySelectorAll('.pkC[data-i]').forEach(e=>e.onclick=()=>{if(PK.phase!=='draw')return;const i=+e.dataset.i;PK.hold[i]=!PK.hold[i];sfx.tick();pkDraw2();});
+  $('#pkCr').textContent=PK.cr;$('#pkBet').textContent=PK.bet;
+  $('#pkDeal').textContent=PK.phase==='draw'?L('Vaihda ▶','Draw ▶'):PK.cr<=0?L('💰 Uudet pelimerkit','💰 New credits'):L('Jaa ▶','Deal ▶');
+  const row=PK_PAY.find(p=>p[0]===PK.res);
+  $('#pkMsg').innerHTML=PK.phase==='draw'?L('Valitse pidettävät kortit','Choose the cards to hold'):PK.hand.length?(PK.win?`<span class="good">🎉 ${L2(row[1])}! +${PK.win}</span>`:`<span class="bad">${L('Ei voittoa','No win')}</span>`):L('Paina Jaa','Press Deal');}
+
+/* ===== AJOPELI ===== */
+let RC=null,raceRAF=0;
+const RC_W=160,RC_H=220,RC_LANES=[44,80,116];
+function raceStop(){if(raceRAF)cancelAnimationFrame(raceRAF);raceRAF=0;removeEventListener('keydown',raceKey,true);removeEventListener('keyup',raceKey,true);}
+function raceKey(e){if(!exOn('race'))return raceStop();const k=e.key.toLowerCase();if(!['arrowleft','arrowright','a','d','arrowup','w',' '].includes(k))return;
+  e.preventDefault();e.stopPropagation();if(e.type==='keydown'){if(k===' '||k==='arrowup'||k==='w'){if(RC.phase!=='play')raceStart();return;}RC.keys[k]=1;}else delete RC.keys[k];}
+function raceNew(){RC={phase:'ready',x:80,speed:60,dist:0,coins:0,cars:[],items:[],spawn:1,keys:{},t:0,road:0,shake:0};}
+function raceStart(){raceNew();RC.phase='play';sfx.ui();}
+function raceRender(){raceNew();
+  exEl().innerHTML=`<div class="msBar"><span>📏 <b id="rcD">0</b> m</span><span>🪙 <b id="rcC">0</b></span><span>🏅 <b>${exBest('raceBest')||0}</b> m</span></div>
+   <canvas id="rcCv" width="${RC_W}" height="${RC_H}"></canvas>
+   <div class="rcCtl"><button class="btn" id="rcL">◀</button><button class="btn big" id="rcGo">${L('Aja! 🏁','Drive! 🏁')}</button><button class="btn" id="rcR">▶</button></div>
+   <p class="lbNote" style="margin:.2em 0">${isPhone()?L('Pidä ◀ ▶ pohjassa ohjataksesi.','Hold ◀ ▶ to steer.'):L('Ohjaa nuolilla tai A/D. Välilyönti = aloita.','Steer with arrows or A/D. Space = start.')} ${L('Vauhti kasvaa koko ajan!','The speed keeps rising!')}</p>`;
+  bind('rcGo',raceStart);
+  const hold=(id,k)=>{const b=$('#'+id);const on=e=>{e.preventDefault();if(RC)RC.keys[k]=1;},off=()=>{if(RC)delete RC.keys[k];};
+    b.addEventListener('pointerdown',on);['pointerup','pointerleave','pointercancel'].forEach(t=>b.addEventListener(t,off));};
+  hold('rcL','arrowleft');hold('rcR','arrowright');
+  addEventListener('keydown',raceKey,true);addEventListener('keyup',raceKey,true);
+  let last=performance.now();const fr=now=>{if(!exOn('race'))return raceStop();const dt=Math.min(.05,(now-last)/1000);last=now;raceUpdate(dt);raceDraw();raceRAF=requestAnimationFrame(fr);};raceRAF=requestAnimationFrame(fr);}
+function raceUpdate(dt){const r=RC;r.t+=dt;if(r.shake>0)r.shake-=dt;if(r.phase!=='play')return;
+  r.speed=Math.min(260,60+r.dist*.12);const dy=r.speed*dt;r.dist+=dy/4;r.road=(r.road+dy)%24;
+  const dir=(r.keys.arrowright||r.keys.d?1:0)-(r.keys.arrowleft||r.keys.a?1:0);r.x=Math.max(30,Math.min(130,r.x+dir*(70+r.speed*.35)*dt));
+  r.spawn-=dt;if(r.spawn<=0){r.spawn=Math.max(.38,1.25-r.dist/900)*(.7+rand()*.6);const lane=pick(RC_LANES);
+    if(rand()<.22)r.items.push({x:lane,y:-10});else r.cars.push({x:lane,y:-24,v:20+rand()*40,c:pick(['#e8435a','#4fa3e8','#b97ae8','#f0a030','#3fae5a'])});}
+  for(const c of r.cars)c.y+=dy-c.v*dt;for(const it of r.items)it.y+=dy;
+  r.cars=r.cars.filter(c=>c.y<RC_H+30);r.items=r.items.filter(it=>!it.got&&it.y<RC_H+20);
+  const py=RC_H-34;
+  for(const it of r.items)if(Math.abs(it.x-r.x)<12&&Math.abs(it.y-py-8)<14){it.got=true;r.coins++;r.dist+=25;tone({f:1320,d:.08,v:.12,type:'square'});}
+  for(const c of r.cars)if(Math.abs(c.x-r.x)<13&&Math.abs(c.y-py)<22){r.phase='crash';r.shake=.5;sfx.bossHit();noise({d:.5,v:.4,f:400});
+    const sc=Math.floor(r.dist);if(exBest('raceBest',sc)){r.rec=true;setTimeout(()=>{if(exOn('race'))toast(L(`🏅 Uusi ennätys: ${sc} m!`,`🏅 New record: ${sc} m!`));},200);}break;}
+  const d=$('#rcD'),c=$('#rcC');if(d)d.textContent=Math.floor(r.dist);if(c)c.textContent=r.coins;}
+function rcCar(g,x,y,col,me){x=Math.round(x-8);y=Math.round(y);R(g,x+1,y,14,22,'#1a1a1a');R(g,x+2,y+1,12,20,col);R(g,x+4,y+4,8,5,me?'#bfe8ff':'#9ad0ff');R(g,x+4,y+14,8,4,'#7ab0d8');
+  R(g,x,y+3,2,5,'#111');R(g,x+14,y+3,2,5,'#111');R(g,x,y+15,2,5,'#111');R(g,x+14,y+15,2,5,'#111');if(me){R(g,x+3,y,2,1,'#fff6a0');R(g,x+11,y,2,1,'#fff6a0');R(g,x+7,y+10,2,3,'#fff');}else{R(g,x+3,y+21,2,1,'#ff3030');R(g,x+11,y+21,2,1,'#ff3030');}}
+function raceDraw(){const c=$('#rcCv');if(!c||!RC)return;const g=c.getContext('2d'),r=RC;g.imageSmoothingEnabled=false;g.save();
+  if(r.shake>0)g.translate(ri(-2,2),ri(-2,2));
+  R(g,0,0,RC_W,RC_H,'#4f9a3a');for(let y=-24;y<RC_H;y+=24){R(g,4,y+r.road,6,6,'#3f7f2c');R(g,148,y+r.road+12,6,6,'#3f7f2c');}
+  R(g,24,0,112,RC_H,'#555b63');R(g,22,0,2,RC_H,'#fff');R(g,136,0,2,RC_H,'#fff');
+  for(let y=-24;y<RC_H;y+=24){R(g,61,y+r.road,2,12,'#e8e8e8');R(g,97,y+r.road,2,12,'#e8e8e8');}
+  for(const it of r.items){R(g,it.x-4,it.y,8,8,'#b8860b');R(g,it.x-3,it.y+1,6,6,'#ffd34d');R(g,it.x-1,it.y+2,2,4,'#fff6a0');}
+  for(const cc of r.cars)rcCar(g,cc.x,cc.y,cc.c,false);
+  rcCar(g,r.x,RC_H-34,'#ffd34d',true);
+  if(r.phase==='crash'){for(let i=0;i<12;i++)R(g,r.x-10+ri(0,20),RC_H-34+ri(0,22),2,2,pick(['#ff9a30','#ffd34d','#ff3030']));}
+  g.restore();
+  if(r.phase!=='play'){g.fillStyle='rgba(0,0,0,.55)';g.fillRect(0,80,RC_W,58);g.fillStyle='#fff3d0';g.textAlign='center';g.font='10px "Press Start 2P",monospace';
+    g.fillText(r.phase==='crash'?L('KOLARI!','CRASH!'):L('VALMIINA?','READY?'),RC_W/2,102);g.font='7px "Press Start 2P",monospace';
+    g.fillText(r.phase==='crash'?`${Math.floor(r.dist)} m${r.rec?' · '+L('ENNÄTYS!','RECORD!'):''}`:L('Paina Aja!','Press Drive!'),RC_W/2,122);}
+  const b=$('#rcGo');if(b)b.textContent=r.phase==='play'?'🏁 '+Math.round(r.speed)+' km/h':r.phase==='crash'?L('Uudestaan 🔄','Again 🔄'):L('Aja! 🏁','Drive! 🏁');}
+
 async function admRenderUsers(){
   const body=$('#admBody');
   try{
