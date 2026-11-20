@@ -236,6 +236,9 @@ body.phone #admBody{--ms:min(30px,calc((100vw - 70px)/9))}
 body.phone #srT{font-size:11px}body.phone #srS{font-size:8px}
 .setRow{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;text-align:left;padding:.35em .2em;border-bottom:2px dashed #d9bf8a}
 .setRow.trk{flex-direction:column;align-items:stretch}.trkBtns{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}.trkBtns .btn{font-size:.8em;padding:.1em .45em}
+.slots{display:grid;gap:6px;margin:.3em 0;font-size:.78em}.slot3{background:#fff8e6;border:3px solid var(--wood2);box-shadow:0 3px 0 var(--wood2);padding:.4em .6em;text-align:left}
+.slot3.empty{background:#f3e7c6;opacity:.9}.slHead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}.slHead small{opacity:.7;font-size:.75em}
+.slInfo{font-size:.8em;margin:.2em 0}.slBtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:.3em}.slBtns .btn.big{font-size:1em;padding:.1em .7em}
 .setRow small{display:block;opacity:.75;font-size:.8em}.setRow input[type=range]{width:150px}
 @keyframes shake{20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
 @media (max-width:560px){.opts{grid-template-columns:1fr}#hud{font-size:18px;gap:4px 8px}#coll{flex-basis:100%;gap:3px}.slot{width:36px;height:32px}.slot canvas{max-width:30px}#stats{flex:1}.ib{width:31px;height:30px;font-size:16px}#bLang{font-size:8px}}
@@ -394,7 +397,7 @@ const MEL=("G4 G4 B4 D5 E5 D5 B4 G4 A4 A4 C5 E5 D5 C5 B4 A4 G4 G4 B4 D5 G5 E5 D5
 const BASS=['G2','A2','G2','D2','D2','C2','G2','D2'];
 const STEP=.19;
 const FARM_TRACK={mel:MEL,bass:BASS,step:STEP};
-const GAME_VERSION='v53 · 20.11.2026';
+const GAME_VERSION='v54 · 20.11.2026';
 const farmTrack=()=>FARM_TRACK;
 const BOSS_TRACK={step:.15,bass:['E2','A2','E2','B1','G2','C2','G2','B1'],
   mel:("E4 E4 G4 E4 B4 A4 G4 F#4 E4 E4 G4 E4 C5 B4 A4 B4 E4 E4 G4 E4 B4 A4 G4 F#4 G4 F#4 E4 D4 E4 - E4 - "+
@@ -1239,12 +1242,12 @@ function showTitle(){
   <canvas id="parade" width="160" height="26"></canvas>
   ${pickerHTML()}
   <div class="row">${has?`<button class="btn big" id="tCont">▶ ${L('Jatka peliä','Continue')}</button><button class="btn" id="tNew">${L('Uusi peli','New game')}</button>`:`<button class="btn big" id="tNew">▶ ${L('Aloita peli','Start game')}</button>`}
-  <button class="btn" id="tHelp">${L('Ohjeet','How to play')}</button><button class="btn" id="tBoard">🏆 ${L('Tulostaulu','Leaderboard')}</button><button class="btn" id="tSet">⚙️ ${L('Asetukset','Settings')}</button></div>
+  <button class="btn" id="tHelp">${L('Ohjeet','How to play')}</button><button class="btn" id="tBoard">🏆 ${L('Tulostaulu','Leaderboard')}</button><button class="btn" id="tSet">⚙️ ${L('Asetukset','Settings')}</button>${ACC?`<button class="btn" id="tSlots">💾 ${L('Tallennukset','Saves')}</button>`:''}</div>
   <p class="credit">${L('Tekijä','Made by')}: <b>leetu1234</b></p>`);
   bindPicker();
   const ni=$('#pName');ni.addEventListener('input',()=>{settings.name=cleanName(ni.value);saveSettings();});
   ni.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();($('#tCont')||$('#tNew')).click();}});
-  bind('tBoard',()=>showBoard(showTitle));bind('tSet',()=>showSettings(showTitle));
+  bind('tBoard',()=>showBoard(showTitle));bind('tSet',()=>showSettings(showTitle));bind('tSlots',()=>showSlots(showTitle));
   bind('aOut',logout);bind('adOpen',showAdmin);bind('adHome',()=>switchToAccount(ADMIN_ID));
   const pin=$('#pPin');
   const doLogin=async()=>{const m=$('#aMsg'),btn=$('#aIn');if(btn)btn.disabled=true;if(m)m.textContent=L('Kirjaudutaan…','Logging in…');
@@ -1256,7 +1259,7 @@ function showTitle(){
     if(!ACC){needLogin();return;}
     const nm=cleanName(ni.value);if(!nm){needName();return;}
     if(has&&!b.dataset.sure){b.dataset.sure=1;b.textContent=L('Varmasti? Edistys nollataan','Sure? Progress will be reset');return;}
-    state=freshState(pendingLevel);state.sr=!!settings.speedrun;state.srSplits={};srFlash=[];state.name=ACC?ACC.name:nm;settings.name=nm;saveSettings();state.unlocked78=pendingLevel===78;bossRise=0;rebuildAnimals();updateHUD();save();P.x=150;P.y=100;started=true;closeModal();sfx.ui();
+    {const ks=state.slots;state=freshState(pendingLevel);if(ks)state.slots=ks;}state.sr=!!settings.speedrun;state.srSplits={};srFlash=[];state.name=ACC?ACC.name:nm;settings.name=nm;saveSettings();state.unlocked78=pendingLevel===78;bossRise=0;rebuildAnimals();updateHUD();save();P.x=150;P.y=100;started=true;closeModal();sfx.ui();
     setTimeout(()=>toast(isPhone()?L('Kävele ❗-merkin luo ja paina ✋!','Walk to a ❗ sign and press ✋!'):L('Kävele ❗-merkin luo ja paina E!','Walk to a ❗ sign and press E!')),300);});
   bind('tHelp',showHelp);
 }
@@ -1680,7 +1683,7 @@ function showWin(){
   if(lastSr){const r=lastSr,el=$('#lbLine');if(el)el.insertAdjacentHTML('afterend',`<p class="fact">⚡ Speedrun: <b>${fmtMs(r.t)}</b>${r.cheated?` · ${L('apukomennot käytössä – ei ennätystä','cheats used – no PB')}`:r.newPB?` · <b class="good">🏅 ${L('UUSI ENNÄTYS!','NEW PB!')}</b>${r.pb!=null?` (${fmtDiff(r.t-r.pb)})`:''}`:` · PB ${fmtMs(r.pb)} (${fmtDiff(r.t-r.pb)})`}</p>`);}
   if(lastRun)lastRun.then(r=>{const el=$('#lbLine');if(!el||!r)return;el.innerHTML=`⏱️ ${L('Aikasi','Your time')}: <b>${fmtClock(r.time)}</b> · ${L('sijoitus','rank')} <b>#${r.rank}</b> ${r.shared?L('tulostaululla','on the leaderboard'):L('tällä laitteella','on this device')}${r.best?' 🏅':''}`;});
   bind('wCont',closeModal);bind('wAgain',startFight);bind('wFarm',()=>{closeModal();goFarm(2);});
-  bind('wNew',()=>{state=freshState(state.level);state.sr=!!settings.speedrun;state.srSplits={};srFlash=[];bossRise=0;rebuildAnimals();updateHUD();save();P.x=150;P.y=100;closeModal();});
+  bind('wNew',()=>{{const ks=state.slots;state=freshState(state.level);if(ks)state.slots=ks;}state.sr=!!settings.speedrun;state.srSplits={};srFlash=[];bossRise=0;rebuildAnimals();updateHUD();save();P.x=150;P.y=100;closeModal();});
 }
 function drawParade(){
   const c=$('#parade');if(!c)return;const g=c.getContext('2d');g.imageSmoothingEnabled=false;g.clearRect(0,0,160,26);
@@ -2267,6 +2270,39 @@ async function pinHash(id,pin,salt){
   return [...new Uint8Array(bits)].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 const packState=()=>JSON.parse(JSON.stringify(state));
+/* ---------- TALLENNUKSET: 3 lempipeliä talteen ja myöhemmin pelattavaksi ---------- */
+// Tallennukset kulkevat pelaajan oman tallennuksen mukana (state.slots), joten ne näkyvät joka laitteella.
+const SLOT_SKIP=['slots','control','robot','dev','updated','owner'];
+function slotSnap(){const o={};for(const k in state)if(!SLOT_SKIP.includes(k))o[k]=state[k];return JSON.parse(JSON.stringify(o));}
+function slotSummary(sv){const n=ANIMALS.filter(a=>(sv.owned||{})[a.id]).length;
+  return `🐾 ${n}/6 · 📚 ${esc(levelName(sv.level||5))} · 🚜 ${L('farmi','farm')} ${sv.farm===2?2:1} · ⏱️ ${fmtClock(sv.time||0)}${sv.boss==='beaten'?' · 👑✅':''}${sv.farm2?` · 🌻 ${Object.keys(sv.crops||{}).length}/6`:''}`;}
+function showSlots(back){
+  if(!ACC){needLogin();return;}state.slots=state.slots||[null,null,null];
+  const fmtD=t=>{const d=new Date(t);return d.toLocaleDateString(settings.lang==='en'?'en-GB':'fi-FI')+' '+d.toLocaleTimeString(settings.lang==='en'?'en-GB':'fi-FI',{hour:'2-digit',minute:'2-digit'});};
+  openModal('board',`<h2>💾 ${L('Tallennukset – 3 lempipeliäsi','Saves – your 3 favourite games')}</h2>
+  <p class="lbNote" style="margin:.2em 0">${L('Tallenna nykyinen peli paikkaan ja jatka sitä myöhemmin. Tallennukset kulkevat käyttäjäsi mukana joka laitteelle.','Save the current game to a slot and continue it later. Saves follow your account to every device.')}</p>
+  <p class="lbNote" style="margin:.1em 0">${L('Nyt pelissä','Now playing')}: ${slotSummary(state)}</p>
+  <div class="slots">${state.slots.map((sl,i)=>`<div class="slot3 ${sl?'':'empty'}" data-s="${i}">
+    <div class="slHead"><b>${i+1}. ${sl?esc(sl.name):L('Tyhjä paikka','Empty slot')}</b>${sl?`<small>${fmtD(sl.at)}</small>`:''}</div>
+    ${sl?`<div class="slInfo">${slotSummary(sl.snap)}</div>`:''}
+    <div class="slBtns">${sl?`<button class="btn big" data-a="load">▶ ${L('Pelaa','Play')}</button>`:''}<button class="btn" data-a="save">💾 ${sl?L('Korvaa nykyisellä','Overwrite'):L('Tallenna tähän','Save here')}</button>${sl?`<button class="btn" data-a="ren" title="${L('Nimeä','Rename')}">✏️</button><button class="btn" data-a="del" title="${L('Poista','Delete')}">🗑️</button>`:''}</div></div>`).join('')}</div>
+  <div class="row"><button class="btn big" id="slBack">${L('Takaisin','Back')}</button></div>`);
+  bind('slBack',()=>{sfx.ui();back?back():closeModal();});
+  panel.querySelectorAll('.slot3').forEach(card=>{const i=+card.dataset.s;card.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{initAudio();const a=b.dataset.a,sl=state.slots[i];
+    const doSave=()=>{const nm=sl?sl.name:L(`Peli ${i+1}`,`Game ${i+1}`);state.slots[i]={name:nm,at:Date.now(),snap:slotSnap()};save();sfx.ok();toast(L(`💾 Tallennettu paikkaan ${i+1}!`,`💾 Saved to slot ${i+1}!`));showSlots(back);};
+    if(a==='save'){if(sl)sureClick(b,doSave);else doSave();}
+    else if(a==='load'){if(robotForced()){sfx.deny();return toast(L('🔒 Perunaattori 2000 -taistelu pitää käydä ensin!','🔒 You must fight Perunaattori 2000 first!'));}
+      const go=()=>{const keep={slots:state.slots,owner:state.owner,name:state.name,robot:state.robot,control:state.control};
+        state=Object.assign(freshState(),JSON.parse(JSON.stringify(sl.snap)),keep);if(!state.crops)state.crops={};state.sr=false;
+        rebuildAnimals();bossRise=bossOnFarm()?1:0;stoneRise=1;pendingLevel=state.level;if(state.farm===2){P.x=160;P.y=112;}else{P.x=150;P.y=100;}
+        nearSt=null;save();updateHUD();closeModal();started=true;sfx.fanfare();toast(L(`▶ Ladattiin ”${sl.name}”. Hauskaa peliä!`,`▶ Loaded “${sl.name}”. Have fun!`));};
+      if(hasProgress())sureClick(b,go);else go();}
+    else if(a==='del')sureClick(b,()=>{state.slots[i]=null;save();sfx.ui();showSlots(back);});
+    else if(a==='ren'){const h=card.querySelector('.slHead');h.innerHTML=`<input class="nameIn" maxlength="20" value="${esc(sl.name)}"><button class="btn" data-ok>OK</button>`;
+      const inp=h.querySelector('input');inp.focus();inp.select();const ok=()=>{const v=inp.value.trim().slice(0,20);if(v)sl.name=v;save();sfx.ok();showSlots(back);};
+      h.querySelector('[data-ok]').onclick=ok;inp.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')ok();});}
+  });});
+}
 function applySave(sv){
   syncBase=(sv&&sv.updated)||0;
   state=Object.assign(freshState(),sv);if(!state.crops)state.crops={};
