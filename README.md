@@ -41,10 +41,12 @@ Tasot: 5. luokka, 6. luokka ja avattava 7.–8. luokka. Pelin kieleksi voi valit
 
 Pelin voi pelata myös ilman nettiä: lataa `index.html` ja avaa se selaimessa.
 
-Peli on tehty Clauden avulla.
+**Tekijä:** leetu1234. Peli on tehty Clauden avulla.
 
 ---
 
 ## English
 
 **Farmikoulu** ("Farm School") is a retro browser game for grades 5–6. Do school tasks on a 2D farm, earn chests, collect every farm animal and finally beat the Potato Boss. The game is available in Finnish and English. **Play:** https://il3.github.io/farmikoulu/
+
+Made by **leetu1234**.

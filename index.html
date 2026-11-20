@@ -78,6 +78,7 @@ body{display:flex;align-items:center;justify-content:center;min-height:100vh;pad
 .pick .btn{padding:.05em .6em}
 .pick .btn.on{background:#9be07a}
 .redo{font-size:2em;margin:.1em 0}
+.credit{font-size:.8em;opacity:.75;margin:.4em 0 0}
 #cmd{position:absolute;left:0;right:0;bottom:0;z-index:20;background:rgba(10,14,8,.92);border-top:3px solid #6fcf4f;color:#9dff7a;font-size:clamp(15px,2.6cqw,22px);padding:.2em .5em;font-family:'VT323',monospace}
 #cmdLog{max-height:7.5em;overflow:auto;white-space:pre-wrap;line-height:1.1}
 #cmdLog .err{color:#ff8a7a}#cmdLog .me{color:#d8e8d0;opacity:.75}
@@ -859,7 +860,8 @@ function showTitle(){
   <canvas id="parade" width="160" height="26"></canvas>
   ${pickerHTML()}
   <div class="row">${has?`<button class="btn big" id="tCont">▶ ${L('Jatka peliä','Continue')}</button><button class="btn" id="tNew">${L('Uusi peli','New game')}</button>`:`<button class="btn big" id="tNew">▶ ${L('Aloita peli','Start game')}</button>`}
-  <button class="btn" id="tHelp">${L('Ohjeet','How to play')}</button></div>`);
+  <button class="btn" id="tHelp">${L('Ohjeet','How to play')}</button></div>
+  <p class="credit">${L('Tekijä','Made by')}: <b>leetu1234</b></p>`);
   bindPicker();
   bind('tCont',()=>{started=true;closeModal();sfx.ui();});
   bind('tNew',b=>{
