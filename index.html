@@ -109,6 +109,16 @@ body.phone #bossCv{width:min(100%,460px)}body.phone #dodgeCv{width:min(100%,380p
 label.rpick{display:block;text-align:left;padding:.25em .4em;margin:.15em 0;border:2px solid #c9a46a;border-radius:4px;background:#fff8e6;cursor:pointer;font-size:.85em;line-height:1.25}
 label.rpick:has(input:checked){background:#ffe08a;border-color:#8a5a2b}.rcols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 @media (max-width:560px){.rcols{grid-template-columns:1fr}}
+#admBody{--ms:28px}.msTop,.msBar{display:flex;justify-content:center;align-items:center;gap:10px;margin:.25em 0;flex-wrap:wrap}
+.msBar>span{font-family:'Press Start 2P',ui-monospace,monospace;font-size:.75em;background:#2b1d0e;color:#ff5a4a;padding:4px 7px;border:2px solid #8a5a2b}
+#msFace{font-size:1.3em;padding:0 .4em}#msMode.on{background:#ffb0a0}
+.msWrap{overflow:auto;max-width:100%;display:flex;justify-content:center}
+.msGrid{display:grid;gap:0;border:4px solid;border-color:#7b7b7b #fff #fff #7b7b7b;background:#bdbdbd;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.msC{width:var(--ms);height:var(--ms);padding:0;margin:0;font:bold calc(var(--ms)*.6)/1 'Press Start 2P',ui-monospace,monospace;background:#c6c6c6;border:3px solid;border-color:#fff #7b7b7b #7b7b7b #fff;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+.msC.o{border:1px solid #9a9a9a;background:#d9d9d9;cursor:default}.msC.boom{background:#ff4a3a}
+body.phone #admBody{--ms:min(30px,calc((100vw - 70px)/9))}
+#admBody:has(.msGrid[style*="repeat(12"]){--ms:min(26px,calc((100vw - 70px)/12))}
+#admBody:has(.msGrid[style*="repeat(16"]){--ms:min(24px,calc((100vw - 64px)/16))}
 #bLang{font-family:'Press Start 2P',monospace;font-size:10px}
 .lives{letter-spacing:2px;white-space:nowrap}
 .lives .lost{filter:grayscale(1);opacity:.35}
@@ -2444,12 +2454,71 @@ function showAdminPanel(tab){
   if(!isAdmin()){toast(L('Admin-paneeli on vain ylläpitäjälle.','The admin panel is for the admin only.'));return;}
   admTab=tab||admTab;
   openModal('admin',`<h2>👑 ${L('Admin-paneeli','Admin panel')}</h2>
-  <div class="lbTabs"><button class="btn" data-at="users">👥 ${L('Käyttäjät','Users')}</button><button class="btn" data-at="scores">🏆 ${L('Tulostaulu','Leaderboard')}</button><button class="btn" data-at="game">🎮 ${L('Pelitoiminnot','Game tools')}</button><button class="btn" data-at="stats">📊 ${L('Tilastot','Stats')}</button></div>
+  <div class="lbTabs"><button class="btn" data-at="users">👥 ${L('Käyttäjät','Users')}</button><button class="btn" data-at="scores">🏆 ${L('Tulostaulu','Leaderboard')}</button><button class="btn" data-at="game">🎮 ${L('Pelitoiminnot','Game tools')}</button><button class="btn" data-at="stats">📊 ${L('Tilastot','Stats')}</button><button class="btn" data-at="mines">💣 ${L('Miinaharava','Minesweeper')}</button></div>
   <div id="admBody"><p>${L('Ladataan…','Loading…')}</p></div>
   <div class="row"><button class="btn big" id="admClose">${L('Sulje','Close')}</button></div>`);
   panel.querySelectorAll('[data-at]').forEach(b=>{b.classList.toggle('on',b.dataset.at===admTab);b.onclick=()=>{initAudio();showAdminPanel(b.dataset.at);};});
   bind('admClose',()=>{closeModal();if(!started)showTitle();});
-  ({users:admRenderUsers,scores:admRenderScores,game:admRenderGame,stats:admRenderStats})[admTab]();
+  ({users:admRenderUsers,scores:admRenderScores,game:admRenderGame,stats:admRenderStats,mines:admRenderMines})[admTab]();
+}
+/* ---------- MIINAHARAVA (admin-paneelissa) ---------- */
+const MS_LV={easy:{w:9,h:9,m:10,n:['Helppo','Easy']},mid:{w:12,h:12,m:24,n:['Keskitaso','Medium']},hard:{w:16,h:16,m:40,n:['Vaikea','Hard']}};
+let MS=null,msTimer=null;
+const MS_BKEY='farmikoulu-miinaharava';
+function msBest(){try{return JSON.parse(localStorage.getItem(MS_BKEY)||'{}')||{};}catch(e){return {};}}
+function msNew(lv){lv=MS_LV[lv]?lv:(MS&&MS.lv)||'easy';const c=MS_LV[lv];
+  MS={lv,w:c.w,h:c.h,m:c.m,cells:Array.from({length:c.w*c.h},()=>({mine:false,open:false,flag:false,n:0})),first:true,over:false,won:false,t0:0,t:0,flagMode:false,boom:-1};}
+function msPlace(safe){const {w,h,m,cells}=MS,sx=safe%w,sy=Math.floor(safe/w),pool=[];
+  for(let i=0;i<w*h;i++){const x=i%w,y=Math.floor(i/w);if(Math.abs(x-sx)>1||Math.abs(y-sy)>1)pool.push(i);}
+  for(let k=0;k<m&&pool.length;k++){const j=Math.floor(rand()*pool.length);cells[pool.splice(j,1)[0]].mine=true;}
+  for(let i=0;i<w*h;i++)cells[i].n=msNb(i).filter(j=>cells[j].mine).length;}
+function msNb(i){const {w,h}=MS,x=i%w,y=Math.floor(i/w),r=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const nx=x+dx,ny=y+dy;if(nx>=0&&ny>=0&&nx<w&&ny<h)r.push(ny*w+nx);}return r;}
+function msOpen(i){
+  if(!MS||MS.over)return;const c=MS.cells[i];if(c.flag)return;
+  if(MS.first){MS.first=false;msPlace(i);MS.t0=performance.now();}
+  if(c.open){// pikakaivuu: jos ympärillä on yhtä monta lippua kuin numero, avaa loput
+    const nb=msNb(i);if(c.n&&nb.filter(j=>MS.cells[j].flag).length===c.n)nb.forEach(j=>{const d=MS.cells[j];if(!d.open&&!d.flag)msReveal(j);});}
+  else msReveal(i);
+  msCheck();msDraw();}
+function msReveal(i){const st=[i];while(st.length){const k=st.pop(),c=MS.cells[k];if(c.open||c.flag)continue;c.open=true;
+  if(c.mine){MS.over=true;MS.boom=k;MS.t=(performance.now()-MS.t0)/1000;MS.cells.forEach(d=>{if(d.mine)d.open=true;});sfx.bossHit();noise({d:.5,v:.35,f:300});return;}
+  if(!c.n)msNb(k).forEach(j=>{if(!MS.cells[j].open)st.push(j);});}
+  sfx.tick();}
+function msFlag(i){if(!MS||MS.over)return;const c=MS.cells[i];if(c.open)return;c.flag=!c.flag;sfx.pop();msDraw();}
+function msCheck(){if(MS.over)return;if(MS.cells.every(c=>c.mine||c.open)){MS.over=true;MS.won=true;MS.t=(performance.now()-MS.t0)/1000;MS.cells.forEach(c=>{if(c.mine)c.flag=true;});
+  const b=msBest();if(!b[MS.lv]||MS.t<b[MS.lv]){b[MS.lv]=MS.t;MS.rec=true;try{localStorage.setItem(MS_BKEY,JSON.stringify(b));}catch(e){}}sfx.win();}}
+const MS_COL=['','#1f5fd1','#2a8a2a','#d1281f','#14217a','#7a1f14','#147a75','#222','#777'];
+function msDraw(){
+  const g=$('#msGrid');if(!g||!MS)return;const flags=MS.cells.filter(c=>c.flag).length;
+  $('#msLeft').textContent=String(Math.max(-99,MS.m-flags)).padStart(3,'0');
+  $('#msFace').textContent=MS.won?'😎':MS.over?'😵':'🙂';
+  $('#msMode').classList.toggle('on',MS.flagMode);
+  g.style.gridTemplateColumns=`repeat(${MS.w},var(--ms))`;
+  if(g.children.length!==MS.w*MS.h){g.innerHTML=MS.cells.map((_,i)=>`<button class="msC" data-i="${i}"></button>`).join('');msBindCells();}
+  MS.cells.forEach((c,i)=>{const e=g.children[i];e.className='msC'+(c.open?' o':'')+(i===MS.boom?' boom':'');
+    e.textContent=c.open?(c.mine?'💣':(c.n||'')):c.flag?(MS.over&&!c.mine?'❌':'🚩'):'';e.style.color=c.open&&!c.mine?MS_COL[c.n]:'';});
+  const m=$('#msMsg');if(m)m.innerHTML=MS.won?`<span class="good">🎉 ${L('Voitit!','You won!')} ${MS.t.toFixed(1)} s${MS.rec?' · 🏅 '+L('uusi ennätys!','new record!'):''}</span>`:MS.over?`<span class="bad">💥 ${L('Osuit miinaan!','You hit a mine!')}</span>`:'';
+}
+function msBindCells(){$('#msGrid').querySelectorAll('.msC').forEach(e=>{const i=+e.dataset.i;let lp=null,lpDone=false;
+  e.onclick=()=>{if(lpDone){lpDone=false;return;}initAudio();MS.flagMode?msFlag(i):msOpen(i);};
+  e.oncontextmenu=ev=>{ev.preventDefault();msFlag(i);};
+  e.addEventListener('pointerdown',ev=>{if(ev.pointerType!=='touch')return;lpDone=false;lp=setTimeout(()=>{lpDone=true;msFlag(i);if(navigator.vibrate)navigator.vibrate(20);},420);});
+  ['pointerup','pointerleave','pointercancel'].forEach(t=>e.addEventListener(t,()=>clearTimeout(lp)));});}
+function admRenderMines(){
+  if(!MS)msNew('easy');const best=msBest();
+  $('#admBody').innerHTML=`<div class="msTop">${Object.entries(MS_LV).map(([k,v])=>`<button class="btn ${MS.lv===k?'on':''}" data-ml="${k}">${L2(v.n)}</button>`).join('')}</div>
+   <div class="msBar"><span>💣 <b id="msLeft">000</b></span><button class="btn" id="msFace" title="${L('Uusi peli','New game')}">🙂</button><span>⏱️ <b id="msTime">0</b></span></div>
+   <div class="msWrap"><div id="msGrid" class="msGrid"></div></div>
+   <div class="msBar"><button class="btn" id="msMode">🚩 ${L('Lippu-tila','Flag mode')}</button><span class="lbNote" style="margin:0">🏅 ${L('Ennätys','Best')}: <b>${best[MS.lv]!=null?best[MS.lv].toFixed(1)+' s':'–'}</b></span></div>
+   <p id="msMsg" style="margin:.2em 0;min-height:1.2em"></p>
+   <p class="lbNote" style="margin:0">${isPhone()?L('Napauta = avaa · pitkä painallus tai 🚩-tila = lippu · napauta numeroa = avaa ympäriltä','Tap = open · long press or 🚩 mode = flag · tap a number = open around it'):L('Vasen klikkaus = avaa · oikea klikkaus = lippu · klikkaa numeroa = avaa ympäriltä','Left click = open · right click = flag · click a number = open around it')}</p>`;
+  $('#msGrid').innerHTML='';
+  $('#admBody').querySelectorAll('[data-ml]').forEach(b=>b.onclick=()=>{initAudio();sfx.ui();msNew(b.dataset.ml);admRenderMines();});
+  bind('msFace',()=>{sfx.ui();msNew(MS.lv);msDraw();});
+  bind('msMode',()=>{MS.flagMode=!MS.flagMode;sfx.ui();msDraw();});
+  msDraw();clearInterval(msTimer);
+  msTimer=setInterval(()=>{const t=$('#msTime');if(!t||admTab!=='mines'||modalType!=='admin'){clearInterval(msTimer);return;}
+    t.textContent=MS.first?0:Math.min(999,Math.floor(MS.over?MS.t:(performance.now()-MS.t0)/1000));},250);
 }
 async function admRenderUsers(){
   const body=$('#admBody');
