@@ -16,6 +16,7 @@ Retrotyylinen selainpeli 3.–6.-luokkalaisille. Tee koulutehtäviä 2D-farmilla
 - Jokaisessa arkussa on **1 eläin**: sorsa, possu, kana, lehmä, lammas tai peruna. Ilman yhtään virhettä saat kultaisen arkun, josta tulee useammin uusi eläin.
 - Kun sinulla on kaikki eläimet, pellolta nousee **Perunapomo**. Pomotaistelussa jokaisessa kysymyksessä on 20 sekunnin aikaraja. Voita pomo, niin voitat pelin!
 - Alussa valitaan **pelaajanimi**, ja peliaika näkyy yläpalkissa. Kun Perunapomo kaatuu ensimmäisen kerran, aika tallentuu **tulostauluun** (🏆), jossa näkyvät nopeimmat suoritukset. GitHub Pagesissa tulostaulu tallentuu laitteelle.
+- Claude-julkaisussa voi kirjautua **nimellä ja PIN-koodilla**, jolloin pelin voi jatkaa millä tahansa laitteella. GitHub Pagesissa peli tallentuu laitteelle.
 - Jokaisesta pomovoitosta ladosta tulee hopeaperuna, ja pomon voi haastaa uusintaotteluun.
 - Perunapomon voitettuasi pääset **seuraavalle farmille**, jossa on yksi iso lato ja paljon peltoa. Siellä arkuista tulee kasveja: vehnä, porkkana, kurpitsa, mansikka, maissi ja auringonkukka. Kasvata kaikki pellot täyteen!
 - Kun olet tehnyt tehtävän jokaisella pisteellä, farmin keskelle ilmestyy salaperäinen kivi, josta tehtävät voi nostaa 7.–8. luokan tasolle.
