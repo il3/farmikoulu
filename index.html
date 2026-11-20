@@ -263,7 +263,7 @@ SPR.apple=makeSprite(["..g.",".rr.","rrrr","rrrr",".rr."],{g:'#3f9a3f',r:'#d6332
 /* ---------- ÄÄNET ---------- */
 let AC=null,master,musicGain,sfxGain,NB=null,musTimer=null,musStep=0,musNext=0;
 const SKEY='farmikoulu-v1',OKEY='farmikoulu-asetukset';
-let settings={music:true,sfx:true,lang:'fi',device:null,name:''};
+let settings={music:true,sfx:true,lang:'fi',device:null,name:'',admin:null};
 try{const s=JSON.parse(localStorage.getItem(OKEY));if(s)settings=Object.assign(settings,s);}catch(e){}
 function saveSettings(){try{localStorage.setItem(OKEY,JSON.stringify(settings));}catch(e){}}
 function initAudio(){
@@ -1107,7 +1107,8 @@ function bind(id,fn){const e=document.getElementById(id);if(e)e.onclick=()=>{ini
 function pickerHTML(){
   return `<div class="pick">${L('Kieli','Language')}:
     <button class="btn ${settings.lang==='fi'?'on':''}" id="pFi">Suomi</button><button class="btn ${settings.lang==='en'?'on':''}" id="pEn">English</button></div>
-  ${ACC?`<div class="pick">👤 ${L('Kirjautunut','Logged in')}: <b>${esc(ACC.name)}</b> ☁️ <button class="btn" id="aOut">${L('Kirjaudu ulos','Log out')}</button><input type="hidden" id="pName" value="${esc(ACC.name)}"></div>`
+  ${ACC?`<div class="pick">👤 ${L('Kirjautunut','Logged in')}: <b>${esc(ACC.name)}</b> ${isAdmin()?'👑':'☁️'} <button class="btn" id="aOut">${L('Kirjaudu ulos','Log out')}</button><input type="hidden" id="pName" value="${esc(ACC.name)}"></div>
+  ${isAdmin()?`<div class="pick"><button class="btn" id="adOpen">👑 ${L('Vaihda käyttäjää','Switch user')}</button>${ADMIN?`<button class="btn" id="adHome">↩ ${L('Palaa käyttäjään','Back to')} leetu1234</button>`:''}</div>`:''}`
   :`<div class="pick">👤 ${L('Pelaajanimi','Player name')}: <input class="nameIn" id="pName" maxlength="16" autocomplete="username" spellcheck="false" placeholder="${L('Kirjoita nimi','Type a name')}" value="${esc(settings.name||state.name||'')}"></div>
   ${SDB?`<div class="pick">🔑 PIN: <input class="nameIn pinIn" id="pPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="current-password" placeholder="4–6 ${L('numeroa','digits')}"><button class="btn" id="aIn">${L('Kirjaudu / luo käyttäjä','Log in / sign up')}</button></div>
   <p class="lbNote" id="aMsg" style="margin:0">${L('Sama nimi + PIN = sama peli millä tahansa laitteella.','Same name + PIN = same game on any device.')}</p>`:''}`}
@@ -1140,7 +1141,7 @@ function showTitle(){
   const ni=$('#pName');ni.addEventListener('input',()=>{settings.name=cleanName(ni.value);saveSettings();});
   ni.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();($('#tCont')||$('#tNew')).click();}});
   bind('tBoard',()=>showBoard(showTitle));
-  bind('aOut',logout);
+  bind('aOut',logout);bind('adOpen',showAdmin);bind('adHome',()=>switchToAccount(ADMIN_ID));
   const pin=$('#pPin');
   const doLogin=async()=>{const m=$('#aMsg'),btn=$('#aIn');if(btn)btn.disabled=true;if(m)m.textContent=L('Kirjaudutaan…','Logging in…');
     const r=await login(ni.value,pin.value);if(!$('#aMsg'))return;
@@ -1888,7 +1889,10 @@ const dbReady=(async()=>{try{if(!(window.claude&&claude.use))return null;const [
   if(!d||!u)return null;const id=await u.id();if(!id)return null;SDB=d;ME=id;return d;}catch(e){return null;}})();
 /* ---------- KÄYTTÄJÄ: NIMI + PIN (yhteinen tallennus, toimii Claude-julkaisussa) ----------
    PIN suojaa vain vahingoilta: tallennus on jaettu kaikkien pelaajien kesken, eikä se ole oikea tietoturvajärjestelmä. */
-let ACC=null,cloudTimer=0,cloudBusy=false,cloudDirty=false;
+let ACC=null,ADMIN=null,cloudTimer=0,cloudBusy=false,cloudDirty=false;
+// Ylläpitäjä: käyttäjä leetu1234. PIN-koodia ei ole koodissa selväkielisenä, vain sen tiiviste.
+const ADMIN_ID='leetu1234',ADMIN_SALT='admin-v1',ADMIN_HASH='d2d3c49bb6022d67e1b1d8012442544eca41656c2f9ba383a5f3d3443c80ce84';
+const isAdmin=()=>!!ADMIN||(ACC&&ACC.id===ADMIN_ID&&ACC.hash===ADMIN_HASH);
 const accId=n=>cleanName(n).toLowerCase().replace(/[åä]/g,'a').replace(/ö/g,'o').replace(/[^a-z0-9_-]+/g,'_').replace(/^_+|_+$/g,'').slice(0,24);
 async function pinHash(id,pin,salt){
   const enc=new TextEncoder(),key=await crypto.subtle.importKey('raw',enc.encode(pin),'PBKDF2',false,['deriveBits']);
@@ -1910,6 +1914,16 @@ async function login(name,pin){
     if(!id)return {ok:false,msg:L('Kirjoita ensin pelaajanimi.','Type a player name first.')};
     if(!/^\d{4,6}$/.test(pin||''))return {ok:false,msg:L('PIN-koodissa pitää olla 4–6 numeroa.','The PIN must be 4–6 digits.')};
     const ref=d.doc('accounts/'+id),snap=await ref.get();
+    if(id===ADMIN_ID){
+      const h=await pinHash(id,pin,ADMIN_SALT);
+      if(h!==ADMIN_HASH)return {ok:false,msg:L('Väärä PIN-koodi tälle nimelle.','Wrong PIN for this name.')};
+      const a=snap.exists?snap.data():null;
+      ACC={id,name:'leetu1234',hash:h,salt:ADMIN_SALT};ADMIN=null;
+      if(a&&a.save)applySave(a.save);state.name=ACC.name;
+      await ref.set({name:ACC.name,pinHash:h,salt:ADMIN_SALT,save:packState(),updated:Date.now()});
+      settings.account={id,name:ACC.name,hash:h,salt:ADMIN_SALT};settings.admin=null;settings.name=ACC.name;saveSettings();
+      return {ok:true,msg:L('👑 Tervetuloa, ylläpitäjä leetu1234!','👑 Welcome, admin leetu1234!')};
+    }
     if(snap.exists){
       const a=snap.data(),h=await pinHash(id,pin,a.salt);
       if(h!==a.pinHash)return {ok:false,msg:L('Väärä PIN-koodi tälle nimelle.','Wrong PIN for this name.')};
@@ -1926,7 +1940,7 @@ async function login(name,pin){
   }catch(e){return {ok:false,msg:L('Kirjautuminen epäonnistui. Yritä hetken päästä uudelleen.','Login failed. Try again in a moment.')};}
 }
 function logout(){
-  flushCloud();ACC=null;settings.account=null;saveSettings();
+  flushCloud();ACC=null;ADMIN=null;settings.account=null;settings.admin=null;saveSettings();
   toast(L('Kirjauduit ulos. Peli tallentuu nyt vain tälle laitteelle.','Logged out. The game now saves on this device only.'));if(modalType==='title')showTitle();
 }
 // Pilvitallennus: korkeintaan kerran 3 sekunnissa, yksi kirjoitus kerrallaan.
@@ -1944,6 +1958,7 @@ dbReady.then(async d=>{
   const acc=settings.account;
   if(acc&&acc.id){try{
     const snap=await d.doc('accounts/'+acc.id).get();
+    if(settings.admin&&settings.admin.hash===ADMIN_HASH)ADMIN={...settings.admin};
     if(snap.exists&&snap.data().pinHash===acc.hash){
       const a=snap.data();ACC={id:acc.id,name:cleanName(a.name)||acc.name,hash:acc.hash,salt:a.salt};
       if(a.save&&(a.save.updated||a.updated||0)>(state.updated||0)){applySave(a.save);toast(L('☁️ Edistys ladattu pilvestä.','☁️ Progress loaded from the cloud.'));}
@@ -1952,6 +1967,42 @@ dbReady.then(async d=>{
   }catch(e){}}
   if(modalType==='title')showTitle();
 });
+// ---- Ylläpitäjän käyttäjänvaihto ----
+async function switchToAccount(id){
+  const d=SDB;if(!d||!isAdmin())return;
+  try{
+    await flushCloud();
+    const snap=await d.doc('accounts/'+id).get();if(!snap.exists){toast(L('Käyttäjää ei löytynyt.','User not found.'));return;}
+    const a=snap.data();
+    if(!ADMIN&&ACC&&ACC.id===ADMIN_ID)ADMIN={...ACC};
+    if(id===ADMIN_ID){ADMIN=null;}
+    ACC={id,name:cleanName(a.name)||id,hash:a.pinHash,salt:a.salt};
+    if(a.save)applySave(a.save);else{applySave(Object.assign(freshState(),{name:ACC.name}));}
+    state.name=ACC.name;
+    settings.account={id,name:ACC.name,hash:a.pinHash,salt:a.salt};settings.admin=ADMIN?{...ADMIN}:null;saveSettings();
+    sfx.ok();toast(id===ADMIN_ID?L('👑 Palasit omaan käyttäjääsi.','👑 Back to your own user.'):L(`👑 Olet nyt käyttäjänä ${ACC.name}.`,`👑 You are now playing as ${ACC.name}.`));
+    showTitle();
+  }catch(e){toast(L('Vaihto epäonnistui.','Switch failed.'));}
+}
+async function showAdmin(){
+  if(!isAdmin()||!SDB)return;
+  openModal('board',`<h2>👑 ${L('Ylläpito – vaihda käyttäjää','Admin – switch user')}</h2>
+  <p class="lbNote">${L('Valitse käyttäjä, jonka peliin haluat siirtyä. Muutokset tallentuvat sen käyttäjän peliin.','Pick the user whose game you want to enter. Changes are saved to that user’s game.')}</p>
+  <div id="lbBody"><p>${L('Ladataan…','Loading…')}</p></div>
+  <div class="row"><button class="btn big" id="adBack">${L('Takaisin','Back')}</button></div>`);
+  bind('adBack',showTitle);
+  try{
+    const all=await Promise.race([SDB.collection('accounts').limit(500).get(),new Promise((_,j)=>setTimeout(()=>j(new Error('t')),10000))]);
+    const body=$('#lbBody');if(!body)return;
+    const rows=all.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>(b.updated||0)-(a.updated||0));
+    if(!rows.length){body.innerHTML=`<p>${L('Ei vielä käyttäjiä.','No users yet.')}</p>`;return;}
+    body.innerHTML=`<table class="lb"><tr><th>${L('Käyttäjä','User')}</th><th>${L('Eläimet','Animals')}</th><th>${L('Pomo','Boss')}</th><th>${L('Päivitetty','Updated')}</th><th></th></tr>`+
+      rows.map(r=>{const sv=r.save||{},n=ANIMALS.filter(a=>(sv.owned||{})[a.id]).length,cur=ACC&&ACC.id===r.id;
+        return `<tr class="${cur?'me':''}"><td>${r.id===ADMIN_ID?'👑 ':''}${esc(cleanName(r.name)||r.id)}</td><td>${n}/6</td><td>${sv.boss==='beaten'?'✅':'–'}</td><td>${esc(shortDate(new Date(r.updated||0).toISOString()))}</td>
+        <td>${cur?L('nyt','now'):`<button class="btn" data-sw="${esc(r.id)}" style="font-size:.85em;padding:0 .5em">${L('Vaihda','Switch')}</button>`}</td></tr>`;}).join('')+'</table>';
+    body.querySelectorAll('[data-sw]').forEach(b=>b.onclick=()=>{initAudio();switchToAccount(b.dataset.sw);});
+  }catch(e){const body=$('#lbBody');if(body)body.innerHTML=`<p class="lbNote">${L('Käyttäjälistaa ei saatu ladattua.','Couldn’t load the user list.')}</p>`;}
+}
 async function submitScore(){
   if(state.cheated)return null;
   const rec={name:state.name||'?',time:Math.round(state.time||0),level:state.level,date:new Date().toISOString().slice(0,10)};
