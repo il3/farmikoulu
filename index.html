@@ -141,6 +141,11 @@ body.phone #bossCv,body.phone #dodgeCv{width:min(100%,460px)}
 .panel.admin .lbTabs{flex-wrap:wrap;gap:.3em}.panel.admin .lbTabs .btn{font-size:.85em;padding:.05em .5em}
 .panel.admin .admGrid .btn{font-size:.85em;padding:.1em .4em}
 .panel.admin h2{margin:.2em 0 .4em}
+.adminName{color:#d6201a;font-weight:bold;text-shadow:0 0 1px rgba(214,32,26,.35)}
+#ctrlBan{position:absolute;left:50%;bottom:4%;transform:translateX(-50%);z-index:12;background:#2b1d0e;color:#fff3d0;border:3px solid #d6201a;box-shadow:0 0 0 3px #2b1d0e,0 0 14px rgba(214,32,26,.7);
+  padding:.15em .8em;font-family:'Press Start 2P',monospace;font-size:clamp(9px,1.7cqw,15px);white-space:nowrap;pointer-events:none;animation:ctrlPulse 1.2s ease-in-out infinite}
+#ctrlBan .adminName{color:#ff5a4f}
+@keyframes ctrlPulse{50%{box-shadow:0 0 0 3px #2b1d0e,0 0 4px rgba(214,32,26,.3)}}
 .credit{font-size:.8em;opacity:.75;margin:.4em 0 0}
 #cmd{position:absolute;left:0;right:0;bottom:0;z-index:20;background:rgba(10,14,8,.92);border-top:3px solid #6fcf4f;color:#9dff7a;font-size:clamp(15px,2.6cqw,22px);padding:.2em .5em;font-family:'VT323',monospace}
 #cmdLog{max-height:7.5em;overflow:auto;white-space:pre-wrap;line-height:1.1}
@@ -209,6 +214,7 @@ body.phone #bossCv,body.phone #dodgeCv{width:min(100%,460px)}
     <canvas id="cv" width="320" height="208"></canvas>
     <div id="prompt" hidden></div>
     <div id="toast"></div>
+    <div id="ctrlBan" hidden>👑 <span class="adminName">leetu</span> is now on control</div>
     <div id="cmd" hidden><div id="cmdLog"></div><div class="cmdrow"><span>&gt;</span><input id="cmdIn" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Komento"><button id="cmdX" title="Sulje">✕</button></div></div>
     <div id="tirppa" hidden></div>
     <div id="modal" class="overlay" hidden><div class="panel" id="panel"></div></div>
@@ -1031,7 +1037,7 @@ const BG2=buildBG2();
 /* ---------- TILA ---------- */
 function freshState(level){return {owned:{},tasks:0,correct:0,answered:0,last:null,dup:0,won:false,chests:0,restarts:0,level:level||5,boss:'none',bossTries:0,doneSt:[],stone:false,unlocked78:false,farm:1,farm2:false,crops:{},dup2:0,farm2Done:false,name:'',time:0,cheated:false};}
 function loadState(){try{const s=JSON.parse(localStorage.getItem(SKEY));if(s&&s.owned)return Object.assign(freshState(),s);}catch(e){}return null;}
-function save(){state.updated=Date.now();state.dev=devId();try{localStorage.setItem(SKEY,JSON.stringify(state));}catch(e){}if(typeof cloudSave==='function')cloudSave();}
+function save(){if(typeof inOthersGame==='function'&&inOthersGame()&&state.control)state.control.at=Date.now();state.updated=Date.now();state.dev=devId();try{localStorage.setItem(SKEY,JSON.stringify(state));}catch(e){}if(typeof cloudSave==='function')cloudSave();}
 let state=loadState()||freshState();
 const allAnimals=()=>ANIMALS.every(a=>state.owned[a.id]);
 if(allAnimals()&&state.boss!=='beaten')state.boss='awake';
@@ -1088,7 +1094,7 @@ function updateHUD(){
   goldSlot.hidden=!state.golden||f2;goldSlot.title=L2(ANIM.kulta.name);
   ANIMALS.forEach(a=>{const n=state.owned[a.id]||0;a.slot.classList.toggle('miss',!n);a.cnt.textContent=n>1?'×'+n:'';a.slot.title=n?L2(a.name):L('??? – vielä löytämättä','??? – not found yet');});
   $('#stTasks').textContent='📝 '+state.tasks;
-  updateTimeHUD();
+  updateTimeHUD();if(typeof renderControl==='function')renderControl();
   {const ab=$('#bAdmin');if(ab)ab.hidden=!(typeof isAdmin==='function'&&isAdmin());}
   {const w=$('#stWho');if(w){w.hidden=!(ADMIN&&ACC);if(ADMIN&&ACC){w.textContent='👑→'+ACC.name;w.title=L('Ylläpitäjä pelaa tämän pelaajan peliä','Admin is playing this player’s game');}}}
   $('#stAcc').textContent='✔ '+(state.answered?Math.round(state.correct/state.answered*100)+' %':'–');
@@ -1132,7 +1138,7 @@ function bind(id,fn){const e=document.getElementById(id);if(e)e.onclick=()=>{ini
 function pickerHTML(){
   return `<div class="pick">${L('Kieli','Language')}:
     <button class="btn ${settings.lang==='fi'?'on':''}" id="pFi">Suomi</button><button class="btn ${settings.lang==='en'?'on':''}" id="pEn">English</button></div>
-  ${ACC?`<div class="pick">👤 ${L('Kirjautunut','Logged in')}: <b>${esc(ACC.name)}</b> ${isAdmin()?'👑':'☁️'} <button class="btn" id="aOut">${L('Kirjaudu ulos','Log out')}</button><input type="hidden" id="pName" value="${esc(ACC.name)}"></div>
+  ${ACC?`<div class="pick">👤 ${L('Kirjautunut','Logged in')}: <b>${nameHTML(ACC.name,ACC.id)}</b> ${isAdmin()?'👑':'☁️'} <button class="btn" id="aOut">${L('Kirjaudu ulos','Log out')}</button><input type="hidden" id="pName" value="${esc(ACC.name)}"></div>
   ${isAdmin()?`<div class="pick"><button class="btn" id="adOpen">👑 ${L('Admin-paneeli','Admin panel')}</button>${ADMIN?`<button class="btn" id="adHome">↩ ${L('Palaa käyttäjään','Back to')} leetu1234</button>`:''}</div>`:''}`
   :`<div class="pick">👤 ${L('Pelaajanimi','Player name')}: <input class="nameIn" id="pName" maxlength="16" autocomplete="username" spellcheck="false" placeholder="${L('Kirjoita nimi','Type a name')}" value="${esc(settings.name||state.name||'')}"></div>
   ${ACCDB?`<div class="pick">🔑 PIN: <input class="nameIn pinIn" id="pPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="current-password" placeholder="4–6 ${L('numeroa','digits')}"><button class="btn" id="aIn">${L('Kirjaudu / luo käyttäjä','Log in / sign up')}</button></div>
@@ -1919,10 +1925,12 @@ addEventListener('resize',()=>{if(nearSt)renderPrompt();});
 
 const SECRET_PX={x:104,y:199,armed:true};
 /* ---------- PELAAJANIMI JA TULOSTAULU ---------- */
+// leetu1234:n nimi näkyy punaisena kaikkialla
+const nameHTML=(n,id)=>{const c=cleanName(n)||id||'?';return (id===ADMIN_ID||c.toLowerCase()==='leetu1234')?`<span class="adminName">${esc(c)}</span>`:esc(c);};
 const cleanName=v=>String(v||'').replace(/[<>"&]/g,'').replace(/\s+/g,' ').trim().slice(0,16);
 const fmtClock=t=>{t=Math.floor(t);const h=Math.floor(t/3600),m=Math.floor(t%3600/60),sec=t%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(sec).padStart(2,'0');};
 function updateTimeHUD(){const el=$('#stTime');if(el){el.textContent='⏱️ '+fmtClock(state.time||0);el.title=L('Peliaika (tulostaulua varten)','Play time (for the leaderboard)');}}
-setInterval(()=>{if(started)updateTimeHUD();},1000);
+setInterval(()=>{if(started)updateTimeHUD();renderControl();},1000);
 function needLogin(){
   sfx.deny();const ni=$('#pName'),pn=$('#pPin');
   if(!ACCDB){toast(L('Hetki, ladataan…','One moment, loading…'));return;}
@@ -2020,7 +2028,7 @@ async function login(name,pin){
   }catch(e){return {ok:false,msg:L('Kirjautuminen epäonnistui. Yritä hetken päästä uudelleen.','Login failed. Try again in a moment.')};}
 }
 function logout(){
-  flushCloud();ACC=null;ADMIN=null;settings.account=null;settings.admin=null;settings.name='';saveSettings();
+  releaseControl();flushCloud();ACC=null;ADMIN=null;settings.account=null;settings.admin=null;settings.name='';saveSettings();
   state=freshState(state.level);try{localStorage.setItem(SKEY,JSON.stringify(state));}catch(e){}rebuildAnimals();bossRise=0;started=false;updateHUD();
   toast(L('Kirjauduit ulos. Peli tallentuu nyt vain tälle laitteelle.','Logged out. The game now saves on this device only.'));if(modalType==='title')showTitle();
 }
@@ -2098,7 +2106,24 @@ ACCS.then(async d=>{
   if(modalType==='title')showTitle();
 });
 // ---- Ylläpitäjän käyttäjänvaihto ----
+// ---- Haltuunotto-ilmoitus: "leetu is now on control" ----
+const CONTROL_TTL=15*60*1000;
+function inOthersGame(){return !!(ADMIN&&ACC&&ACC.id!==ADMIN_ID);}
+function controlActive(){const c=state.control;return !!(c&&c.by&&Date.now()-(c.at||0)<CONTROL_TTL);}
+function renderControl(){const b=$('#ctrlBan');if(b)b.hidden=!controlActive();}
+function releaseControl(){if(inOthersGame()&&state.control){state.control=null;save();}}
+function takeControl(){
+  if(!inOthersGame()||settings.announce===false)return;
+  state.control={by:ADMIN_ID,at:Date.now()};save();renderControl();
+  toast('👑 leetu is now on control');
+}
 async function switchToAccount(id){
+  releaseControl();
+  await switchToAccountRaw(id);
+  if(id!==ADMIN_ID)takeControl();
+  renderControl();
+}
+async function switchToAccountRaw(id){
   const d=ACCDB;if(!d||!isAdmin())return;
   if(SUPA){try{
     await flushCloud();
@@ -2145,7 +2170,7 @@ async function showAdminOld(){
     if(!rows.length){body.innerHTML=`<p>${L('Ei vielä käyttäjiä.','No users yet.')}</p>`;return;}
     body.innerHTML=`<table class="lb"><tr><th>${L('Käyttäjä','User')}</th><th>${L('Eläimet','Animals')}</th><th>${L('Pomo','Boss')}</th><th>${L('Päivitetty','Updated')}</th><th></th></tr>`+
       rows.map(r=>{const sv=r.save||{},n=ANIMALS.filter(a=>(sv.owned||{})[a.id]).length,cur=ACC&&ACC.id===r.id;
-        return `<tr class="${cur?'me':''}"><td>${r.id===ADMIN_ID?'👑 ':''}${esc(cleanName(r.name)||r.id)}</td><td>${n}/6</td><td>${sv.boss==='beaten'?'✅':'–'}</td><td>${r.updated?esc(shortDate(new Date(r.updated).toISOString())):'–'}</td>
+        return `<tr class="${cur?'me':''}"><td>${r.id===ADMIN_ID?'👑 ':''}${nameHTML(r.name,r.id)}</td><td>${n}/6</td><td>${sv.boss==='beaten'?'✅':'–'}</td><td>${r.updated?esc(shortDate(new Date(r.updated).toISOString())):'–'}</td>
         <td>${cur?L('nyt','now'):`<button class="btn" data-sw="${esc(r.id)}" style="font-size:.85em;padding:0 .5em">${L('Vaihda','Switch')}</button>`}</td></tr>`;}).join('')+'</table>';
     body.querySelectorAll('[data-sw]').forEach(b=>b.onclick=()=>{initAudio();switchToAccount(b.dataset.sw);});
   }catch(e){const body=$('#lbBody');if(body)body.innerHTML=`<p class="lbNote">${L('Käyttäjälistaa ei saatu ladattua.','Couldn’t load the user list.')}</p>`;}
@@ -2210,12 +2235,15 @@ async function admRenderUsers(){
   const body=$('#admBody');
   try{
     const rows=await admUsers();if(!$('#admBody')||admTab!=='users')return;
-    body.innerHTML=`<p class="lbNote">${L('▶ = siirry peliin · 🐾 = anna kaikki eläimet · 🔄 = nollaa peli · 🔑 = vaihda PIN · 🗑️ = poista','▶ = enter game · 🐾 = give all animals · 🔄 = reset game · 🔑 = change PIN · 🗑️ = delete')}</p>
+    body.innerHTML=`<label class="pick" style="cursor:pointer"><input type="checkbox" id="admAnn" ${settings.announce!==false?'checked':''}> 📢 ${L('Ilmoita haltuunotosta:','Announce takeover:')} <b>”<span class="adminName">leetu</span> is now on control”</b></label>
+    <p class="lbNote">${L('▶ = siirry peliin · 🐾 = anna kaikki eläimet · 🔄 = nollaa peli · 🔑 = vaihda PIN · 🗑️ = poista','▶ = enter game · 🐾 = give all animals · 🔄 = reset game · 🔑 = change PIN · 🗑️ = delete')}</p>
     <table class="lb adm"><tr><th>${L('Käyttäjä','User')}</th><th>🐾</th><th>👑</th><th>${L('Päiv.','Upd.')}</th><th></th></tr>`+
       rows.map(r=>{const sv=r.save||{},n=ANIMALS.filter(a=>(sv.owned||{})[a.id]).length,cur=ACC&&ACC.id===r.id,adm=r.id===ADMIN_ID;
-        return `<tr class="${cur?'me':''}" data-id="${esc(r.id)}"><td>${adm?'👑 ':''}${esc(cleanName(r.name)||r.id)}</td><td>${n}/6</td><td>${sv.boss==='beaten'?'✅':'–'}</td>
+        return `<tr class="${cur?'me':''}" data-id="${esc(r.id)}"><td>${adm?'👑 ':''}${nameHTML(r.name,r.id)}</td><td>${n}/6</td><td>${sv.boss==='beaten'?'✅':'–'}</td>
         <td>${r.updated?esc(shortDate(new Date(r.updated).toISOString())):'–'}</td>
         <td class="acts">${cur?`<b>${L('nyt','now')}</b> `:`<button class="btn" data-a="go" title="${L('Siirry peliin','Enter game')}">▶</button>`}<button class="btn" data-a="animals" title="${L('Anna kaikki eläimet','Give all animals')}">🐾</button><button class="btn" data-a="reset" title="${L('Nollaa peli','Reset game')}">🔄</button><button class="btn" data-a="pin" title="${L('Vaihda PIN','Change PIN')}">🔑</button>${adm||cur?'':`<button class="btn" data-a="del" title="${L('Poista käyttäjä','Delete user')}">🗑️</button>`}</td></tr>`;}).join('')+'</table>';
+    $('#admAnn').onchange=e=>{settings.announce=e.target.checked;saveSettings();
+      if(inOthersGame()){if(e.target.checked)takeControl();else{state.control=null;save();renderControl();}}};
     body.querySelectorAll('tr[data-id]').forEach(tr=>{const id=tr.dataset.id;tr.querySelectorAll('[data-a]').forEach(btn=>btn.onclick=()=>{initAudio();admAction(id,btn.dataset.a,btn,tr);});});
   }catch(e){if($('#admBody'))body.innerHTML=`<p class="lbNote">${L('Käyttäjälistaa ei saatu ladattua.','Couldn’t load the user list.')}</p>`;}
 }
@@ -2239,7 +2267,7 @@ async function admRenderScores(){
   try{const rows=await admScores();if(!$('#admBody')||admTab!=='scores')return;
     if(!rows.length){body.innerHTML=`<p>${L('Ei tuloksia.','No results.')}</p>`;return;}
     body.innerHTML=`<p class="lbNote">${L('Poista epäilyttävät tai testitulokset 🗑️-napilla.','Remove suspicious or test results with 🗑️.')}</p><table class="lb adm"><tr><th>#</th><th>${L('Nimi','Name')}</th><th class="r">${L('Aika','Time')}</th><th>${L('Lk','Gr.')}</th><th>${L('Päivä','Date')}</th><th></th></tr>`+
-      rows.map((r,i)=>`<tr data-sid="${esc(String(r.id))}"><td>${i+1}</td><td>${esc(cleanName(r.name)||'?')}</td><td class="r">${fmtClock(+r.time||0)}</td><td>${esc(shortLevel(+r.level||5))}</td><td>${esc(shortDate(r.date))}</td><td class="acts"><button class="btn" data-a="del">🗑️</button></td></tr>`).join('')+'</table>';
+      rows.map((r,i)=>`<tr data-sid="${esc(String(r.id))}"><td>${i+1}</td><td>${nameHTML(r.name,r.acc)}</td><td class="r">${fmtClock(+r.time||0)}</td><td>${esc(shortLevel(+r.level||5))}</td><td>${esc(shortDate(r.date))}</td><td class="acts"><button class="btn" data-a="del">🗑️</button></td></tr>`).join('')+'</table>';
     body.querySelectorAll('tr[data-sid]').forEach(tr=>tr.querySelector('[data-a]').onclick=e=>sureClick(e.currentTarget,async()=>{try{await admDeleteScore(tr.dataset.sid);sfx.ok();admRenderScores();}catch(err){admErr(err);}}));
   }catch(e){if($('#admBody'))body.innerHTML=`<p class="lbNote">${L('Tuloksia ei saatu ladattua.','Couldn’t load results.')}</p>`;admErr(e);}
 }
@@ -2314,7 +2342,7 @@ function medalRows(rows){
 function boardTable(rows,meId){
   if(!rows.length)return `<p>${L('Ei vielä tuloksia. Ole ensimmäinen!','No results yet. Be the first!')}</p>`;
   return `<table class="lb"><tr><th>#</th><th>${L('Nimi','Name')}</th><th class="r">${L('Aika','Time')}</th><th>${L('Lk','Gr.')}</th><th>${L('Päivä','Date')}</th></tr>`+
-    medalRows(rows).map((r,i)=>`<tr class="${r._me?'me':''}${r._medal?' m'+r._medal:''}"><td>${i+1}</td><td>${esc(cleanName(r.name)||'?')}${r._medal?` <span class="medal" title="${[L('Kulta','Gold'),L('Hopea','Silver'),L('Pronssi','Bronze')][r._medal-1]}">${['🥇','🥈','🥉'][r._medal-1]}</span>`:''}</td><td class="r">${fmtClock(+r.time||0)}</td><td>${esc(shortLevel(+r.level||5))}</td><td>${esc(shortDate(r.date))}</td></tr>`).join('')+'</table>';
+    medalRows(rows).map((r,i)=>`<tr class="${r._me?'me':''}${r._medal?' m'+r._medal:''}"><td>${i+1}</td><td>${nameHTML(r.name,r.acc)}${r._medal?` <span class="medal" title="${[L('Kulta','Gold'),L('Hopea','Silver'),L('Pronssi','Bronze')][r._medal-1]}">${['🥇','🥈','🥉'][r._medal-1]}</span>`:''}</td><td class="r">${fmtClock(+r.time||0)}</td><td>${esc(shortLevel(+r.level||5))}</td><td>${esc(shortDate(r.date))}</td></tr>`).join('')+'</table>';
 }
 async function fillBoard(){
   const body=$('#lbBody');if(!body)return;
