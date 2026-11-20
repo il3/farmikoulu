@@ -336,9 +336,9 @@ SPR.sprout=makeSprite(["..g.g..",".gGgGg.","..gGg..","...b...","..bbb..",".bbbbb
 SPR.apple=makeSprite(["..g.",".rr.","rrrr","rrrr",".rr."],{g:'#3f9a3f',r:'#d6332b'});
 
 /* ---------- ÄÄNET ---------- */
-let AC=null,master,musicGain,sfxGain,NB=null,musTimer=null,musStep=0,musNext=0;
+let AC=null,master,musicGain,musBus=null,sfxGain,NB=null,musTimer=null,musStep=0,musNext=0;
 const SKEY='farmikoulu-v1',OKEY='farmikoulu-asetukset';
-let settings={music:true,sfx:true,lang:'fi',device:null,name:'',admin:null,devId:'',vol:80,shake:true,speedrun:false,track:0};
+let settings={music:true,sfx:true,lang:'fi',device:null,name:'',admin:null,devId:'',vol:80,shake:true,speedrun:false,track:null};
 try{const s=JSON.parse(localStorage.getItem(OKEY));if(s)settings=Object.assign(settings,s);}catch(e){}
 // Tämän laitteen tunniste: sen avulla peli tunnistaa muiden laitteiden (esim. ylläpitäjän) tekemät muutokset.
 function devId(){if(!settings.devId){settings.devId=Math.random().toString(36).slice(2,10);saveSettings();}return settings.devId;}
@@ -348,7 +348,7 @@ function initAudio(){
   try{
     AC=new (window.AudioContext||window.webkitAudioContext)();
     master=AC.createGain();master.gain.value=.8;master.connect(AC.destination);
-    musicGain=AC.createGain();musicGain.connect(master);
+    musicGain=AC.createGain();musicGain.connect(master);musBus=AC.createGain();musBus.connect(musicGain);
     sfxGain=AC.createGain();sfxGain.connect(master);
     applyVolumes();startMusic();
   }catch(e){AC=null;}
@@ -385,36 +385,39 @@ const STEP=.19;
 const FARM_TRACK={mel:MEL,bass:BASS,step:STEP};
 // Viisi valittavaa farmimusiikkia (asetuksista). kick/snare = askeleet 16 askeleen jaksossa.
 const FARM_TRACKS=[
- {id:'remix',n:['Farmi-remix','Farm Remix'],e:'🚜',mel:MEL,bass:BASS,step:.15,kick:[0,4,8,12],snare:[4,12],wave:'square',hat:.07},
+ {id:'synth',n:['Sorsasyntikka','Duck Synthwave'],e:'🦆',mel:'F4 - G#4 - C5 - D#5 - C5 - G#4 - A#4 - C5 - C#5 - C5 - A#4 - G#4 - G4 - G#4 - A#4 - - - F5 - D#5 - C5 - G#4 - A#4 - C5 - C#5 - D#5 - F5 - G5 - G#5 - G5 - F5 - - - C5 - - -'.split(' '),bass:['F2','D#2','C#2','C2','F2','C#2','D#2','C2'],step:.13,kick:[0,4,8,12],snare:[4,12],wave:'sawtooth',filt:1800,hat:.07,off:true,lv:.13},
  {id:'tekno',n:['Traktoriteknoa','Tractor Techno'],e:'⚙️',mel:'A4 C5 E5 A5 E5 C5 A4 C5 G4 B4 D5 G5 D5 B4 G4 B4 F4 A4 C5 F5 C5 A4 F4 A4 E4 G#4 B4 E5 B4 G#4 E4 G#4 A4 C5 E5 A5 B5 A5 E5 C5 G4 B4 D5 G5 A5 G5 D5 B4 F4 A4 C5 F5 G5 F5 C5 A4 E5 - E5 - G#5 - B5 -'.split(' '),bass:['A2','G2','F2','E2','A2','G2','F2','E2'],step:.115,kick:[0,4,8,12],snare:[4,12],wave:'sawtooth',filt:2600,hat:.09,off:true},
  {id:'rock',n:['Perunarock','Potato Rock'],e:'🎸',mel:'E4 - E4 G4 A4 - G4 E4 D4 - D4 E4 G4 - E4 D4 E4 - E4 G4 A4 - B4 - D5 - B4 A4 G4 - E4 - G4 - G4 A4 B4 - A4 G4 A4 - A4 B4 D5 - B4 A4 B4 - D5 - E5 - D5 B4 A4 G4 E4 D4 E4 - - -'.split(' '),bass:['E2','D2','E2','D2','G2','A2','B1','E2'],step:.14,kick:[0,3,8,10],snare:[4,12],wave:'square',hat:.08,dist:true},
  {id:'beat',n:['Lehmäbeat','Cow Beat'],e:'🐄',mel:'C5 - D#5 - G4 - - G4 A#4 - G4 - F4 - D#4 - C5 - D#5 - G5 - F5 D#5 D5 - A#4 - G4 - - - G#4 - C5 - D#5 - C5 G#4 A#4 - D5 - F5 - D5 A#4 G5 - F5 - D#5 - D5 - C5 - - - C5 - - -'.split(' '),bass:['C2','C2','G#1','G#1','A#1','A#1','G1','G1'],step:.16,kick:[0,6,10],snare:[4,12],wave:'triangle',hat:.06,lv:.16},
  {id:'disko',n:['Kanadisko','Chicken Disco'],e:'🐔',mel:'F#5 - F#5 E5 D5 - A4 - B4 - D5 - E5 - F#5 - G5 - F#5 E5 D5 - B4 - A4 - B4 D5 E5 - - - F#5 - F#5 E5 D5 - A4 - B4 - D5 - E5 - F#5 A5 B5 - A5 F#5 E5 - D5 - E5 - D5 - D5 - - -'.split(' '),bass:['D2','B1','G1','A1','D2','B1','G1','A1'],step:.12,kick:[0,4,8,12],snare:[4,12],wave:'square',hat:.1,off:true,oct:true}];
-const farmTrack=()=>FARM_TRACKS[Math.max(0,Math.min(FARM_TRACKS.length-1,settings.track|0))];
-function pickTrack(i){settings.track=i;settings.music=true;saveSettings();initAudio();applyVolumes();if(musicMode==='farm')musStep=0;}
+const farmTrack=()=>settings.track==null?FARM_TRACK:FARM_TRACKS[Math.max(0,Math.min(FARM_TRACKS.length-1,settings.track|0))];
+function pickTrack(i){const ch=settings.track!==i;settings.track=i;settings.music=true;saveSettings();initAudio();applyVolumes();if(musicMode==='farm'&&ch){musStep=0;cutMusic();}}
 const BOSS_TRACK={step:.15,bass:['E2','A2','E2','B1','G2','C2','G2','B1'],
   mel:("E4 E4 G4 E4 B4 A4 G4 F#4 E4 E4 G4 E4 C5 B4 A4 B4 E4 E4 G4 E4 B4 A4 G4 F#4 G4 F#4 E4 D4 E4 - E4 - "+
   "B4 B4 C5 B4 A4 G4 A4 B4 C5 C5 B4 A4 G4 F#4 G4 A4 B4 - B4 C5 D5 C5 B4 A4 G4 F#4 D4 F#4 E4 - - -").split(' ')};
 let musicMode='farm';
 const FINAL_TRACK={mel:BOSS_TRACK.mel,bass:BOSS_TRACK.bass,step:.12};
 const ROBOT_TRACK={mel:BOSS_TRACK.mel.map(n=>n==='-'?n:n.replace(/(\d)$/,d=>String(+d+1))),bass:BOSS_TRACK.bass,step:.1};
-function setMusic(m){if(musicMode===m)return;musicMode=m;musStep=0;}
+// Katkaise jo ajastetut nuotit: vanha väylä hiljennetään ja irrotetaan, uusi väylä tilalle.
+function cutMusic(){if(!AC||!musBus)return;const old=musBus,t=AC.currentTime;try{old.gain.setValueAtTime(old.gain.value,t);old.gain.linearRampToValueAtTime(0,t+.04);}catch(e){}
+  setTimeout(()=>{try{old.disconnect();}catch(e){}},120);musBus=AC.createGain();musBus.connect(musicGain);musNext=t+.06;}
+function setMusic(m){if(musicMode===m)return;musicMode=m;musStep=0;cutMusic();}
 function startMusic(){musNext=AC.currentTime+.15;musTimer=setInterval(schedMusic,40);}
 function schedMusic(){
   if(!AC)return;
   if(musNext<AC.currentTime)musNext=AC.currentTime+.05;
   while(musNext<AC.currentTime+.25){
     const T=musicMode==='boss'?BOSS_TRACK:musicMode==='final'?FINAL_TRACK:musicMode==='robot'?ROBOT_TRACK:farmTrack(),i=musStep%64,n=T.mel[i];
-    if(n!=='-'){tone({f:nf(n),at:musNext,d:T.step*.8,v:T.lv||.11,type:T.wave||'square',filt:T.filt?{type:'lowpass',f:T.filt}:null,dest:musicGain});
-      if(T.dist)tone({f:nf(n)*1.005,at:musNext,d:T.step*.8,v:.05,type:'sawtooth',filt:{type:'lowpass',f:1800},dest:musicGain});}
+    if(n!=='-'){tone({f:nf(n),at:musNext,d:T.step*.8,v:T.lv||.11,type:T.wave||'square',filt:T.filt?{type:'lowpass',f:T.filt}:null,dest:musBus});
+      if(T.dist)tone({f:nf(n)*1.005,at:musNext,d:T.step*.8,v:.05,type:'sawtooth',filt:{type:'lowpass',f:1800},dest:musBus});}
     if(T.kick){const j=i%16;
-      if(T.kick.includes(j))tone({f:150,f2:45,at:musNext,d:.16,v:.55,type:'sine',dest:musicGain});
-      if(T.snare.includes(j))noise({at:musNext,d:.12,v:.22,f:1800,dest:musicGain});
-      if(T.off&&j%4===2)noise({at:musNext,d:.07,v:T.hat*1.4,f:9000,dest:musicGain});
-      if(T.oct&&i%2===1)tone({f:nf(T.bass[Math.floor(i/8)])*2,at:musNext,d:T.step*.6,v:.12,type:'square',filt:{type:'lowpass',f:900},dest:musicGain});}
-    if(i%2===0){const root=nf(T.bass[Math.floor(i/8)]);const beat=(i%8)/2;tone({f:beat%2?root*1.5:root,at:musNext,d:T.step*1.7,v:.3,type:'triangle',dest:musicGain});}
-    else noise({at:musNext,d:.03,v:musicMode!=='farm'?.1:(T.hat||.06),f:7000,dest:musicGain});
-    if(musicMode!=='farm'&&i%(musicMode==='final'?2:4)===0)noise({at:musNext,d:.08,v:.22,f:150,dest:musicGain});
+      if(T.kick.includes(j))tone({f:150,f2:45,at:musNext,d:.16,v:.55,type:'sine',dest:musBus});
+      if(T.snare.includes(j))noise({at:musNext,d:.12,v:.22,f:1800,dest:musBus});
+      if(T.off&&j%4===2)noise({at:musNext,d:.07,v:T.hat*1.4,f:9000,dest:musBus});
+      if(T.oct&&i%2===1)tone({f:nf(T.bass[Math.floor(i/8)])*2,at:musNext,d:T.step*.6,v:.12,type:'square',filt:{type:'lowpass',f:900},dest:musBus});}
+    if(i%2===0){const root=nf(T.bass[Math.floor(i/8)]);const beat=(i%8)/2;tone({f:beat%2?root*1.5:root,at:musNext,d:T.step*1.7,v:.3,type:'triangle',dest:musBus});}
+    else noise({at:musNext,d:.03,v:musicMode!=='farm'?.1:(T.hat||.06),f:7000,dest:musBus});
+    if(musicMode!=='farm'&&i%(musicMode==='final'?2:4)===0)noise({at:musNext,d:.08,v:.22,f:150,dest:musBus});
     musStep++;musNext+=T.step;
   }
 }
@@ -1250,7 +1253,7 @@ function showSettings(back){
   openModal('settings',`<h2>⚙️ ${L('Asetukset','Settings')}</h2>
   <div class="setRow"><span>🌐 ${L('Kieli','Language')}</span><span><button class="btn ${on(settings.lang==='fi')}" id="sFi">Suomi</button><button class="btn ${on(settings.lang==='en')}" id="sEn">English</button></span></div>
   <div class="setRow"><span>♪ ${L('Musiikki','Music')}</span><span><button class="btn ${on(settings.music)}" id="sMu1">${L('Päällä','On')}</button><button class="btn ${on(!settings.music)}" id="sMu0">${L('Pois','Off')}</button></span></div>
-  <div class="setRow trk"><span>🎵 ${L('Farmin musiikki','Farm music')}<small>${L('Valitse biisi – se alkaa soida heti','Pick a song – it starts playing right away')}</small></span><span class="trkBtns">${FARM_TRACKS.map((t,i)=>`<button class="btn ${on(farmTrack()===t)}" data-trk="${i}">${t.e} ${L2(t.n)}</button>`).join('')}</span></div>
+  <div class="setRow trk"><span>🎵 ${L('Farmin musiikki','Farm music')}<small>${settings.track==null?L('Nyt soi alkuperäinen farmimusiikki. Valitse biisi – se korvaa alkuperäisen heti.','The original farm music is playing. Pick a song – it replaces the original right away.'):L('Valitse biisi – se alkaa soida heti','Pick a song – it starts playing right away')}</small></span><span class="trkBtns">${FARM_TRACKS.map((t,i)=>`<button class="btn ${on(farmTrack()===t)}" data-trk="${i}">${t.e} ${L2(t.n)}</button>`).join('')}</span></div>
   <div class="setRow"><span>🔊 ${L('Ääniefektit','Sound effects')}</span><span><button class="btn ${on(settings.sfx)}" id="sFx1">${L('Päällä','On')}</button><button class="btn ${on(!settings.sfx)}" id="sFx0">${L('Pois','Off')}</button></span></div>
   <div class="setRow"><span>🎚️ ${L('Äänenvoimakkuus','Volume')}</span><span><input type="range" id="sVol" min="0" max="100" step="5" value="${settings.vol==null?80:settings.vol}"> <b id="sVolN">${settings.vol==null?80:settings.vol}</b> %</span></div>
   <div class="setRow"><span>📳 ${L('Ruudun tärinä','Screen shake')}<small>${L('Ruutu heiluu osumista ja vääristä vastauksista','The screen shakes on hits and wrong answers')}</small></span><span><button class="btn ${on(settings.shake!==false)}" id="sSh1">${L('Päällä','On')}</button><button class="btn ${on(settings.shake===false)}" id="sSh0">${L('Pois','Off')}</button></span></div>
