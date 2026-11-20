@@ -379,6 +379,10 @@ const ANIMALS=[
 const ANIM=Object.fromEntries(ANIMALS.map(a=>[a.id,a]));
 SPR.hopea=makeSprite(["...bbbb...",".bbbbbbbb.","bbBbbbbbBb","bbWebbWebb","bbbbbbbbbb","bbbmmmmbbb",".bbbbmmbB.","..bbbbbb..","..k....k..",".kk....kk."],
   {b:'#cfd4da',B:'#9aa1aa',W:'#ffffff',e:'#1b1410',m:'#5a5f66',k:'#5a5f66'});
+SPR.hevonen=makeSprite(["...........kk...","..........kbbb..","..........kbbbbb","..........kbebbb","k.........kbbbBn","kkbbbbbbbbbbb...","kbbbbbbbbbbbb...",".bbbbbbbbbbbb...",".bb.bb...bb.bb..",".bb.bb...bb.bb..",".BB.BB...BB.BB..",".hh.hh...hh.hh.."],
+  {k:'#3a2414',b:'#8a5a2b',B:'#6f4520',e:'#111111',n:'#2a1a0a',h:'#2a2a2a'});
+ANIM.hevonen={id:'hevonen',name:['Hevonen','Horse'],region:'barnyard',speed:18,
+  snd:()=>{tone({f:520,f2:950,d:.3,v:.4,type:'sawtooth',vib:35,vibF:15,filt:{f:1600,q:1.5}});tone({f:950,f2:380,d:.6,v:.35,type:'sawtooth',vib:30,vibF:13,t:.28,filt:{f:1400,q:1.5}});}};
 ANIM.hopea={id:'hopea',name:['Hopeaperuna','Silver potato'],region:'barnyard',speed:12,
   snd:()=>[784,988,1175].forEach((f,i)=>tone({f,d:.2,v:.13,t:i*.08,type:'triangle'}))};
 ANIM.kulta={id:'kulta',name:['Kultainen peruna','Golden potato'],region:'field',speed:15,fact:['Harvinaisin peruna koko farmilla!','The rarest potato on the whole farm!'],
@@ -1050,7 +1054,7 @@ function spawnAnimal(id,celebrate){
     for(let i=0;i<4;i++)parts.push({x:a.x+(rand()-.5)*10,y:a.y-10,vx:(rand()-.5)*10,vy:-18-rand()*10,life:1.4,max:1.4,kind:'heart'});}
   return a;
 }
-function rebuildAnimals(){animals=[];for(const a of ANIMALS)for(let i=0;i<(state.owned[a.id]||0);i++)spawnAnimal(a.id,false);if(state.golden)spawnAnimal('kulta',false);for(let i=0;i<(state.silver||0);i++)spawnAnimal('hopea',false);}
+function rebuildAnimals(){animals=[];for(const a of ANIMALS)for(let i=0;i<(state.owned[a.id]||0);i++)spawnAnimal(a.id,false);if(state.golden)spawnAnimal('kulta',false);for(let i=0;i<(state.silver||0);i++)spawnAnimal('hopea',false);if(state.horse)spawnAnimal('hevonen',false);}
 
 /* ---------- HUD ---------- */
 const coll=$('#coll');
@@ -1495,6 +1499,13 @@ function drawFight(){
 /* ---------- VOITTO ---------- */
 let lastBossResult=null;
 // Jokaisesta tavallisen Perunapomon voitosta: yksi hopeaperuna kävelee ulos ladosta.
+// Salainen: hevonen ladosta (komento "hevonen", vain käyttäjille suuppe ja leetu1234)
+function horseFromBarn(){
+  const a=spawnAnimal('hevonen',false);a.x=268;a.y=67;const t=randPt('barnyard');a.tx=t.x;a.ty=Math.max(84,t.y);a.wait=.4;a.jump=.6;
+  for(let i=0;i<30;i++)parts.push({x:268+(rand()-.5)*22,y:60+(rand()-.5)*12,vx:(rand()-.5)*60,vy:-rand()*40,life:1,max:1,kind:'spark',color:pick(['#e8c14c','#cfae73','#ffffff'])});
+  for(let i=0;i<6;i++)noise({t:i*.11,d:.05,v:.25,f:300+(i%2)*200});
+  setTimeout(()=>ANIM.hevonen.snd(),500);
+}
 function silverFromBarn(){
   const a=spawnAnimal('hopea',false);a.x=268;a.y=67;const t=randPt('barnyard');a.tx=t.x;a.ty=Math.max(80,t.y);a.wait=.8;a.jump=.6;
   for(let i=0;i<30;i++)parts.push({x:268+(rand()-.5)*20,y:58+(rand()-.5)*12,vx:(rand()-.5)*50,vy:-rand()*40,life:1.2,max:1.2,kind:'spark',color:pick(['#ffffff','#cfd4da','#e8f0ff'])});
@@ -1813,6 +1824,14 @@ function runCmd(raw){
   case 'farmi':case 'farm':{const n=+a;if(n!==1&&n!==2)return err(L('Käytä: farmi 1 tai farmi 2','Use: farm 1 or farm 2'));
     if(['quiz','boss','chest','result','dodge'].includes(modalType))return err(L('Sulje ensin avoin ikkuna.','Close the open window first.'));
     if(n===2&&!state.farm2){state.farm2=true;}if(modalType)closeModal();started=true;goFarm(n);ok(L(`🚜 Farmi ${n}`,`🚜 Farm ${n}`));break;}
+  case 'hevonen':case 'horse':{
+    const who=ADMIN?ADMIN_ID:(ACC&&ACC.id);
+    if(!['suuppe',ADMIN_ID].includes(who))return err(L(`Tuntematon komento "${c}". Kirjoita "apua".`,`Unknown command "${c}". Type "help".`));
+    if(state.horse){const h=animals.find(x=>x.id==='hevonen');if(h){h.jump=.6;h.wait=0;const t=randPt('barnyard');h.tx=t.x;h.ty=t.y;}ANIM.hevonen.snd();ok(L('🐴 Hevonen on jo farmilla – se hirnahti iloisesti!','🐴 The horse is already on the farm – it neighed happily!'));break;}
+    state.horse=true;save();
+    if(state.farm===2){rebuildAnimals();ANIM.hevonen.snd();ok(L('🐴 Hevonen juoksi ulos farmin 1 ladosta!','🐴 A horse ran out of the farm 1 barn!'));}
+    else{horseFromBarn();ok(L('🐴 Ladon ovet aukeavat… hevonen juoksee ulos!','🐴 The barn doors open… a horse runs out!'));}
+    break;}
   case 'tirppa':openTirppa();ok(L('🐦 Tirppa-valikko avattu ruudun reunaan!','🐦 Tirppa menu opened at the edge of the screen!'));break;
   default:err(L(`Tuntematon komento "${c}". Kirjoita "apua".`,`Unknown command "${c}". Type "help".`));
   }
