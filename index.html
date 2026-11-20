@@ -1905,7 +1905,7 @@ const LOCALDB={doc:p=>{const id=p.split('/')[1];return {get:async()=>{const v=lg
 let ACCDB=null;
 // Supabase: yhteinen tietokanta muille versioille (esim. GitHub Pages). Julkinen avain on tarkoitettu selaimeen;
 // varsinainen suojaus (PIN-tarkistus, lukitus) on tietokannan funktioissa, ks. supabase-asennus.sql.
-const SUPA_URL='https://ebvrosdwdaguiddvlkqh.supabase.co',SUPA_KEY='';
+const SUPA_URL='https://ebvrosdwdaguiddvlkqh.supabase.co',SUPA_KEY='sb_publishable_AR_nOWLgTYvJMkBbF3eisw_Rn-wn-4o';
 let SUPA=false;
 async function rpc(fn,args){
   const h={'apikey':SUPA_KEY,'Content-Type':'application/json'};if(!SUPA_KEY.startsWith('sb_'))h.Authorization='Bearer '+SUPA_KEY;
