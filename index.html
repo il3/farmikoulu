@@ -114,7 +114,7 @@ label.rpick:has(input:checked){background:#ffe08a;border-color:#8a5a2b}.rcols{di
 .lives .lost{filter:grayscale(1);opacity:.35}
 .pick{display:flex;gap:.4em;justify-content:center;align-items:center;flex-wrap:wrap;margin:.3em 0;font-size:.9em}
 .pick .btn{padding:.05em .6em}
-.pick .btn.on{background:#9be07a}
+.pick .btn.on,.setRow .btn.on{background:#9be07a}
 .redo{font-size:2em;margin:.1em 0}
 .nameIn{font:inherit;font-size:1em;width:11em;max-width:60%;padding:.05em .4em;border:3px solid var(--wood2);background:#fff8e1;color:var(--ink)}
 .nameIn:focus{outline:3px dashed var(--red);outline-offset:1px}
@@ -1158,29 +1158,15 @@ function closeModal(){modalType=null;modal.hidden=true;quiz=null;chest=null;figh
 function bind(id,fn){const e=document.getElementById(id);if(e)e.onclick=()=>{initAudio();fn(e);};}
 
 function pickerHTML(){
-  return `<div class="pick">${L('Kieli','Language')}:
-    <button class="btn ${settings.lang==='fi'?'on':''}" id="pFi">Suomi</button><button class="btn ${settings.lang==='en'?'on':''}" id="pEn">English</button></div>
-  ${ACC?`<div class="pick">👤 ${L('Kirjautunut','Logged in')}: <b>${nameHTML(ACC.name,ACC.id)}</b> ${isAdmin()?'👑':'☁️'} <button class="btn" id="aOut">${L('Kirjaudu ulos','Log out')}</button><input type="hidden" id="pName" value="${esc(ACC.name)}"></div>
+  return `${ACC?`<div class="pick">👤 ${L('Kirjautunut','Logged in')}: <b>${nameHTML(ACC.name,ACC.id)}</b> ${isAdmin()?'👑':'☁️'} <button class="btn" id="aOut">${L('Kirjaudu ulos','Log out')}</button><input type="hidden" id="pName" value="${esc(ACC.name)}"></div>
   ${isAdmin()?`<div class="pick"><button class="btn" id="adOpen">👑 ${L('Admin-paneeli','Admin panel')}</button>${ADMIN?`<button class="btn" id="adHome">↩ ${L('Palaa käyttäjään','Back to')} leetu1234</button>`:''}</div>`:''}`
   :`<div class="pick">👤 ${L('Pelaajanimi','Player name')}: <input class="nameIn" id="pName" maxlength="16" autocomplete="username" spellcheck="false" placeholder="${L('Kirjoita nimi','Type a name')}" value="${esc(settings.name||state.name||'')}"></div>
   ${ACCDB?`<div class="pick">🔑 PIN: <input class="nameIn pinIn" id="pPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="current-password" placeholder="4–6 ${L('numeroa','digits')}"><button class="btn" id="aIn">${L('Kirjaudu / luo käyttäjä','Log in / sign up')}</button></div>
   <p class="lbNote" id="aMsg" style="margin:0">🔒 ${cloudMode()?L('Kirjaudu tai keksi uusi nimi + PIN. Toimii joka laitteella.','Log in, or make up a new name + PIN. Works on any device.')
     :L('Kirjaudu tai keksi uusi nimi + PIN.','Log in, or make up a new name + PIN.')}</p>`:''}`}
-  <div class="pick">${L('Laite','Device')}:
-    <button class="btn ${!isPhone()?'on':''}" id="pPc">💻 ${L('Tietokone','Computer')}</button><button class="btn ${isPhone()?'on':''}" id="pPhone">📱 ${L('Puhelin','Phone')}</button></div>
-  <div class="pick">${L('Tehtävien taso','Task level')}:
-    <button class="btn ${pendingLevel===34?'on':''}" id="p34">${L('3.–4. luokka','Grade 3–4')}</button><button class="btn ${pendingLevel===5?'on':''}" id="p5">${L('5. luokka','Grade 5')}</button><button class="btn ${pendingLevel===6?'on':''}" id="p6">${L('6. luokka','Grade 6')}</button>${state.unlocked78?`<button class="btn ${pendingLevel===78?'on':''}" id="p78">🪨 ${L('7.–8. luokka','Grade 7–8')}</button>`:''}</div>`;
+  <p class="lbNote" style="margin:.2em 0">📚 ${L('Tehtävien taso','Task level')}: <b>${esc(levelName(pendingLevel))}</b> · ${L('kielen, laitteen ja tason voit vaihtaa','change language, device and level in')} <b>⚙️ ${L('Asetuksista','Settings')}</b></p>`;
 }
-function bindPicker(){
-  bind('pPc',()=>{settings.device='pc';saveSettings();applyDevice();showTitle();});
-  bind('pPhone',()=>{settings.device='phone';saveSettings();applyDevice();showTitle();});
-  bind('pFi',()=>{settings.lang='fi';saveSettings();applyLang();});
-  bind('pEn',()=>{settings.lang='en';saveSettings();applyLang();});
-  bind('p34',()=>{pendingLevel=34;if(started||hasProgress())state.level=34,save();showTitle();});
-  bind('p5',()=>{pendingLevel=5;if(started||hasProgress())state.level=5,save();showTitle();});
-  bind('p6',()=>{pendingLevel=6;if(started||hasProgress())state.level=6,save();showTitle();});
-  bind('p78',()=>{pendingLevel=78;state.level=78;save();showTitle();});
-}
+function bindPicker(){}
 const hasProgress=()=>Object.keys(state.owned).length>0||state.tasks>0;
 function showTitle(){
   updateHUD();
@@ -1221,6 +1207,7 @@ function showSettings(back){
   <div class="setRow"><span>🎚️ ${L('Äänenvoimakkuus','Volume')}</span><span><input type="range" id="sVol" min="0" max="100" step="5" value="${settings.vol==null?80:settings.vol}"> <b id="sVolN">${settings.vol==null?80:settings.vol}</b> %</span></div>
   <div class="setRow"><span>📳 ${L('Ruudun tärinä','Screen shake')}<small>${L('Ruutu heiluu osumista ja vääristä vastauksista','The screen shakes on hits and wrong answers')}</small></span><span><button class="btn ${on(settings.shake!==false)}" id="sSh1">${L('Päällä','On')}</button><button class="btn ${on(settings.shake===false)}" id="sSh0">${L('Pois','Off')}</button></span></div>
   <div class="setRow"><span>🖥️ ${L('Laite','Device')}</span><span><button class="btn ${on(!isPhone())}" id="sPc">💻 ${L('Tietokone','Computer')}</button><button class="btn ${on(isPhone())}" id="sPh">📱 ${L('Puhelin','Phone')}</button></span></div>
+  <div class="setRow"><span>📚 ${L('Tehtävien taso','Task level')}<small>${hasProgress()?L('Vaihtaa tämän pelin tehtävät heti','Changes this game’s tasks right away'):L('Koskee uutta peliä','Applies to the new game')}</small></span><span class="lvBtns"><button class="btn ${pendingLevel===34?'on':''}" id="p34">${L('3.–4. luokka','Grade 3–4')}</button><button class="btn ${pendingLevel===5?'on':''}" id="p5">${L('5. luokka','Grade 5')}</button><button class="btn ${pendingLevel===6?'on':''}" id="p6">${L('6. luokka','Grade 6')}</button>${state.unlocked78?`<button class="btn ${pendingLevel===78?'on':''}" id="p78">🪨 ${L('7.–8. luokka','Grade 7–8')}</button>`:''}</span></div>
   <div class="setRow" style="border-bottom:none"><span>⚡ <b>${L('Speedrun-tila','Speedrun mode')}</b><small>${L('Tarkka ajastin sadasosineen, väliajat jokaisesta eläimestä ja pomosta, vertailu omaan ennätykseen (PB). Arkut aukeavat heti ja oikean vastauksen jälkeen siirrytään automaattisesti eteenpäin.','Precise timer with hundredths, splits for every animal and the boss, comparison to your personal best (PB). Chests open instantly and correct answers auto-advance.')}</small></span>
    <span><button class="btn ${on(sr)}" id="sSr1">${L('Päällä','On')}</button><button class="btn ${on(!sr)}" id="sSr0">${L('Pois','Off')}</button></span></div>
   ${sr&&!state.sr&&hasProgress()?`<p class="lbNote">⚡ ${L('Tämä peli alkoi ilman speedrun-tilaa, joten virallinen ⚡-ajo alkaa vasta <b>uudesta pelistä</b>.','This game started without speedrun mode, so an official ⚡ run starts with a <b>new game</b>.')}</p>`:''}
@@ -1232,6 +1219,7 @@ function showSettings(back){
   bind('sFx1',()=>{settings.sfx=true;ss();sfx.ui();re();});bind('sFx0',()=>{settings.sfx=false;ss();re();});
   bind('sSh1',()=>{settings.shake=true;ss();re();});bind('sSh0',()=>{settings.shake=false;ss();re();});
   bind('sPc',()=>{settings.device='pc';saveSettings();applyDevice();re();});bind('sPh',()=>{settings.device='phone';saveSettings();applyDevice();re();});
+  [['p34',34],['p5',5],['p6',6],['p78',78]].forEach(([id,lv])=>bind(id,()=>{pendingLevel=lv;if(lv===78||started||hasProgress()){state.level=lv;save();}sfx.ui();re();}));
   bind('sSr1',()=>{settings.speedrun=true;saveSettings();sfx.ok();renderSr();re();});bind('sSr0',()=>{settings.speedrun=false;saveSettings();renderSr();re();});
   const v=$('#sVol');v.oninput=()=>{settings.vol=+v.value;$('#sVolN').textContent=v.value;ss();};v.onchange=()=>sfx.ui();
   bind('sOk',()=>{sfx.ui();back?back():closeModal();});
