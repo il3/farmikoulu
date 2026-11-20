@@ -18,7 +18,7 @@ body{display:flex;align-items:center;justify-content:center;min-height:100vh;pad
 #coll{display:flex;gap:5px;flex:1;flex-wrap:wrap}
 .slot{position:relative;width:44px;height:38px;background:#5e3a17;border:3px solid #3a2410;display:grid;place-items:center;cursor:pointer}
 .slot canvas{image-rendering:pixelated;max-width:38px}
-.slot.miss canvas{filter:brightness(0);opacity:.35}
+.slot.miss canvas{filter:brightness(0);opacity:.35}.slot .pe{font-size:20px;line-height:1}.slot.miss .pe{filter:grayscale(1) brightness(.3);opacity:.45}
 .slot.miss{cursor:default}
 .slot .cnt{position:absolute;right:1px;bottom:-4px;font-size:18px;color:#fff3d0;text-shadow:1px 1px 0 #000,-1px 1px 0 #000}
 #stats{display:flex;gap:12px;white-space:nowrap}
@@ -397,7 +397,7 @@ const MEL=("G4 G4 B4 D5 E5 D5 B4 G4 A4 A4 C5 E5 D5 C5 B4 A4 G4 G4 B4 D5 G5 E5 D5
 const BASS=['G2','A2','G2','D2','D2','C2','G2','D2'];
 const STEP=.19;
 const FARM_TRACK={mel:MEL,bass:BASS,step:STEP};
-const GAME_VERSION='v54 · 20.11.2026';
+const GAME_VERSION='v55 · 20.11.2026';
 const farmTrack=()=>FARM_TRACK;
 const BOSS_TRACK={step:.15,bass:['E2','A2','E2','B1','G2','C2','G2','B1'],
   mel:("E4 E4 G4 E4 B4 A4 G4 F#4 E4 E4 G4 E4 C5 B4 A4 B4 E4 E4 G4 E4 B4 A4 G4 F#4 G4 F#4 E4 D4 E4 - E4 - "+
@@ -1121,6 +1121,133 @@ function buildBG2(){
   return c;
 }
 const BG2=buildBG2();
+/* ---------- FARMI 3: TALON RAKENNUS ----------
+   Jokainen tehtäväpiste antaa yhden talon osan. Kun kaikki viisi osaa on kerätty,
+   talo rakennetaan rakennuspaikalla. */
+const PARTS3=[
+ {id:'perustus',st:'mat',e:'🪨',n:['Perustus','Foundation'],d:['kivijalka ja lattia','stone base and floor']},
+ {id:'seinat',st:'aid',e:'🪵',n:['Seinät','Walls'],d:['hirsiseinät','log walls']},
+ {id:'ikkunat',st:'eng',e:'🪟',n:['Ikkunat ja ovi','Windows & door'],d:['kaksi ikkunaa ja ovi','two windows and a door']},
+ {id:'katto',st:'ymp',e:'🛖',n:['Katto','Roof'],d:['punainen tiilikatto','a red tiled roof']},
+ {id:'piippu',st:'his',e:'🧱',n:['Savupiippu ja kuisti','Chimney & porch'],d:['savupiippu ja kuisti','a chimney and a porch']}];
+const PART3=Object.fromEntries(PARTS3.map(p=>[p.st,p]));
+const STATIONS3=[
+ {id:'mat',name:['Kaivo','Well'],subject:['Matematiikka','Maths'],icon:'🔢',x:36,y:150,kind:'well',h:34},
+ {id:'aid',name:['Postilaatikko','Mailbox'],subject:['Äidinkieli','Finnish language'],icon:'📖',x:96,y:176,kind:'mail',h:28},
+ {id:'his',name:['Tienviitta','Signpost'],subject:['Historia ja maantieto','History & geography'],icon:'🗺️',x:160,y:196,kind:'sign',h:29},
+ {id:'eng',name:['Liitutaulu','Chalkboard'],subject:['Englanti','English'],icon:'💬',x:224,y:176,kind:'board',h:31},
+ {id:'ymp',name:['Omenapuu','Apple tree'],subject:['Ympäristöoppi','Science'],icon:'🌱',x:284,y:150,kind:'tree',h:37}];
+STATIONS3.forEach(s=>s.img=stationImg(s.kind));
+const BUILD3={id:'build',name:['Rakennuspaikka','Building site'],x:160,y:100,h:14};
+const SOLIDS3=[{x:112,y:18,w:96,h:76}];
+const has3=id=>!!(state.house3Parts||{})[id];
+const parts3Count=()=>PARTS3.filter(p=>has3(p.id)).length;
+const house3Done=()=>!!state.house3;
+let house3Anim=-1; // >=0 kun rakennusanimaatio on käynnissä (sekunteja)
+function buildBG3(){
+  const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');const rn=mulberry32(33);
+  R(g,0,0,W,H,'#7cc053');
+  for(let i=0;i<650;i++){const x=rn()*W|0,y=rn()*H|0;R(g,x,y,1,2,rn()<.5?'#68a844':'#90d064');}
+  const fl=['#ffffff','#ffe066','#ff9ec4'];for(let i=0;i<40;i++)R(g,rn()*W|0,rn()*H|0,1,1,fl[rn()*3|0]);
+  // polut
+  R(g,6,124,308,8,'#cfae73');R(g,154,94,12,30,'#cfae73');
+  for(let i=0;i<220;i++){R(g,6+rn()*308|0,124+rn()*8|0,1,1,'#b8955c');R(g,154+rn()*12|0,94+rn()*30|0,1,1,'#b8955c');}
+  // rakennuspaikka: hiekkapohja
+  R(g,108,16,104,80,'#c9a46a');for(let i=0;i<300;i++)R(g,108+rn()*104|0,16+rn()*80|0,1,1,rn()<.5?'#b8935a':'#d8b67c');
+  // puutavarakasa ja työkalut koristeeksi
+  for(let k=0;k<4;k++)R(g,14,36+k*4,40,3,k%2?'#a8743e':'#8f5f36');R(g,14,52,40,1,'#5e3a17');
+  R(g,262,40,30,20,'#8a8a8a');for(let k=0;k<5;k++)R(g,262+k*6,40,1,20,'#6e6e6e');R(g,262,50,30,1,'#6e6e6e');
+  // aidantolpat rakennuspaikan ympärillä
+  for(let x=108;x<=212;x+=13){R(g,x,14,2,6,'#7a4e2a');R(g,x,92,2,6,'#7a4e2a');}
+  for(let y=14;y<=92;y+=13){R(g,106,y,2,6,'#7a4e2a');R(g,212,y,2,6,'#7a4e2a');}
+  return c;
+}
+const BG3=buildBG3();
+// Talon piirto vaiheittain: 1 perustus, 2 seinät, 3 ikkunat+ovi, 4 katto, 5 piippu+kuisti
+function drawHouse3(g,stage,tt){
+  const x0=118,y0=22;
+  if(stage>=1){R(g,x0,y0+58,84,8,'#7d7d7d');for(let x=x0;x<x0+84;x+=7)R(g,x,y0+58,1,8,'#5e5e5e');R(g,x0,y0+61,84,1,'#5e5e5e');R(g,x0+2,y0+55,80,3,'#a8743e');}
+  if(stage>=2){R(g,x0+4,y0+22,76,33,'#d9a84a');for(let y=y0+25;y<y0+55;y+=4)R(g,x0+4,y,76,1,'#b98a35');R(g,x0+4,y0+22,3,33,'#f4ede0');R(g,x0+77,y0+22,3,33,'#f4ede0');}
+  if(stage>=3){for(const wx of[x0+12,x0+58]){R(g,wx,y0+30,14,12,'#f4ede0');R(g,wx+1,y0+31,12,10,'#6fb6e8');R(g,wx+6,y0+31,1,10,'#f4ede0');R(g,wx+1,y0+35,12,1,'#f4ede0');R(g,wx+2,y0+32,3,2,'#bfe6ff');}
+    R(g,x0+35,y0+34,14,21,'#f4ede0');R(g,x0+36,y0+35,12,20,'#7a3a22');R(g,x0+37,y0+36,10,8,'#8f4a2c');R(g,x0+45,y0+45,2,2,'#ffd34d');}
+  if(stage>=4){for(let i=0;i<24;i++){const hw=Math.min(46,4+i*1.8)|0;R(g,x0+42-hw,y0+i-2,hw*2,1,i%3===2?'#7e2018':'#a8322a');}R(g,x0-4,y0+22,92,2,'#5e1a14');}
+  if(stage>=5){R(g,x0+60,y0-6,9,18,'#9c4a3a');R(g,x0+59,y0-8,11,3,'#5e2a1e');for(let y=y0-4;y<y0+12;y+=4)R(g,x0+60,y,9,1,'#7e3a2c');
+    R(g,x0+30,y0+55,24,3,'#a8743e');R(g,x0+32,y0+58,20,3,'#8a8a8a');R(g,x0+30,y0+31,24,3,'#7e2018');R(g,x0+31,y0+34,2,21,'#f4ede0');R(g,x0+51,y0+34,2,21,'#f4ede0');
+    R(g,x0+12,y0+42,14,3,'#e8435a');R(g,x0+58,y0+42,14,3,'#ffd34d');
+    if(tt!=null)for(let i=0;i<4;i++){const k=(tt*.35+i/4)%1,sy=y0-10-k*22,sx=x0+64+Math.sin(k*6+i)*3+k*6,sz=2+Math.round(k*3);g.globalAlpha=.75*(1-k);R(g,sx-sz/2,sy-sz/2,sz,sz,'#e8e8e8');}g.globalAlpha=1;}
+}
+// Kerätyt osat odottavat rakennuspaikan reunalla
+function drawPiles3(tt){
+  const spots=[[124,74],[142,74],[160,74],[178,74],[196,74]];
+  PARTS3.forEach((p,i)=>{if(!has3(p.id))return;const [x,y]=spots[i];
+    if(p.id==='perustus'){R(ctx,x-6,y,12,6,'#7d7d7d');R(ctx,x-5,y+1,4,2,'#9a9a9a');R(ctx,x+1,y+3,4,2,'#9a9a9a');}
+    else if(p.id==='seinat'){for(let k=0;k<3;k++)R(ctx,x-7,y+k*2,14,2,k%2?'#b98a35':'#d9a84a');}
+    else if(p.id==='ikkunat'){R(ctx,x-6,y-1,6,7,'#f4ede0');R(ctx,x-5,y,4,5,'#6fb6e8');R(ctx,x+1,y-2,5,8,'#7a3a22');}
+    else if(p.id==='katto'){for(let k=0;k<3;k++)R(ctx,x-6+k,y+k*2,12-k*2,2,k%2?'#7e2018':'#a8322a');}
+    else{R(ctx,x-3,y-2,6,8,'#9c4a3a');R(ctx,x-4,y-3,8,2,'#5e2a1e');}
+    if(Math.floor(tt*2+i)%4===0)R(ctx,x+5,y-3,1,1,'#ffffff');});
+}
+function drawFarm3(){
+  ctx.drawImage(BG3,0,0);const tt=performance.now()/1000;
+  const ents=[];
+  // talo (valmis, rakenteilla tai pelkkä tyhjä tontti + osat)
+  ents.push({y:94,d:()=>{
+    if(house3Anim>=0)drawHouse3(ctx,Math.min(5,Math.floor(house3Anim/0.9)+1),null);
+    else if(house3Done())drawHouse3(ctx,5,tt);
+    else{for(let x=118;x<202;x+=6)R(ctx,x,80,3,1,'#fff6d5');R(ctx,118,80,1,1,'#fff6d5');drawPiles3(tt);
+      const y=Math.round(52+Math.sin(tt*2)*1.5);R(ctx,150,y,20,14,'#3a2414');R(ctx,151,y+1,18,12,'#ffd34d');R(ctx,152,y+2,16,2,'#3a2414');R(ctx,152,y+5,16,1,'#3a2414');R(ctx,152,y+8,10,1,'#3a2414');R(ctx,159,y+14,2,10,'#7a4e2a');}}});
+  for(const st of STATIONS3)ents.push({y:st.y,d:()=>{shadow(st.x,st.y+1,12);ctx.drawImage(st.img,st.x-20,st.y-42);}});
+  pushRobot(ents,tt);
+  ents.push({y:P.y,d:()=>{const fr=P.moving?(Math.floor(P.walkT*8)%2?1:2):0,s=SPR.player[fr],px=Math.round(P.x-s.w/2),py=Math.round(P.y-s.h);shadow(P.x,P.y,s.w);ctx.drawImage(P.flip?s.f:s.c,px,py);if(TIR.big)bigHead(s,'player',P.flip,px,py);if(state.crown)drawCrown(P.x,py-(TIR.big?9:0));}});
+  ents.sort((a,b)=>a.y-b.y).forEach(e=>e.d());
+  if(started){
+    for(const st of STATIONS3){if(st===nearSt&&!modalType)continue;
+      if(has3(PART3[st.id].id)){const y=st.y-st.h-10;R(ctx,st.x-3,y,7,7,'#2f6a24');R(ctx,st.x-2,y+3,1,1,'#fff');R(ctx,st.x-1,y+4,1,1,'#fff');R(ctx,st.x,y+3,1,1,'#fff');R(ctx,st.x+1,y+2,1,1,'#fff');R(ctx,st.x+2,y+1,1,1,'#fff');continue;}
+      const y=Math.round(st.y-st.h-14+Math.sin(tt*4+st.x)*1.5);R(ctx,st.x-3,y-1,7,11,'#3a2414');R(ctx,st.x-2,y,5,9,'#fff6d5');R(ctx,st.x-1,y+1,3,4,'#d6332b');R(ctx,st.x-1,y+6,3,2,'#d6332b');}
+    if(!house3Done()&&house3Anim<0&&parts3Count()===PARTS3.length&&nearSt!==BUILD3){const y=Math.round(BUILD3.y-14+Math.sin(tt*5)*2);R(ctx,BUILD3.x-3,y-1,7,11,'#3a2414');R(ctx,BUILD3.x-2,y,5,9,'#ffd34d');R(ctx,BUILD3.x-1,y+1,3,4,'#3a2414');R(ctx,BUILD3.x-1,y+6,3,2,'#3a2414');}
+  }
+  if(P.target&&!modalType){const b=Math.floor(tt*6)%2;R(ctx,P.target.x-2-b,P.target.y,2,1,'#fff6d5');R(ctx,P.target.x+1+b,P.target.y,2,1,'#fff6d5');}
+  for(const p of parts){const al=Math.min(1,p.life/p.max*1.5);ctx.globalAlpha=al;
+    if(p.kind==='heart')ctx.drawImage(SPR.heart.c,Math.round(p.x-2),Math.round(p.y));
+    else if(p.kind==='confetti')R(ctx,p.x,p.y,2,1,p.color);else R(ctx,p.x,p.y,1,1,p.color);ctx.globalAlpha=1;}
+}
+function updateHouse3(dt){
+  if(house3Anim<0)return;const prev=Math.floor(house3Anim/0.9);house3Anim+=dt;const now=Math.floor(house3Anim/0.9);
+  if(now!==prev&&now<=5){for(let i=0;i<3;i++)noise({t:i*.12,d:.05,v:.3,f:900+i*200});
+    for(let i=0;i<30;i++)parts.push({x:118+rand()*84,y:30+rand()*55,vx:(rand()-.5)*40,vy:-rand()*30,life:.9,max:.9,kind:'spark',color:pick(['#cfae73','#e8d7b0','#ffffff','#a8743e'])});}
+  if(house3Anim>=4.6){house3Anim=-1;state.house3=true;state.house3At=state.time||0;save();showHouse3Win();}
+}
+function finishQuiz3(){
+  const st=quiz.st,p=PART3[st.id];state.tasks++;state.last=st.id;
+  state.house3Parts=state.house3Parts||{};const isNew=!state.house3Parts[p.id];state.house3Parts[p.id]=true;save();updateHUD();
+  const n=parts3Count(),all=n===PARTS3.length;
+  openModal('result',`<h2>${L('Tehtävä suoritettu!','Task complete!')}</h2><div class="redo" style="font-size:3em">${p.e}</div>
+  <p>${isNew?L(`Sait talon osan: <b>${L2(p.n)}</b> – ${L2(p.d)}!`,`You got a house part: <b>${L2(p.n)}</b> – ${L2(p.d)}!`):L('Tämä osa oli jo kerätty.','You already had this part.')}</p>
+  <p class="fact">🏗️ ${L('Talon osia','House parts')}: <b>${n}/${PARTS3.length}</b> ${PARTS3.map(x=>`<span style="${has3(x.id)?'':'filter:grayscale(1);opacity:.35'}">${x.e}</span>`).join(' ')}</p>
+  ${all?`<p><b>${L('Kaikki osat kerätty! Mene rakennuspaikalle ja rakenna talo 🔨','All parts collected! Go to the building site and build the house 🔨')}</b></p>`:''}
+  <div class="row"><button class="btn big" id="p3Ok">${L('Takaisin työmaalle ▶','Back to the site ▶')}</button></div>`);
+  bind('p3Ok',closeModal);sfx.fanfare();
+}
+function openBuild3(){
+  if(house3Done()){openModal('result',`<h2>🏡 ${L('Valmis talo','Finished house')}</h2><p>${L('Rakensit tämän talon itse! Savupiipusta nousee savua ja ikkunoissa kukkii.','You built this house yourself! Smoke rises from the chimney and flowers bloom in the windows.')}</p><div class="row"><button class="btn big" id="b3Ok">OK</button></div>`);bind('b3Ok',closeModal);return;}
+  const miss=PARTS3.filter(p=>!has3(p.id));
+  if(miss.length){sfx.deny();openModal('result',`<h2>🏗️ ${L('Rakennuspaikka','Building site')}</h2><p>${L('Talon rakentamiseen tarvitaan kaikki viisi osaa. Saat osan jokaiselta tehtäväpisteeltä.','You need all five parts to build the house. Each task point gives one part.')}</p>
+    <p class="fact">${L('Vielä puuttuu','Still missing')}: ${miss.map(p=>`${p.e} <b>${L2(p.n)}</b> (${st3Name(p.st)})`).join(' · ')}</p><div class="row"><button class="btn big" id="b3Ok">OK</button></div>`);bind('b3Ok',closeModal);return;}
+  openModal('result',`<h2>🔨 ${L('Rakenna talo!','Build the house!')}</h2><div class="redo" style="font-size:2em">${PARTS3.map(p=>p.e).join(' ')}</div>
+   <p>${L('Kaikki osat ovat valmiina. Aloitetaanko rakentaminen?','All the parts are ready. Shall we start building?')}</p>
+   <div class="row"><button class="btn big" id="b3Go">🔨 ${L('Rakenna!','Build!')}</button><button class="btn" id="b3No">${L('Myöhemmin','Later')}</button></div>`);
+  bind('b3No',closeModal);bind('b3Go',()=>{closeModal();house3Anim=0;sfx.ui();toast(L('🔨 Rakennetaan… kop kop!','🔨 Building… knock knock!'));});
+}
+const st3Name=id=>{const s=STATIONS3.find(x=>x.id===id);return s?`${s.icon} ${L2(s.name)}`:'';};
+function showHouse3Win(){
+  sfx.win();for(let i=0;i<140;i++)parts.push({x:rand()*W,y:-rand()*40,vx:(rand()-.5)*30,vy:20+rand()*40,life:4,max:4,kind:'confetti',color:pick(['#e8435a','#ffd34d','#6fcf4f','#4fa3e8','#b97ae8'])});
+  openModal('win',`<div class="logo small">${L('TALO VALMIS!','HOUSE BUILT!')}</div><canvas id="h3Cv" width="100" height="80" style="width:min(60%,300px);image-rendering:pixelated;display:block;margin:.3em auto"></canvas>
+  <p>${L('Keräsit kaikki viisi osaa ja rakensit farmille oman talon! 🏡','You collected all five parts and built your own house on the farm! 🏡')}</p>
+  <div class="row"><button class="btn big" id="h3Ok">${L('Ihaile taloa','Admire the house')}</button><button class="btn" id="h3Back">🚜 ${L('Farmille 1','To farm 1')}</button></div>`);
+  const c=$('#h3Cv'),g=c.getContext('2d');g.imageSmoothingEnabled=false;R(g,0,0,100,80,'#7cc053');g.translate(-110,-12);drawHouse3(g,5,null);
+  bind('h3Ok',closeModal);bind('h3Back',()=>{closeModal();goFarm(1);});
+}
+
 
 /* ---------- TILA ---------- */
 function freshState(level){return {owned:{},tasks:0,correct:0,answered:0,last:null,dup:0,won:false,chests:0,restarts:0,level:level||5,boss:'none',bossTries:0,doneSt:[],stone:false,unlocked78:false,farm:1,farm2:false,crops:{},dup2:0,farm2Done:false,name:'',time:0,cheated:false};}
@@ -1173,13 +1300,15 @@ CROPS.forEach(cr=>{
   const n=document.createElement('span');n.className='cnt';d.append(c,n);coll.append(d);cr.slot=d;cr.cnt=n;
   d.onclick=()=>{if(state.crops[cr.id]){initAudio();cropSnd();}};
 });
+PARTS3.forEach(pt=>{const d=document.createElement('div');d.className='slot miss';d.hidden=true;const e=document.createElement('span');e.className='pe';e.textContent=pt.e;d.append(e);coll.append(d);pt.slot=d;});
 function updateHUD(){
-  const f2=state.farm===2;
-  ANIMALS.forEach(a=>a.slot.hidden=f2);
+  const f2=state.farm===2,f3=state.farm===3,nf1=state.farm!==1;
+  ANIMALS.forEach(a=>a.slot.hidden=nf1);
+  PARTS3.forEach(pt=>{pt.slot.hidden=!f3;pt.slot.classList.toggle('miss',!has3(pt.id));pt.slot.title=has3(pt.id)?L2(pt.n):L(`??? – ${L2(pt.n)} saat pisteeltä ${st3Name(pt.st)}`,`??? – get ${L2(pt.n)} from ${st3Name(pt.st)}`);});
   CROPS.forEach(c=>{const n=state.crops[c.id]||0;c.slot.hidden=!f2;c.slot.classList.toggle('miss',!n);c.cnt.textContent=n>1?'×'+n:'';c.slot.title=n?L2(c.name):L('??? – vielä löytämättä','??? – not found yet');});
-  $('#bFarm').hidden=!state.farm2;$('#bFarm').title=f2?L('Takaisin farmille 1','Back to farm 1'):L('Farmille 2','To farm 2');
-  silverSlot.hidden=!state.silver||f2;silverSlot.cnt.textContent=state.silver>1?'×'+state.silver:'';silverSlot.title=L2(ANIM.hopea.name);
-  goldSlot.hidden=!state.golden||f2;goldSlot.title=L2(ANIM.kulta.name);
+  $('#bFarm').hidden=!state.farm2;$('#bFarm').title=f3?L('Farmille 1','To farm 1'):f2?L('Talotyömaalle (farmi 3)','To the house site (farm 3)'):L('Farmille 2','To farm 2');
+  silverSlot.hidden=!state.silver||nf1;silverSlot.cnt.textContent=state.silver>1?'×'+state.silver:'';silverSlot.title=L2(ANIM.hopea.name);
+  goldSlot.hidden=!state.golden||nf1;goldSlot.title=L2(ANIM.kulta.name);
   ANIMALS.forEach(a=>{const n=state.owned[a.id]||0;a.slot.classList.toggle('miss',!n);a.cnt.textContent=n>1?'×'+n:'';a.slot.title=n?L2(a.name):L('??? – vielä löytämättä','??? – not found yet');});
   $('#stTasks').textContent='📝 '+state.tasks;
   updateTimeHUD();if(typeof renderControl==='function')renderControl();
@@ -1335,6 +1464,7 @@ function showHelp(){
   <li>🎁 Jokaisessa arkussa on <b>1 eläin</b>. Ilman yhtään virhettä saat kultaisen arkun, josta tulee useammin uusi eläin.</li>
   <li>🔁 Sama piste ei anna arkkua kahdesti peräkkäin – vaihtele oppiaineita!</li>
   <li>🐾 Kerää <b>sorsa, possu, kana, lehmä, lammas ja peruna</b>. Tavallisissa tehtävissä ei ole aikarajaa.</li>
+  <li>🏗️ Perunapomon voiton jälkeen 🚜-napista pääset farmille 2 ja <b>talotyömaalle (farmi 3)</b>. Työmaalla jokainen tehtäväpiste antaa yhden <b>talon osan</b>. Kun olet kerännyt kaikki viisi, rakenna talo rakennuspaikalla!</li>
   <li>👑 Kun kaikki eläimet on kerätty, pellolta nousee <b>Perunapomo</b>. Pomotaistelussa jokaisessa kysymyksessä on <b>20 sekunnin aikaraja</b>. Oikea vastaus tekee vahinkoa (nopea vastaus tekee enemmän), väärä vastaus tai loppunut aika vie sydämen. Voita pomo, niin voitat pelin!</li>
   <li>🔁 Voiton jälkeen Perunapomo jää pellolle, ja voit haastaa sen <b>uusintaotteluun</b> milloin vain. Yritä rikkoa ennätyksesi!</li>
   <li>🪨 Kun olet saanut arkun jokaiselta viideltä pisteeltä, farmin keskelle nousee <b>salaperäinen kivi</b>. Sitä klikkaamalla voit nostaa tehtävät <b>7.–8. luokan</b> tasolle.</li>
@@ -1353,6 +1483,7 @@ function showHelp(){
   <li>🎁 Every chest holds <b>1 animal</b>. With no mistakes you get a golden chest, which gives a new animal more often.</li>
   <li>🔁 The same point won’t give a chest twice in a row – mix your subjects!</li>
   <li>🐾 Collect the <b>duck, pig, chicken, cow, sheep and potato</b>. Normal tasks have no time limit.</li>
+  <li>🏗️ After beating the Potato Boss, the 🚜 button takes you to farm 2 and the <b>house site (farm 3)</b>. There every task point gives one <b>house part</b>. Collect all five and build the house at the building site!</li>
   <li>👑 When you have every animal, the <b>Potato Boss</b> rises from the field. In the boss fight every question has a <b>20-second time limit</b>. A right answer deals damage (fast answers deal more); a wrong answer or running out of time costs a heart. Beat the boss to win the game!</li>
   <li>🔁 After you win, the Potato Boss stays in the field and you can challenge it to a <b>rematch</b> any time. Try to beat your record!</li>
   <li>🪨 Once you have earned a chest at all five points, a <b>mysterious stone</b> rises in the middle of the farm. Click it to raise the tasks to <b>grade 7–8</b>.</li>
@@ -1369,7 +1500,9 @@ function openStation(st){
   if(st.id==='boss')return showBossIntro();
   if(st.id==='robot')return showRobotIntro();
   if(st.id==='stone')return showStone();
-  if(state.last===st.id){toast(L('Tämä piste lepää. Tee välillä tehtävä toisella pisteellä!','This point is resting. Try another task point first!'));sfx.deny();return;}
+  if(st.id==='build')return openBuild3();
+  if(state.farm===3&&PART3[st.id]&&has3(PART3[st.id].id)){toast(L(`✅ Sait jo täältä osan: ${L2(PART3[st.id].n)}. Hae muut osat muilta pisteiltä!`,`✅ You already got ${L2(PART3[st.id].n)} here. Get the other parts from the other points!`));sfx.deny();return;}
+  if(state.last===st.id&&state.farm!==3){toast(L('Tämä piste lepää. Tee välillä tehtävä toisella pisteellä!','This point is resting. Try another task point first!'));sfx.deny();return;}
   initAudio();sfx.ui();
   quiz={st,done:0,lives:LIVES,mistakes:0,q:null,answered:false,lastOk:false,seen:new Set(),slots:[]};
   quiz.q=freshQ();
@@ -1429,6 +1562,7 @@ function showRestart(){
   bind('rBack',closeModal);
 }
 function finishQuiz(){
+  if(state.farm===3)return finishQuiz3();
   const st=quiz.st,gold=quiz.mistakes===0;state.tasks++;state.last=st.id;
   state.doneSt=[...new Set([...(state.doneSt||[]),st.id])];
   let stoneNow=false;if(!state.stone&&STATIONS.every(x=>state.doneSt.includes(x.id))){state.stone=true;stoneRise=0;stoneNow=true;}
@@ -1534,7 +1668,8 @@ const BOSS={id:'boss',name:['Perunapomo','Potato Boss'],x:160,y:184,h:40};
 const BOSS_HP=100,BOSS_HEARTS=5,BOSS_TIME=20;
 let fight=null,bossRise=bossOnFarm()?1:0;
 function bossOnFarm(){return state.boss==='awake'||state.boss==='beaten';}
-const activeStations=()=>robotOn()?[...(state.farm===2?STATIONS2:baseStations()),robotPos()]:(state.farm===2?STATIONS2:baseStations());
+const farmStations=()=>state.farm===3?[...STATIONS3,BUILD3]:state.farm===2?STATIONS2:baseStations();
+const activeStations=()=>robotOn()?[...farmStations(),robotPos()]:farmStations();
 const baseStations=()=>[...STATIONS,...(bossOnFarm()?[BOSS]:[]),...(state.stone?[STONE]:[])];
 function showBossIntro(first){
   setMusic('boss');sfx.bossRoar();
@@ -1971,7 +2106,7 @@ function applyReward(id){
 }
 const ROBOT={id:'robot',name:['Perunaattori 2000','Perunaattori 2000'],x:34,y:120,h:40};
 function robotOn(){return !!(state.robot&&state.robot.on);}
-function robotPos(){if(state.farm===2){ROBOT.x=160;ROBOT.y=150;}else{ROBOT.x=34;ROBOT.y=120;}return ROBOT;}
+function robotPos(){if(state.farm===3){ROBOT.x=60;ROBOT.y=112;}else if(state.farm===2){ROBOT.x=160;ROBOT.y=150;}else{ROBOT.x=34;ROBOT.y=120;}return ROBOT;}
 function summonRobot(by){state.robot={on:true,by:by||'',at:Date.now()};save();robotRise=0;robotAnnounced=state.robot.at;robotAlarm();}
 let robotRise=1,robotAnnounced=0;
 function robotAlarm(){
@@ -2045,7 +2180,7 @@ function runCmd(raw){
   tila             – näytä pelin tila
   nollaa           – aloita koko peli alusta
   kivi             – tuo 7.–8. luokan kivi heti
-  farmi 1 / farmi 2 – siirry farmille
+  farmi 1 / 2 / 3  – siirry farmille (3 = talotyömaa)
   extrat           – minipelit (miinaharava, shakki, tammi, pokeri, ajopeli)
   tyhjennä / sulje`,`Commands:
   animals          – get every animal now
@@ -2062,7 +2197,7 @@ function runCmd(raw){
   status           – show game status
   reset            – start the whole game over
   stone            – bring the grade 7–8 stone now
-  farm 1 / farm 2  – go to a farm
+  farm 1 / 2 / 3   – go to a farm (3 = house site)
   extras           – mini games (minesweeper, chess, checkers, poker, racing)
   clear / close`));break;
   case 'eläimet':case 'elaimet':case 'animals':{
@@ -2108,9 +2243,9 @@ function runCmd(raw){
   case 'tyhjennä':case 'tyhjenna':case 'clear':$('#cmdLog').innerHTML='';break;
   case 'sulje':case 'close':case 'exit':closeCmd();break;
   case 'kivi':case 'stone':state.doneSt=STATIONS.map(x=>x.id);if(!state.stone){state.stone=true;stoneRise=0;}save();ok(L('🪨 Kivi ilmestyi farmin keskelle!','🪨 The stone appeared in the middle of the farm!'));break;
-  case 'farmi':case 'farm':{const n=+a;if(n!==1&&n!==2)return err(L('Käytä: farmi 1 tai farmi 2','Use: farm 1 or farm 2'));
+  case 'farmi':case 'farm':{const n=+a;if(![1,2,3].includes(n))return err(L('Käytä: farmi 1, 2 tai 3','Use: farm 1, 2 or 3'));
     if(['quiz','boss','chest','result','dodge'].includes(modalType))return err(L('Sulje ensin avoin ikkuna.','Close the open window first.'));
-    if(n===2&&!state.farm2){state.farm2=true;}if(modalType)closeModal();started=true;goFarm(n);ok(L(`🚜 Farmi ${n}`,`🚜 Farm ${n}`));break;}
+    if(n>1&&!state.farm2){state.farm2=true;}if(modalType)closeModal();started=true;goFarm(n);ok(L(`🚜 Farmi ${n}`,`🚜 Farm ${n}`));break;}
   case 'extrat':case 'extras':case 'extra':
     if(['quiz','chest','boss','dodge','result','bossintro'].includes(modalType)||robotForced())return err(L('Avaa extrat vasta tehtävän jälkeen.','Open the extras after the task.'));
     closeCmd();showExtras();ok(L('🎲 Extrat avattu!','🎲 Extras opened!'));break;
@@ -2119,7 +2254,7 @@ function runCmd(raw){
     if(!['suuppe',ADMIN_ID].includes(who))return err(L(`Tuntematon komento "${c}". Kirjoita "apua".`,`Unknown command "${c}". Type "help".`));
     if(state.horse){const h=animals.find(x=>x.id==='hevonen');if(h){h.jump=.6;h.wait=0;const t=randPt('barnyard');h.tx=t.x;h.ty=t.y;}ANIM.hevonen.snd();ok(L('🐴 Hevonen on jo farmilla – se hirnahti iloisesti!','🐴 The horse is already on the farm – it neighed happily!'));break;}
     state.horse=true;save();
-    if(state.farm===2){rebuildAnimals();ANIM.hevonen.snd();ok(L('🐴 Hevonen juoksi ulos farmin 1 ladosta!','🐴 A horse ran out of the farm 1 barn!'));}
+    if(state.farm!==1){rebuildAnimals();ANIM.hevonen.snd();ok(L('🐴 Hevonen juoksi ulos farmin 1 ladosta!','🐴 A horse ran out of the farm 1 barn!'));}
     else{horseFromBarn();ok(L('🐴 Ladon ovet aukeavat… hevonen juoksee ulos!','🐴 The barn doors open… a horse runs out!'));}
     break;}
   case 'tirppa':openTirppa();ok(L('🐦 Tirppa-valikko avattu ruudun reunaan!','🐦 Tirppa menu opened at the edge of the screen!'));break;
@@ -2147,6 +2282,7 @@ $('#bHelp').onclick=()=>{if(['quiz','chest','result','boss','bossintro'].include
 /* ---------- PÄIVITYS ---------- */
 function blocked(x,y){
   if(x<6||x>314||y<18||y>205)return true;
+  if(state.farm===3){for(const s of SOLIDS3)if(x>s.x&&x<s.x+s.w&&y>s.y&&y<s.y+s.h)return true;return false;}
   if(state.farm===2){for(const s of SOLIDS2)if(x>s.x&&x<s.x+s.w&&y>s.y&&y<s.y+s.h)return true;return false;}
   for(const s of SOLIDS)if(x>s.x&&x<s.x+s.w&&y>s.y&&y<s.y+s.h)return true;
   const dx=(x-POND.cx)/(POND.rx-2),dy=(y-POND.cy)/(POND.ry-2);return dx*dx+dy*dy<1;
@@ -2171,7 +2307,7 @@ function update(dt){
     let best=null,bd=18;for(const st of activeStations()){const d=Math.hypot(P.x-st.x,P.y-(st.y+7))-(st.id==='boss'||st.id==='robot'?8:0);if(d<bd){bd=d;best=st;}}
     if(best!==nearSt){nearSt=best;renderPrompt();}
     // Salainen pikseli lammikon vieressä alareunassa: päälle astuminen = perunajumpscare.
-    const sd=state.farm===2?99:Math.hypot(P.x-SECRET_PX.x,P.y-SECRET_PX.y);
+    const sd=state.farm!==1?99:Math.hypot(P.x-SECRET_PX.x,P.y-SECRET_PX.y);
     if(sd<4&&SECRET_PX.armed){SECRET_PX.armed=false;keys.clear();P.target=null;potatoScare();}
     else if(sd>9)SECRET_PX.armed=true;
   }else P.moving=false;
@@ -2194,7 +2330,9 @@ function renderPrompt(){
   if(st.id==='robot'){pr.innerHTML=`<span>🤖 PERUNAATTORI 2000</span><button>${L('Taistele!','Fight!')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
   else if(st.id==='stone'){pr.innerHTML=`<span>🪨 ${L('Salaperäinen kivi','Mysterious stone')}</span><button>${L('Tutki','Inspect')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
   else if(st.id==='boss'){pr.innerHTML=`<span>👑 ${L2(st.name)}</span><button>${state.boss==='beaten'?L('Uusintaottelu!','Rematch!'):L('Taistele!','Fight!')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
-  else if(state.last===st.id)pr.innerHTML=`<span>${L2(st.name)} ${L('lepää 💤 – kokeile toista pistettä','is resting 💤 – try another point')}</span>`;
+  else if(st.id==='build'){pr.innerHTML=`<span>🏗️ ${L2(st.name)} (${parts3Count()}/${PARTS3.length})</span><button>${house3Done()?L('Katso taloa','View house'):parts3Count()===PARTS3.length?L('Rakenna!','Build!'):L('Katso','Look')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
+  else if(state.farm===3&&PART3[st.id]&&has3(PART3[st.id].id))pr.innerHTML=`<span>✅ ${PART3[st.id].e} ${L2(PART3[st.id].n)} ${L('saatu','collected')}</span>`;
+  else if(state.last===st.id&&state.farm!==3)pr.innerHTML=`<span>${L2(st.name)} ${L('lepää 💤 – kokeile toista pistettä','is resting 💤 – try another point')}</span>`;
   else{pr.innerHTML=`<span>${st.icon} ${L2(st.subject)}</span><button>${L('Tee tehtävä','Do the task')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
   if(isPhone())pr.innerHTML=pr.innerHTML.replace(' [E]',' ✋');
   pr.hidden=false;
@@ -2275,7 +2413,7 @@ const packState=()=>JSON.parse(JSON.stringify(state));
 const SLOT_SKIP=['slots','control','robot','dev','updated','owner'];
 function slotSnap(){const o={};for(const k in state)if(!SLOT_SKIP.includes(k))o[k]=state[k];return JSON.parse(JSON.stringify(o));}
 function slotSummary(sv){const n=ANIMALS.filter(a=>(sv.owned||{})[a.id]).length;
-  return `🐾 ${n}/6 · 📚 ${esc(levelName(sv.level||5))} · 🚜 ${L('farmi','farm')} ${sv.farm===2?2:1} · ⏱️ ${fmtClock(sv.time||0)}${sv.boss==='beaten'?' · 👑✅':''}${sv.farm2?` · 🌻 ${Object.keys(sv.crops||{}).length}/6`:''}`;}
+  return `🐾 ${n}/6 · 📚 ${esc(levelName(sv.level||5))} · 🚜 ${L('farmi','farm')} ${sv.farm||1} · ⏱️ ${fmtClock(sv.time||0)}${sv.boss==='beaten'?' · 👑✅':''}${sv.farm2?` · 🌻 ${Object.keys(sv.crops||{}).length}/6 · ${sv.house3?'🏡':'🏗️ '+Object.keys(sv.house3Parts||{}).length+'/5'}`:''}`;}
 function showSlots(back){
   if(!ACC){needLogin();return;}state.slots=state.slots||[null,null,null];
   const fmtD=t=>{const d=new Date(t);return d.toLocaleDateString(settings.lang==='en'?'en-GB':'fi-FI')+' '+d.toLocaleTimeString(settings.lang==='en'?'en-GB':'fi-FI',{hour:'2-digit',minute:'2-digit'});};
@@ -2294,7 +2432,7 @@ function showSlots(back){
     else if(a==='load'){if(robotForced()){sfx.deny();return toast(L('🔒 Perunaattori 2000 -taistelu pitää käydä ensin!','🔒 You must fight Perunaattori 2000 first!'));}
       const go=()=>{const keep={slots:state.slots,owner:state.owner,name:state.name,robot:state.robot,control:state.control};
         state=Object.assign(freshState(),JSON.parse(JSON.stringify(sl.snap)),keep);if(!state.crops)state.crops={};state.sr=false;
-        rebuildAnimals();bossRise=bossOnFarm()?1:0;stoneRise=1;pendingLevel=state.level;if(state.farm===2){P.x=160;P.y=112;}else{P.x=150;P.y=100;}
+        rebuildAnimals();bossRise=bossOnFarm()?1:0;stoneRise=1;pendingLevel=state.level;if(state.farm===3){P.x=160;P.y=140;}else if(state.farm===2){P.x=160;P.y=112;}else{P.x=150;P.y=100;}
         nearSt=null;save();updateHUD();closeModal();started=true;sfx.fanfare();toast(L(`▶ Ladattiin ”${sl.name}”. Hauskaa peliä!`,`▶ Loaded “${sl.name}”. Have fun!`));};
       if(hasProgress())sureClick(b,go);else go();}
     else if(a==='del')sureClick(b,()=>{state.slots[i]=null;save();sfx.ui();showSlots(back);});
@@ -2308,7 +2446,7 @@ function applySave(sv){
   state=Object.assign(freshState(),sv);if(!state.crops)state.crops={};
   try{localStorage.setItem(SKEY,JSON.stringify(state));}catch(e){}
   rebuildAnimals();bossRise=bossOnFarm()?1:0;stoneRise=1;pendingLevel=state.level;
-  if(state.farm===2){P.x=160;P.y=112;}else{P.x=150;P.y=100;}nearSt=null;updateHUD();
+  if(state.farm===3){P.x=160;P.y=140;}else if(state.farm===2){P.x=160;P.y=112;}else{P.x=150;P.y=100;}nearSt=null;updateHUD();
 }
 async function login(name,pin){
   try{
@@ -2913,7 +3051,8 @@ function admRenderGame(){
    <button class="btn" data-g="animals">🐾 ${L('Kaikki eläimet','All animals')}</button>
    <button class="btn" data-g="crops">🌻 ${L('Kaikki kasvit','All crops')}</button>
    <button class="btn" data-g="boss">👑 ${L('Herätä Perunapomo','Wake the Potato Boss')}</button>
-   <button class="btn" data-g="farm2">🚜 ${L('Avaa farmi 2','Unlock farm 2')}</button>
+   <button class="btn" data-g="farm2">🚜 ${L('Avaa farmit 2 ja 3','Unlock farms 2 and 3')}</button>
+   <button class="btn" data-g="house3">🏗️ ${L('Kaikki talon osat','All house parts')}</button>
    <button class="btn" data-g="stone">🪨 ${L('Avaa 7.–8. luokan kivi','Unlock the grade 7–8 stone')}</button>
    <button class="btn" data-g="silver">🥈 ${L('Hopeaperuna +1','Silver potato +1')}</button>
    <button class="btn" data-g="golden">✨ ${L('Kultainen peruna','Golden potato')}</button>
@@ -2932,6 +3071,7 @@ function admRenderGame(){
     if(g==='crops'){CROPS.forEach(c=>{if(!state.crops[c.id])state.crops[c.id]=1;});state.farm2=true;}
     if(g==='boss'){if(state.boss==='none')state.boss='awake';bossRise=1;}
     if(g==='farm2')state.farm2=true;
+    if(g==='house3'){state.farm2=true;state.house3Parts={};PARTS3.forEach(p=>state.house3Parts[p.id]=true);}
     if(g==='stone'){state.doneSt=STATIONS.map(x=>x.id);state.stone=true;state.unlocked78=true;stoneRise=1;}
     if(g==='silver'){state.silver=(state.silver||0)+1;rebuildAnimals();}
     if(g==='golden'){state.golden=true;rebuildAnimals();}
@@ -3027,15 +3167,15 @@ function applyDevice(){
     if(nearSt)openStation(nearSt);else{toast(L('Kävele ❗-merkin luo ja paina ✋','Walk to a ❗ sign and press ✋'));sfx.deny();}});
 })();
 function goFarm(n){
-  if(n===2&&!state.farm2)return;initAudio();
+  if((n===2||n===3)&&!state.farm2)return;initAudio();
   state.farm=n;P.target=null;P.autoSt=null;keys.clear();
-  if(n===2){P.x=160;P.y=112;}else{P.x=150;P.y=100;}
+  if(n===3){P.x=160;P.y=140;}else if(n===2){P.x=160;P.y=112;}else{P.x=150;P.y=100;}
   nearSt=null;renderPrompt();updateHUD();save();
   noise({d:.5,v:.25,f:120});tone({f:70,f2:95,d:.6,v:.3,type:'sawtooth',filt:{type:'lowpass',f:400}});
   for(let i=0;i<20;i++)parts.push({x:P.x+(rand()-.5)*20,y:P.y-4,vx:(rand()-.5)*40,vy:-rand()*30,life:.8,max:.8,kind:'spark',color:pick(['#cfae73','#e8d7b0','#ffffff'])});
-  toast(n===2?L('🚜 Saavuit farmille 2! Tee tehtäviä ja kasvata pellot täyteen.','🚜 You arrived at farm 2! Do tasks and fill the fields with crops.'):L('🚜 Takaisin farmilla 1.','🚜 Back at farm 1.'));
+  toast(n===3?(house3Done()?L('🏡 Talotyömaa – talosi odottaa!','🏡 The house site – your house is waiting!'):L(`🏗️ Talotyömaa! Jokainen tehtäväpiste antaa yhden talon osan (${parts3Count()}/5). Kerää kaikki ja rakenna talo!`,`🏗️ House site! Each task point gives one house part (${parts3Count()}/5). Collect them all and build the house!`)):n===2?L('🚜 Saavuit farmille 2! Tee tehtäviä ja kasvata pellot täyteen.','🚜 You arrived at farm 2! Do tasks and fill the fields with crops.'):L('🚜 Takaisin farmilla 1.','🚜 Back at farm 1.'));
 }
-$('#bFarm').onclick=()=>{if(modalType&&modalType!=='title')return;if(modalType==='title'){started=true;closeModal();}goFarm(state.farm===2?1:2);};
+$('#bFarm').onclick=()=>{if(modalType&&modalType!=='title')return;if(modalType==='title'){started=true;closeModal();}goFarm(state.farm===1?2:state.farm===2?3:1);};
 function showFarm2Win(){
   sfx.win();
   for(let i=0;i<120;i++)parts.push({x:rand()*W,y:-rand()*40,vx:(rand()-.5)*30,vy:20+rand()*40,life:4,max:4,kind:'confetti',color:pick(['#e8435a','#ffd34d','#6fcf4f','#4fa3e8','#b97ae8'])});
@@ -3065,6 +3205,7 @@ function drawFarm2(){
 /* ---------- PIIRTO ---------- */
 function shadow(x,y,w){ctx.fillStyle='rgba(0,0,0,.22)';ctx.fillRect(Math.round(x-w/2+1),Math.round(y-1),w-2,2);}
 function draw(){
+  if(state.farm===3)return drawFarm3();
   if(state.farm===2)return drawFarm2();
   ctx.drawImage(BG,0,0);
   const tt=performance.now()/1000;
@@ -3107,6 +3248,7 @@ function loop(now){
   update(dt);draw();
   if(modalType==='chest')drawChest(dt);
   if(modalType==='boss'||modalType==='bossintro')updateFight(dt);
+  updateHouse3(dt);
   if(modalType==='dodge')updateDodge(dt);
   if(modalType==='title'||modalType==='win')drawParade();
   renderSr();
