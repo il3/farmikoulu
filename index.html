@@ -280,6 +280,10 @@ SPR.bossW=makeSprite(BOSS_ROWS,{b:'#fff',B:'#fff',y:'#fff',r:'#fff',G:'#fff',k:'
 SPR.kulta=makeSprite(["...bbbb...",".bbbbbbbb.","bbBbbbbbBb","bbWebbWebb","bbbbbbbbbb","bbbmmmmbbb",".bbbbmmbB.","..bbbbbb..","..k....k..",".kk....kk."],
   {b:'#f7cf3a',B:'#d9a520',W:'#ffffff',e:'#1b1410',m:'#9a6a00',k:'#9a6a00'});
 SPR.bossEvil=makeSprite(BOSS_ROWS,{b:'#8a6a3a',B:'#6a4a22',y:'#7a3ab0',r:'#ff2020',G:'#ff2020',k:'#2a160a',W:'#ffd0d0',e:'#ff2020',m:'#300808'});
+const ROBOT_ROWS=["........R.........","........k.........","....kkkkkkkkkk....","...kGGGGGGGGGGk...","..kGGgGGGGGGgGGk..",".kGGGGGGGGGGGGGGk.",".kGrrrrrrrrrrrrGk.",".kGrRRrrrrrrRRrGk.",".kGrrrrrrrrrrrrGk.",".kGGGGGGGGGGGGGGk.",
+ ".kGGkGkGkGkGkGGGk.",".kGGGGGGGGGGGGGGk.","kkGGgGGGGGGGGgGGkk","bkGGGGGGGGGGGGGGkb","b.kGGGGGGGGGGGGk.b","...kGGGGGGGGGGk...","....kkkkkkkkkk....",".....kk....kk.....","....kkk....kkk...."];
+SPR.robot=makeSprite(ROBOT_ROWS,{k:'#2a2f36',G:'#9aa4ae',g:'#d7dee5',r:'#7a0f0f',R:'#ff3030',b:'#c9995a'});
+SPR.robotW=makeSprite(ROBOT_ROWS,{k:'#fff',G:'#fff',g:'#fff',r:'#fff',R:'#fff',b:'#fff'});
 SPR.sprout=makeSprite(["..g.g..",".gGgGg.","..gGg..","...b...","..bbb..",".bbbbb.","..bbb.."],{g:'#6fcf4f',G:'#3f9a3f',b:'#c9995a'});
 SPR.apple=makeSprite(["..g.",".rr.","rrrr","rrrr",".rr."],{g:'#3f9a3f',r:'#d6332b'});
 
@@ -335,13 +339,14 @@ const BOSS_TRACK={step:.15,bass:['E2','A2','E2','B1','G2','C2','G2','B1'],
   "B4 B4 C5 B4 A4 G4 A4 B4 C5 C5 B4 A4 G4 F#4 G4 A4 B4 - B4 C5 D5 C5 B4 A4 G4 F#4 D4 F#4 E4 - - -").split(' ')};
 let musicMode='farm';
 const FINAL_TRACK={mel:BOSS_TRACK.mel,bass:BOSS_TRACK.bass,step:.12};
+const ROBOT_TRACK={mel:BOSS_TRACK.mel.map(n=>n==='-'?n:n.replace(/(\d)$/,d=>String(+d+1))),bass:BOSS_TRACK.bass,step:.1};
 function setMusic(m){if(musicMode===m)return;musicMode=m;musStep=0;}
 function startMusic(){musNext=AC.currentTime+.15;musTimer=setInterval(schedMusic,40);}
 function schedMusic(){
   if(!AC)return;
   if(musNext<AC.currentTime)musNext=AC.currentTime+.05;
   while(musNext<AC.currentTime+.25){
-    const T=musicMode==='boss'?BOSS_TRACK:musicMode==='final'?FINAL_TRACK:FARM_TRACK,i=musStep%64,n=T.mel[i];
+    const T=musicMode==='boss'?BOSS_TRACK:musicMode==='final'?FINAL_TRACK:musicMode==='robot'?ROBOT_TRACK:FARM_TRACK,i=musStep%64,n=T.mel[i];
     if(n!=='-')tone({f:nf(n),at:musNext,d:T.step*.8,v:.11,type:'square',dest:musicGain});
     if(i%2===0){const root=nf(T.bass[Math.floor(i/8)]);const beat=(i%8)/2;tone({f:beat%2?root*1.5:root,at:musNext,d:T.step*1.7,v:.3,type:'triangle',dest:musicGain});}
     else noise({at:musNext,d:.03,v:musicMode!=='farm'?.1:.06,f:7000,dest:musicGain});
@@ -1234,6 +1239,7 @@ const NEED=3,LIVES=3;
 function openStation(st){
   if(modalType)return;
   if(st.id==='boss')return showBossIntro();
+  if(st.id==='robot')return showRobotIntro();
   if(st.id==='stone')return showStone();
   if(state.last===st.id){toast(L('Tämä piste lepää. Tee välillä tehtävä toisella pisteellä!','This point is resting. Try another task point first!'));sfx.deny();return;}
   initAudio();sfx.ui();
@@ -1396,7 +1402,8 @@ const BOSS={id:'boss',name:['Perunapomo','Potato Boss'],x:160,y:184,h:40};
 const BOSS_HP=100,BOSS_HEARTS=5,BOSS_TIME=20;
 let fight=null,bossRise=bossOnFarm()?1:0;
 function bossOnFarm(){return state.boss==='awake'||state.boss==='beaten';}
-const activeStations=()=>state.farm===2?STATIONS2:[...STATIONS,...(bossOnFarm()?[BOSS]:[]),...(state.stone?[STONE]:[])];
+const activeStations=()=>robotOn()?[...(state.farm===2?STATIONS2:baseStations()),robotPos()]:(state.farm===2?STATIONS2:baseStations());
+const baseStations=()=>[...STATIONS,...(bossOnFarm()?[BOSS]:[]),...(state.stone?[STONE]:[])];
 function showBossIntro(first){
   setMusic('boss');sfx.bossRoar();
   fight={phase:'intro',t:0,hp:BOSS_HP,hearts:BOSS_HEARTS,anims:[],bossFlash:0,lunge:0,hurt:0};
@@ -1579,8 +1586,8 @@ cv.addEventListener('pointerdown',e=>{
   const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,y=(e.clientY-r.top)/r.height*H;
   if(state.farm!==2)for(const a of animals){const s=SPR[a.id];if(Math.abs(x-a.x)<s.w/2+2&&y>a.y-s.h-3&&y<a.y+3){ANIM[a.id].snd();a.wait=1.2;a.moving=false;
     parts.push({x:a.x,y:a.y-s.h-2,vx:0,vy:-16,life:1.2,max:1.2,kind:'heart'});return;}}
-  for(const st of activeStations()){if(Math.abs(x-st.x)<(st.id==='boss'?20:st.id==='stone'?12:15)&&y>st.y-st.h-2&&y<st.y+6){
-    if(Math.hypot(P.x-st.x,P.y-(st.y+7))<(st.id==='boss'?24:18)){openStation(st);return;}
+  for(const st of activeStations()){if(Math.abs(x-st.x)<(st.id==='boss'||st.id==='robot'?20:st.id==='stone'?12:15)&&y>st.y-st.h-2&&y<st.y+6){
+    if(Math.hypot(P.x-st.x,P.y-(st.y+7))<(st.id==='boss'||st.id==='robot'?24:18)){openStation(st);return;}
     P.target={x:st.x,y:st.y+7};P.autoSt=st;P.stuck=0;return;}}
   P.target={x,y};P.autoSt=null;P.stuck=0;
 });
@@ -1648,21 +1655,42 @@ function renderTirppa(){
 let dodge=null;
 const DB={x:40,y:62,w:120,h:80},D_TIME=45,D_HP=20;
 const D_SAYS=[['Ranskalaissade!','French fry rain!'],['Perunat, vyöry!','Potatoes, roll!'],['Muusiaalto!','Mash wave!'],['Ranskalaismuuri!','Wall of fries!'],['KAIKKI KERRALLA!','EVERYTHING AT ONCE!']];
-function startDodge(){
-  closeCmd();if(modalType)closeModal();started=true;initAudio();setMusic('final');sfx.bossRoar();
-  dodge={t:0,hp:D_HP,inv:0,px:DB.x+DB.w/2,py:DB.y+DB.h-10,bul:[],spawn:0,spawn2:0,ring:0,wall:0,phase:'play',end:0,lastWave:-1,target:null};
-  openModal('dodge',`${exitBtn()}<h2>${L('Perunapomon viimeinen muoto','The Potato Boss: Final Form')}</h2>
+// Perunaattori 2000: noin 3× vaikeampi kuin viimeinen muoto (2× pidempi, tiheämmät ja nopeammat ammukset,
+// kovemmat osumat sekä uudet hyökkäykset: laserit ja ohjautuvat perunat).
+const DCFG={final:{time:45,hp:20,dmg:3,wave:9,waves:5},robot:{time:90,hp:20,dmg:4,wave:15,waves:6}};
+const R_SAYS=[['AKTIVOIDAAN… BIIP BOOP.','ACTIVATING… BEEP BOOP.'],['Ranskalaistykit, tulta!','Fry cannons, fire!'],['LASERMUUSI!','MASH LASERS!'],['Ohjautuvat perunat laukaistu!','Homing potatoes launched!'],['YLIKUORMITUS!','OVERLOAD!'],['PERUNAATTORI 2000 EI HÄVIÄ!','PERUNAATTORI 2000 NEVER LOSES!']];
+function startDodge(mode){
+  mode=mode==='robot'?'robot':'final';const cfg=DCFG[mode];
+  closeCmd();if(modalType)closeModal();started=true;initAudio();setMusic(mode);sfx.bossRoar();
+  dodge={mode,cfg,t:0,hp:cfg.hp,inv:0,px:DB.x+DB.w/2,py:DB.y+DB.h-10,bul:[],spawn:0,spawn2:0,ring:0,wall:0,laser:0,hom:0,phase:'play',end:0,lastWave:-1,target:null};
+  const robot=mode==='robot';
+  openModal('dodge',`${exitBtn()}<h2>${robot?'🤖 PERUNAATTORI 2000':L('Perunapomon viimeinen muoto','The Potato Boss: Final Form')}</h2>
   <div class="bars"><span>💚 ${L('Sinä','You')}</span><div class="bar"><div id="dHp" style="width:100%;background:#6fcf4f"></div></div>
-  <span>⏱️ <b id="dT">${D_TIME}</b> s</span><div class="bar"><div id="dBar" style="width:100%;background:#4fa3e8"></div></div></div>
+  <span>⏱️ <b id="dT">${cfg.time}</b> s</span><div class="bar"><div id="dBar" style="width:100%;background:${robot?'#e9654f':'#4fa3e8'}"></div></div></div>
   <canvas id="dodgeCv" width="200" height="150"></canvas>
-  <p id="dMsg" style="font-size:.85em;margin:.2em 0">${L('Väistä! Liiku nuolilla / WASD tai vedä sormella. Selviä 45 sekuntia.','Dodge! Move with arrows / WASD or drag. Survive 45 seconds.')}</p>`);
+  <p id="dMsg" style="font-size:.85em;margin:.2em 0">${L(`Väistä! Liiku nuolilla / WASD tai vedä sormella. Selviä ${cfg.time} sekuntia.`,`Dodge! Move with arrows / WASD or drag. Survive ${cfg.time} seconds.`)}</p>`);
   const c=$('#dodgeCv');
   const setT=e=>{if(!dodge)return;const r=c.getBoundingClientRect();dodge.target={x:(e.clientX-r.left)/r.width*200,y:(e.clientY-r.top)/r.height*150};};
   c.addEventListener('pointerdown',e=>{setT(e);try{c.setPointerCapture(e.pointerId);}catch(_){}});
   c.addEventListener('pointermove',e=>{if(e.buttons)setT(e);});
   // Napautus: taimi liikkuu napautettuun kohtaan (ei pysähdy, kun sormi nousee).
 }
-function dSpawn(k,x,y,vx,vy){const sz={fry:[2,7],pot:[6,5],mash:[3,3]}[k];dodge.bul.push({k,x,y,vx,vy,w:sz[0],h:sz[1]});}
+function dSpawn(k,x,y,vx,vy){const sz={fry:[2,7],pot:[6,5],mash:[3,3],hom:[5,5]}[k];const b={k,x,y,vx,vy,w:sz[0],h:sz[1]};dodge.bul.push(b);return b;}
+function dLaser(orient){const d=dodge,b={k:'laser',orient,warn:.75,life:.45};
+  if(orient==='h'){b.x=DB.x;b.w=DB.w;b.h=6;b.y=Math.max(DB.y,Math.min(DB.y+DB.h-6,d.py-3+(rand()-.5)*30));}
+  else{b.y=DB.y;b.h=DB.h;b.w=6;b.x=Math.max(DB.x,Math.min(DB.x+DB.w-6,d.px-3+(rand()-.5)*30));}
+  b.vx=0;b.vy=0;d.bul.push(b);tone({f:1200,d:.08,v:.08,type:'square'});}
+function dHoming(){const b=dSpawn('hom',DB.x+10+rand()*(DB.w-20),DB.y-6,0,30);b.life=6;}
+// Perunaattori 2000:n aallot (15 s kukin)
+function robotWaves(d,w){
+  if(w===0&&d.spawn<=0){d.spawn=.15;dSpawn('fry',DB.x+rand()*DB.w,DB.y-8,0,75+rand()*35);}
+  if(w===1){if(d.wall<=0){d.wall=1.0;dWall(62);}if(d.spawn2<=0){d.spawn2=.6;dPot(85);}}
+  if(w===2){if(d.laser<=0){d.laser=1.1;dLaser(rand()<.5?'h':'v');}if(d.ring<=0){d.ring=1.5;dRing(11,60);}}
+  if(w===3){if(d.hom<=0){d.hom=.7;dHoming();}if(d.spawn<=0){d.spawn=.35;dSpawn('fry',DB.x+rand()*DB.w,DB.y-8,0,80);}}
+  if(w===4){if(d.ring<=0){d.ring=.9;dRing(13,70);}if(d.spawn<=0){d.spawn=.25;dSpawn('fry',DB.x+rand()*DB.w,DB.y-8,0,85+rand()*25);}if(d.laser<=0){d.laser=1.6;dLaser('v');}}
+  if(w===5){if(d.spawn<=0){d.spawn=.2;dSpawn('fry',DB.x+rand()*DB.w,DB.y-8,0,90+rand()*30);}if(d.wall<=0){d.wall=1.4;dWall(66);}
+    if(d.laser<=0){d.laser=1.3;dLaser(rand()<.5?'h':'v');}if(d.hom<=0){d.hom=.9;dHoming();}}
+}
 function dRing(n,speed){const off=(rand()-.5)*.3;for(let i=0;i<n;i++){const a=Math.PI*(.1+.8*i/(n-1))+off;dSpawn('mash',100,DB.y-4,Math.cos(a)*speed,Math.sin(a)*speed);}}
 function dWall(speed){const gap=DB.x+8+rand()*(DB.w-40);for(let x=DB.x;x<DB.x+DB.w;x+=7)if(x<gap||x>gap+24)dSpawn('fry',x,DB.y-8,0,speed);}
 function dPot(speed){const left=rand()<.5;dSpawn('pot',left?DB.x-6:DB.x+DB.w,DB.y+4+rand()*(DB.h-10),left?speed:-speed,0);}
@@ -1670,14 +1698,15 @@ function updateDodge(dt){
   const d=dodge;if(!d)return;
   d.inv=Math.max(0,d.inv-dt);
   if(d.phase==='play'){
-    d.t+=dt;const w=Math.min(4,Math.floor(d.t/9));
-    if(w!==d.lastWave){d.lastWave=w;const m=$('#dMsg');if(m)m.innerHTML=`👑 ”${L2(D_SAYS[w])}”`;if(w)sfx.bossRoar();}
-    d.spawn-=dt;d.spawn2-=dt;d.ring-=dt;d.wall-=dt;
-    if(w===0&&d.spawn<=0){d.spawn=.22;dSpawn('fry',DB.x+rand()*DB.w,DB.y-8,0,55+rand()*25);}
-    if(w===1){if(d.spawn<=0){d.spawn=.45;dPot(65);}if(d.spawn2<=0){d.spawn2=.7;dSpawn('fry',DB.x+rand()*DB.w,DB.y-8,0,55);}}
-    if(w===2){if(d.ring<=0){d.ring=1.1;dRing(11,48);}if(d.spawn2<=0){d.spawn2=.8;dSpawn('fry',DB.x+rand()*DB.w,DB.y-8,0,60);}}
-    if(w===3&&d.wall<=0){d.wall=1.3;dWall(44);}
-    if(w===4){if(d.spawn<=0){d.spawn=.32;dSpawn('fry',DB.x+rand()*DB.w,DB.y-8,0,65+rand()*25);}if(d.spawn2<=0){d.spawn2=.9;dPot(75);}if(d.ring<=0){d.ring=1.7;dRing(9,55);}}
+    const cfg=d.cfg;d.t+=dt;const w=Math.min(cfg.waves-1,Math.floor(d.t/cfg.wave));
+    if(w!==d.lastWave){d.lastWave=w;const m=$('#dMsg');if(m)m.innerHTML=d.mode==='robot'?`🤖 ”${L2(R_SAYS[w])}”`:`👑 ”${L2(D_SAYS[w])}”`;if(w)sfx.bossRoar();}
+    d.spawn-=dt;d.spawn2-=dt;d.ring-=dt;d.wall-=dt;d.laser-=dt;d.hom-=dt;
+    if(d.mode==='robot')robotWaves(d,w);
+    else if(w===0&&d.spawn<=0){d.spawn=.22;dSpawn('fry',DB.x+rand()*DB.w,DB.y-8,0,55+rand()*25);}
+    if(d.mode!=='robot'&&w===1){if(d.spawn<=0){d.spawn=.45;dPot(65);}if(d.spawn2<=0){d.spawn2=.7;dSpawn('fry',DB.x+rand()*DB.w,DB.y-8,0,55);}}
+    if(d.mode!=='robot'&&w===2){if(d.ring<=0){d.ring=1.1;dRing(11,48);}if(d.spawn2<=0){d.spawn2=.8;dSpawn('fry',DB.x+rand()*DB.w,DB.y-8,0,60);}}
+    if(d.mode!=='robot'&&w===3&&d.wall<=0){d.wall=1.3;dWall(44);}
+    if(d.mode!=='robot'&&w===4){if(d.spawn<=0){d.spawn=.32;dSpawn('fry',DB.x+rand()*DB.w,DB.y-8,0,65+rand()*25);}if(d.spawn2<=0){d.spawn2=.9;dPot(75);}if(d.ring<=0){d.ring=1.7;dRing(9,55);}}
     // liike
     let mx=0,my=0;
     if(keys.has('arrowleft')||keys.has('a'))mx--;if(keys.has('arrowright')||keys.has('d'))mx++;
@@ -1686,14 +1715,17 @@ function updateDodge(dt){
     if(!mx&&!my&&d.target){const vx=d.target.x-d.px,vy=d.target.y-d.py,dd=Math.hypot(vx,vy);if(dd>1.5){mx=vx/dd;my=vy/dd;}}
     const ml=Math.hypot(mx,my);if(ml){d.px+=mx/ml*72*dt;d.py+=my/ml*72*dt;}
     d.px=Math.max(DB.x+3,Math.min(DB.x+DB.w-3,d.px));d.py=Math.max(DB.y+3,Math.min(DB.y+DB.h-3,d.py));
-    for(const b of d.bul){b.x+=b.vx*dt;b.y+=b.vy*dt;
-      if(d.inv<=0&&b.y+b.h>DB.y&&d.px+2>b.x&&d.px-2<b.x+b.w&&d.py+2>b.y&&d.py-2<b.y+b.h){
-        d.hp-=3;d.inv=1;b.dead=true;sfx.bossHit();const pn=panel;pn.classList.remove('shake');void pn.offsetWidth;pn.classList.add('shake');}}
+    for(const b of d.bul){
+      if(b.k==='laser'){if(b.warn>0){b.warn-=dt;if(b.warn<=0)noise({d:.3,v:.25,f:2500});continue;}b.life-=dt;if(b.life<=0){b.dead=true;continue;}}
+      else if(b.k==='hom'){b.life-=dt;if(b.life<=0)b.dead=true;const vx=d.px-b.x,vy=d.py-b.y,dd=Math.hypot(vx,vy)||1,sp=52;b.vx+=(vx/dd*sp-b.vx)*1.6*dt;b.vy+=(vy/dd*sp-b.vy)*1.6*dt;}
+      b.x+=b.vx*dt;b.y+=b.vy*dt;
+      if(d.inv<=0&&!b.dead&&b.y+b.h>DB.y&&d.px+2>b.x&&d.px-2<b.x+b.w&&d.py+2>b.y&&d.py-2<b.y+b.h){
+        d.hp-=cfg.dmg;d.inv=1;if(b.k!=='laser')b.dead=true;sfx.bossHit();const pn=panel;pn.classList.remove('shake');void pn.offsetWidth;pn.classList.add('shake');}}
     d.bul=d.bul.filter(b=>!b.dead&&b.y<DB.y+DB.h+10&&b.x>DB.x-12&&b.x<DB.x+DB.w+12);
     if(d.hp<=0){d.hp=0;d.phase='lose';setTimeout(dodgeLose,700);}
-    else if(d.t>=D_TIME){d.phase='win';d.bul=[];sfx.win();}
+    else if(d.t>=cfg.time){d.phase='win';d.bul=[];sfx.win();}
     const hp=$('#dHp'),tb=$('#dBar'),tn=$('#dT');
-    if(hp)hp.style.width=d.hp/D_HP*100+'%';if(tb)tb.style.width=Math.max(0,(D_TIME-d.t)/D_TIME*100)+'%';if(tn)tn.textContent=Math.max(0,Math.ceil(D_TIME-d.t));
+    if(hp)hp.style.width=Math.max(0,d.hp)/cfg.hp*100+'%';if(tb)tb.style.width=Math.max(0,(cfg.time-d.t)/cfg.time*100)+'%';if(tn)tn.textContent=Math.max(0,Math.ceil(cfg.time-d.t));
   }else if(d.phase==='win'){d.end+=dt;if(d.end>2.2){d.phase='done';dodgeWin();return;}}
   drawDodge();
 }
@@ -1701,9 +1733,10 @@ function drawDodge(){
   const c=$('#dodgeCv');if(!c||!dodge)return;const g=c.getContext('2d'),d=dodge,tt=performance.now()/1000;g.imageSmoothingEnabled=false;
   R(g,0,0,200,150,'#120a06');
   for(let i=0;i<24;i++){const x=(i*53+tt*6*(i%3+1))%200,y=(i*37)%58;R(g,x,y,1,1,i%4?'#5a3a2a':'#c9995a');}
-  const b=SPR.bossEvil,bob=Math.round(Math.sin(tt*3)*2);let sc=2;
+  const robot=d.mode==='robot',b=robot?SPR.robot:SPR.bossEvil,bob=Math.round(Math.sin(tt*(robot?6:3))*2);let sc=2;
+  if(robot)for(let i=0;i<6;i++)R(g,(i*37+tt*40)%200,(i*23)%55,6,1,'#1f4a5a');
   if(d.phase==='win'||d.phase==='done')sc=Math.max(0,2*(1-d.end/1.8));
-  if(sc>0){g.save();g.shadowColor='#ff3030';g.shadowBlur=6+Math.sin(tt*6)*3;g.globalAlpha=d.phase==='win'?Math.max(0,1-d.end/1.8):1;
+  if(sc>0){g.save();g.shadowColor=robot?(Math.floor(tt*4)%2?'#ff3030':'#30d0ff'):'#ff3030';g.shadowBlur=6+Math.sin(tt*6)*3;g.globalAlpha=d.phase==='win'?Math.max(0,1-d.end/1.8):1;
     g.drawImage(b.c,Math.round(100-b.w*sc/2),Math.round(4+bob+(2-sc)*b.h/2),b.w*sc,b.h*sc);g.restore();}
   if(d.phase==='win')for(let i=0;i<8;i++)R(g,100+ri(-20,20),10+ri(0,36),1,1,pick(['#fff','#ffd34d']));
   R(g,DB.x-2,DB.y-2,DB.w+4,DB.h+4,'#ffffff');R(g,DB.x,DB.y,DB.w,DB.h,'#000000');
@@ -1711,25 +1744,64 @@ function drawDodge(){
   for(const q of d.bul){
     if(q.k==='fry'){R(g,q.x,q.y,q.w,q.h,'#f2c230');R(g,q.x,q.y,q.w,1,'#fff3b0');}
     else if(q.k==='pot'){R(g,q.x+1,q.y,q.w-2,q.h,'#c9995a');R(g,q.x,q.y+1,q.w,q.h-2,'#c9995a');R(g,q.x+2,q.y+1,1,1,'#a4763f');R(g,q.x+4,q.y+3,1,1,'#a4763f');}
+    else if(q.k==='laser'){if(q.warn>0){if(Math.floor(tt*12)%2){if(q.orient==='h')R(g,q.x,q.y+2,q.w,1,'#ff3030');else R(g,q.x+2,q.y,1,q.h,'#ff3030');}}
+      else{R(g,q.x,q.y,q.w,q.h,'#ff3030');if(q.orient==='h')R(g,q.x,q.y+2,q.w,2,'#ffffff');else R(g,q.x+2,q.y,2,q.h,'#ffffff');}}
+    else if(q.k==='hom'){R(g,q.x+1,q.y,3,5,'#9aa4ae');R(g,q.x,q.y+1,5,3,'#9aa4ae');R(g,q.x+2,q.y+2,1,1,'#ff3030');}
     else R(g,q.x,q.y,q.w,q.h,'#f6efe0');}
   if(!(d.inv>0&&Math.floor(tt*16)%2)){const s=SPR.sprout;g.drawImage(s.c,Math.round(d.px-s.w/2),Math.round(d.py-s.h/2));}
   g.restore();
 }
 function dodgeLose(){
-  if(modalType!=='dodge')return;setMusic('farm');
+  if(modalType!=='dodge')return;setMusic('farm');const mode=dodge?dodge.mode:'final';
+  if(mode==='robot'){openModal('result',`<div class="redo">🤖💥</div><h2>${L('Perunaattori 2000 voitti tällä kertaa','Perunaattori 2000 won this time')}</h2>
+    <p>${L(`Selvisit ${Math.floor(dodge?dodge.t:0)} / 90 sekuntia. Robotti jää farmille odottamaan – yritä uudelleen!`,`You survived ${Math.floor(dodge?dodge.t:0)} / 90 seconds. The robot waits on the farm – try again!`)}</p>
+    <div class="row"><button class="btn big" id="dRe">${L('Yritä uudelleen','Try again')}</button><button class="btn" id="dBack">${L('Takaisin farmille','Back to the farm')}</button></div>`);
+    bind('dRe',()=>startDodge('robot'));bind('dBack',closeModal);return;}
   openModal('result',`<div class="redo">🍟💥</div><h2>${L('Viimeinen muoto voitti tällä kertaa','The Final Form won this time')}</h2>
   <p>${L(`Selvisit ${Math.floor(dodge?dodge.t:0)} sekuntia. Yritä uudelleen – opit väistöt nopeasti!`,`You survived ${Math.floor(dodge?dodge.t:0)} seconds. Try again – you’ll learn the patterns fast!`)}</p>
   <div class="row"><button class="btn big" id="dRe">${L('Yritä uudelleen','Try again')}</button><button class="btn" id="dBack">${L('Takaisin farmille','Back to the farm')}</button></div>`);
-  bind('dRe',startDodge);bind('dBack',closeModal);
+  bind('dRe',()=>startDodge('final'));bind('dBack',closeModal);
 }
 function dodgeWin(){
+  if(dodge&&dodge.mode==='robot')return robotWin();
   state.finalWins=(state.finalWins||0)+1;save();setMusic('farm');
   for(let i=0;i<120;i++)parts.push({x:rand()*W,y:-rand()*40,vx:(rand()-.5)*30,vy:20+rand()*40,life:4,max:4,kind:'confetti',color:pick(['#e8435a','#ffd34d','#6fcf4f','#4fa3e8','#b97ae8'])});
   openModal('result',`<div class="redo">🏆</div><h2>${L('Selvisit!','You survived!')}</h2>
   <p>${L('Perunapomon viimeinen muoto väsyi ja kierähti nukkumaan. Olet todellinen farmisankari!','The Potato Boss’s final form got tired and rolled off to sleep. You are a true farm hero!')}</p>
   <p>${L('Voitot viimeisestä muodosta','Final form wins')}: <b>${state.finalWins}</b></p>
   <div class="row"><button class="btn big" id="dRe">${L('Pelaa uudelleen','Play again')}</button><button class="btn" id="dBack">${L('Takaisin farmille','Back to the farm')}</button></div>`);
-  bind('dRe',startDodge);bind('dBack',closeModal);
+  bind('dRe',()=>startDodge('final'));bind('dBack',closeModal);
+}
+// ---- Perunaattori 2000: kutsuminen, farmilla näkyminen ja palkinto ----
+const ROBOT={id:'robot',name:['Perunaattori 2000','Perunaattori 2000'],x:34,y:120,h:40};
+function robotOn(){return !!(state.robot&&state.robot.on);}
+function robotPos(){if(state.farm===2){ROBOT.x=160;ROBOT.y=150;}else{ROBOT.x=34;ROBOT.y=120;}return ROBOT;}
+function summonRobot(by){state.robot={on:true,by:by||'',at:Date.now()};save();robotRise=0;robotAnnounced=state.robot.at;robotAlarm();}
+let robotRise=1,robotAnnounced=0;
+function robotAlarm(){
+  initAudio();[0,.25,.5,.75].forEach(t=>tone({f:880,f2:440,d:.22,v:.22,type:'square',t}));
+  toast(L('⚠️ PERUNAATTORI 2000 saapui farmille! Kävele sen luo ja taistele.','⚠️ PERUNAATTORI 2000 arrived on the farm! Walk to it and fight.'));
+}
+function checkRobotArrival(){if(robotOn()&&state.robot.at!==robotAnnounced&&started){robotAnnounced=state.robot.at;robotRise=0;robotAlarm();}}
+function showRobotIntro(){
+  setMusic('robot');sfx.bossRoar();
+  openModal('bossintro',`<h2>🤖 PERUNAATTORI 2000</h2><canvas id="robotCv" width="60" height="44" style="width:min(30%,170px);image-rendering:pixelated;display:block;margin:0 auto"></canvas>
+  <p>${L('Ylläpitäjä kutsui farmille superrobotin! Se on kolme kertaa vaikeampi kuin Perunapomon viimeinen muoto.','The admin summoned a super robot to the farm! It is three times harder than the Potato Boss’s final form.')}</p>
+  <p style="font-size:.85em">${L('⏱️ Selviä 90 sekuntia · 🔴 varo lasereita (vilkkuva viiva = laser tulossa) · 🎯 ohjautuvat perunat seuraavat sinua','⏱️ Survive 90 seconds · 🔴 watch out for lasers (blinking line = laser coming) · 🎯 homing potatoes follow you')}</p>
+  <div class="row"><button class="btn big" id="rbGo">${L('Taistele! ⚔️','Fight! ⚔️')}</button><button class="btn" id="rbLater">${L('Myöhemmin','Later')}</button></div>`);
+  const c=$('#robotCv').getContext('2d');c.imageSmoothingEnabled=false;c.drawImage(SPR.robot.c,12,3,36,38);
+  bind('rbGo',()=>startDodge('robot'));bind('rbLater',closeModal);
+}
+function robotWin(){
+  state.robotWins=(state.robotWins||0)+1;state.robot=null;
+  let reward;if(!state.golden){state.golden=true;reward=L('✨ kultainen peruna','✨ the golden potato');}else{state.silver=(state.silver||0)+3;reward=L('🥈 3 hopeaperunaa','🥈 3 silver potatoes');}
+  rebuildAnimals();save();updateHUD();setMusic('farm');
+  for(let i=0;i<160;i++)parts.push({x:rand()*W,y:-rand()*40,vx:(rand()-.5)*30,vy:20+rand()*40,life:4,max:4,kind:'confetti',color:pick(['#e8435a','#ffd34d','#6fcf4f','#4fa3e8','#b97ae8','#9aa4ae'])});
+  openModal('result',`<div class="redo">🤖🏆</div><h2>${L('PERUNAATTORI 2000 KAATUI!','PERUNAATTORI 2000 IS DOWN!')}</h2>
+  <p>${L('Uskomatonta! Selvisit 90 sekuntia ja robotti meni oikosulkuun.','Incredible! You survived 90 seconds and the robot short-circuited.')}</p>
+  <p class="fact">🎁 ${L('Palkinto','Reward')}: <b>${reward}</b> · ${L('Robottivoitot','Robot wins')}: <b>${state.robotWins}</b></p>
+  <div class="row"><button class="btn big" id="dBack">${L('Takaisin farmille','Back to the farm')}</button></div>`);
+  bind('dBack',closeModal);
 }
 
 /* ---------- KOMENTOPALKKI ---------- */
@@ -1885,7 +1957,7 @@ function update(dt){
       if(Math.abs(dx)>.1)P.flip=dx<0;P.walkT+=dt;P.moving=true;
       if(!moved&&P.target){P.stuck+=dt;if(P.stuck>.35){const s=P.autoSt;P.target=null;P.autoSt=null;if(s&&Math.hypot(P.x-s.x,P.y-(s.y+7))<26)openStation(s);}}else P.stuck=0;
     }else P.moving=false;
-    let best=null,bd=18;for(const st of activeStations()){const d=Math.hypot(P.x-st.x,P.y-(st.y+7))-(st.id==='boss'?8:0);if(d<bd){bd=d;best=st;}}
+    let best=null,bd=18;for(const st of activeStations()){const d=Math.hypot(P.x-st.x,P.y-(st.y+7))-(st.id==='boss'||st.id==='robot'?8:0);if(d<bd){bd=d;best=st;}}
     if(best!==nearSt){nearSt=best;renderPrompt();}
     // Salainen pikseli lammikon vieressä alareunassa: päälle astuminen = perunajumpscare.
     const sd=state.farm===2?99:Math.hypot(P.x-SECRET_PX.x,P.y-SECRET_PX.y);
@@ -1908,7 +1980,8 @@ function renderPrompt(){
   const pr=$('#prompt');
   if(!nearSt||modalType){pr.hidden=true;return;}
   const st=nearSt;pr.style.left=(st.x/W*100)+'%';
-  if(st.id==='stone'){pr.innerHTML=`<span>🪨 ${L('Salaperäinen kivi','Mysterious stone')}</span><button>${L('Tutki','Inspect')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
+  if(st.id==='robot'){pr.innerHTML=`<span>🤖 PERUNAATTORI 2000</span><button>${L('Taistele!','Fight!')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
+  else if(st.id==='stone'){pr.innerHTML=`<span>🪨 ${L('Salaperäinen kivi','Mysterious stone')}</span><button>${L('Tutki','Inspect')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
   else if(st.id==='boss'){pr.innerHTML=`<span>👑 ${L2(st.name)}</span><button>${state.boss==='beaten'?L('Uusintaottelu!','Rematch!'):L('Taistele!','Fight!')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
   else if(state.last===st.id)pr.innerHTML=`<span>${L2(st.name)} ${L('lepää 💤 – kokeile toista pistettä','is resting 💤 – try another point')}</span>`;
   else{pr.innerHTML=`<span>${st.icon} ${L2(st.subject)}</span><button>${L('Tee tehtävä','Do the task')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
@@ -1924,13 +1997,21 @@ function renderPrompt(){
 addEventListener('resize',()=>{if(nearSt)renderPrompt();});
 
 const SECRET_PX={x:104,y:199,armed:true};
+function pushRobot(ents,tt){
+  if(!robotOn())return;const r=robotPos(),s=SPR.robot;robotRise=Math.min(1,robotRise+1/60);
+  const hgt=Math.round(s.h*2*robotRise),bob=Math.round(Math.sin(tt*6)*1.5);
+  ents.push({y:r.y,d:()=>{shadow(r.x,r.y,s.w*2);ctx.drawImage(s.c,0,0,s.w,hgt/2,r.x-s.w,r.y-hgt+bob,s.w*2,hgt);
+    if(robotRise>=1){if(Math.floor(tt*3)%2)R(ctx,r.x,r.y-s.h*2-4+bob,1,1,'#ff3030');
+      const y=Math.round(r.y-r.h-14+Math.sin(tt*5)*2);R(ctx,r.x-3,y-1,7,11,'#3a2414');R(ctx,r.x-2,y,5,9,'#ff9a9a');R(ctx,r.x-1,y+1,3,4,'#7a0f0f');R(ctx,r.x-1,y+6,3,2,'#7a0f0f');}
+    if(robotRise<1&&Math.floor(tt*20)%2)R(ctx,r.x+ri(-12,12),r.y-ri(0,4),2,1,'#9aa4ae');}});
+}
 /* ---------- PELAAJANIMI JA TULOSTAULU ---------- */
 // leetu1234:n nimi näkyy punaisena kaikkialla
 const nameHTML=(n,id)=>{const c=cleanName(n)||id||'?';return (id===ADMIN_ID||c.toLowerCase()==='leetu1234')?`<span class="adminName">${esc(c)}</span>`:esc(c);};
 const cleanName=v=>String(v||'').replace(/[<>"&]/g,'').replace(/\s+/g,' ').trim().slice(0,16);
 const fmtClock=t=>{t=Math.floor(t);const h=Math.floor(t/3600),m=Math.floor(t%3600/60),sec=t%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(sec).padStart(2,'0');};
 function updateTimeHUD(){const el=$('#stTime');if(el){el.textContent='⏱️ '+fmtClock(state.time||0);el.title=L('Peliaika (tulostaulua varten)','Play time (for the leaderboard)');}}
-setInterval(()=>{if(started)updateTimeHUD();renderControl();},1000);
+setInterval(()=>{if(started)updateTimeHUD();renderControl();checkRobotArrival();},1000);
 function needLogin(){
   sfx.deny();const ni=$('#pName'),pn=$('#pPin');
   if(!ACCDB){toast(L('Hetki, ladataan…','One moment, loading…'));return;}
@@ -2235,13 +2316,13 @@ async function admRenderUsers(){
   const body=$('#admBody');
   try{
     const rows=await admUsers();if(!$('#admBody')||admTab!=='users')return;
-    body.innerHTML=`<label class="pick" style="cursor:pointer"><input type="checkbox" id="admAnn" ${settings.announce!==false?'checked':''}> 📢 ${L('Ilmoita haltuunotosta:','Announce takeover:')} <b>”<span class="adminName">leetu</span> is now on control”</b></label>
+    body.innerHTML=`<p class="lbNote" style="margin:.1em 0">🤖 = ${L('kutsu / poista Perunaattori 2000','summon / remove Perunaattori 2000')}</p><label class="pick" style="cursor:pointer"><input type="checkbox" id="admAnn" ${settings.announce!==false?'checked':''}> 📢 ${L('Ilmoita haltuunotosta:','Announce takeover:')} <b>”<span class="adminName">leetu</span> is now on control”</b></label>
     <p class="lbNote">${L('▶ = siirry peliin · 🐾 = anna kaikki eläimet · 🔄 = nollaa peli · 🔑 = vaihda PIN · 🗑️ = poista','▶ = enter game · 🐾 = give all animals · 🔄 = reset game · 🔑 = change PIN · 🗑️ = delete')}</p>
     <table class="lb adm"><tr><th>${L('Käyttäjä','User')}</th><th>🐾</th><th>👑</th><th>${L('Päiv.','Upd.')}</th><th></th></tr>`+
       rows.map(r=>{const sv=r.save||{},n=ANIMALS.filter(a=>(sv.owned||{})[a.id]).length,cur=ACC&&ACC.id===r.id,adm=r.id===ADMIN_ID;
         return `<tr class="${cur?'me':''}" data-id="${esc(r.id)}"><td>${adm?'👑 ':''}${nameHTML(r.name,r.id)}</td><td>${n}/6</td><td>${sv.boss==='beaten'?'✅':'–'}</td>
         <td>${r.updated?esc(shortDate(new Date(r.updated).toISOString())):'–'}</td>
-        <td class="acts">${cur?`<b>${L('nyt','now')}</b> `:`<button class="btn" data-a="go" title="${L('Siirry peliin','Enter game')}">▶</button>`}<button class="btn" data-a="animals" title="${L('Anna kaikki eläimet','Give all animals')}">🐾</button><button class="btn" data-a="reset" title="${L('Nollaa peli','Reset game')}">🔄</button><button class="btn" data-a="pin" title="${L('Vaihda PIN','Change PIN')}">🔑</button>${adm||cur?'':`<button class="btn" data-a="del" title="${L('Poista käyttäjä','Delete user')}">🗑️</button>`}</td></tr>`;}).join('')+'</table>';
+        <td class="acts">${cur?`<b>${L('nyt','now')}</b> `:`<button class="btn" data-a="go" title="${L('Siirry peliin','Enter game')}">▶</button>`}<button class="btn" data-a="animals" title="${L('Anna kaikki eläimet','Give all animals')}">🐾</button><button class="btn" data-a="reset" title="${L('Nollaa peli','Reset game')}">🔄</button><button class="btn" data-a="pin" title="${L('Vaihda PIN','Change PIN')}">🔑</button><button class="btn" data-a="robot" title="${L('Kutsu / poista Perunaattori 2000','Summon / remove Perunaattori 2000')}">🤖${(sv.robot&&sv.robot.on)?'✓':''}</button>${adm||cur?'':`<button class="btn" data-a="del" title="${L('Poista käyttäjä','Delete user')}">🗑️</button>`}</td></tr>`;}).join('')+'</table>';
     $('#admAnn').onchange=e=>{settings.announce=e.target.checked;saveSettings();
       if(inOthersGame()){if(e.target.checked)takeControl();else{state.control=null;save();renderControl();}}};
     body.querySelectorAll('tr[data-id]').forEach(tr=>{const id=tr.dataset.id;tr.querySelectorAll('[data-a]').forEach(btn=>btn.onclick=()=>{initAudio();admAction(id,btn.dataset.a,btn,tr);});});
@@ -2250,6 +2331,9 @@ async function admRenderUsers(){
 async function admAction(id,a,btn,tr){
   try{
     if(a==='go'){switchToAccount(id);return;}
+    if(a==='robot'){const info=await admGetSave(id),sv=info.save,on=!(sv.robot&&sv.robot.on);
+      sv.robot=on?{on:true,by:ADMIN_ID,at:Date.now()}:null;await admPutSave(id,info,sv);if(ACC&&ACC.id===id&&on){robotAnnounced=0;}
+      sfx.ok();toast(on?L('🤖 Perunaattori 2000 kutsuttu pelaajan peliin!','🤖 Perunaattori 2000 summoned into the player’s game!'):L('🤖 Perunaattori 2000 poistettu.','🤖 Perunaattori 2000 removed.'));admRenderUsers();return;}
     if(a==='animals'){const info=await admGetSave(id),sv=info.save;sv.owned=sv.owned||{};ANIMALS.forEach(x=>{if(!sv.owned[x.id])sv.owned[x.id]=1;});sv.cheated=true;
       await admPutSave(id,info,sv);sfx.ok();toast(L('🐾 Kaikki eläimet annettu.','🐾 All animals given.'));admRenderUsers();return;}
     if(a==='reset'){sureClick(btn,async()=>{try{const info=await admGetSave(id),sv=Object.assign(freshState(info.save.level),{name:info.save.name||'',owner:id});
@@ -2283,9 +2367,12 @@ function admRenderGame(){
    <button class="btn" data-g="silver">🥈 ${L('Hopeaperuna +1','Silver potato +1')}</button>
    <button class="btn" data-g="golden">✨ ${L('Kultainen peruna','Golden potato')}</button>
    <button class="btn" data-g="rest">💤 ${L('Kaikki pisteet käyttöön','All points usable')}</button>
+   <button class="btn" data-g="robot" style="grid-column:1/-1;background:#ffd9d4">🤖 ${robotOn()?L('Poista Perunaattori 2000','Remove Perunaattori 2000'):L('Kutsu Perunaattori 2000 tähän peliin','Summon Perunaattori 2000 into this game')}</button>
   </div>`;
   $('#admBody').querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{initAudio();
-    const g=b.dataset.g;state.cheated=true;
+    const g=b.dataset.g;
+    if(g==='robot'){if(robotOn()){state.robot=null;save();toast(L('🤖 Perunaattori 2000 poistettu.','🤖 Perunaattori 2000 removed.'));}else{closeModal();started=true;summonRobot(ADMIN_ID);}admRenderGame&&modalType==='admin'&&admRenderGame();return;}
+    state.cheated=true;
     if(g==='animals'){ANIMALS.forEach(a=>{if(!state.owned[a.id])state.owned[a.id]=1;});rebuildAnimals();if(state.boss==='none')state.boss='awake';bossRise=1;}
     if(g==='crops'){CROPS.forEach(c=>{if(!state.crops[c.id])state.crops[c.id]=1;});state.farm2=true;}
     if(g==='boss'){if(state.boss==='none')state.boss='awake';bossRise=1;}
@@ -2408,6 +2495,7 @@ function drawFarm2(){
   FIELDS2.forEach((f,i)=>ctx.drawImage(state.crops[CROPS[i].id]?f.full:f.plow,f.x,f.y));
   const ents=[];
   for(const st of STATIONS2)ents.push({y:st.y,d:()=>{shadow(st.x,st.y+1,st.kind==='tractor'?22:12);ctx.drawImage(st.img,st.x-20,st.y-42);}});
+  pushRobot(ents,tt);
   ents.push({y:P.y,d:()=>{const fr=P.moving?(Math.floor(P.walkT*8)%2?1:2):0,s=SPR.player[fr],px=Math.round(P.x-s.w/2),py=Math.round(P.y-s.h);shadow(P.x,P.y,s.w);ctx.drawImage(P.flip?s.f:s.c,px,py);if(TIR.big)bigHead(s,'player',P.flip,px,py);}});
   ents.sort((a,b)=>a.y-b.y).forEach(e=>e.d());
   if(started)for(const st of STATIONS2){if(st===nearSt&&!modalType)continue;
@@ -2442,6 +2530,7 @@ function draw(){
       if(stoneRise>=1){const gl=.55+Math.sin(tt*3)*.45;ctx.globalAlpha=gl;R(ctx,STONE.x,STONE.y-12,1,6,'#8ff0ff');R(ctx,STONE.x-1,STONE.y-11,3,1,'#8ff0ff');R(ctx,STONE.x-2,STONE.y-10,5,1,'#8ff0ff');ctx.globalAlpha=1;
         if(Math.floor(tt*5)%4===0)R(ctx,STONE.x+ri(-7,7),STONE.y-ri(2,14),1,1,'#d8fbff');}}});
     if(stoneRise<1&&Math.floor(tt*20)%2)R(ctx,STONE.x+ri(-10,10),STONE.y-ri(0,4),2,1,'#8a6a3a');}
+  pushRobot(ents,tt);
   if(bossOnFarm()){bossRise=Math.min(1,bossRise+1/60);const s=SPR.boss,bob=Math.round(Math.sin(tt*3)*1.5),hgt=Math.round(s.h*2*bossRise);
     ents.push({y:BOSS.y,d:()=>{shadow(BOSS.x,BOSS.y,s.w*2);ctx.drawImage(s.c,0,0,s.w,hgt/2,BOSS.x-s.w,BOSS.y-hgt+bob,s.w*2,hgt);}});}
   ents.push({y:P.y,d:()=>{const fr=P.moving?(Math.floor(P.walkT*8)%2?1:2):0,s=SPR.player[fr],px=Math.round(P.x-s.w/2),py=Math.round(P.y-s.h);shadow(P.x,P.y,s.w);ctx.drawImage(P.flip?s.f:s.c,px,py);
