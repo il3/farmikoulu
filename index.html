@@ -107,6 +107,8 @@ body{display:flex;align-items:center;justify-content:center;min-height:100vh;pad
 #hpBar{background:#e9654f}#tBar{background:#6fcf4f;transition:none}
 #tBar.low{background:#e9654f}
 .panel.boss{max-width:700px}
+.panel.win{font-size:clamp(14px,2.75cqw,24px)}
+.panel.win .row{margin:.3em 0 .1em}
 .panel{position:relative}
 .panel.quiz,.panel.boss,.panel.dodge{padding-top:2em}
 .xbtn{position:absolute;top:.35em;right:.4em;font:inherit;font-size:.8em;background:#fff8e1;color:var(--ink);border:2px solid var(--wood2);box-shadow:0 2px 0 var(--wood2);padding:0 .45em;cursor:pointer}
@@ -129,6 +131,7 @@ body{display:flex;align-items:center;justify-content:center;min-height:100vh;pad
       <button class="ib" id="bMusic" title="Musiikki päälle/pois">♪</button>
       <button class="ib" id="bSfx" title="Äänet päälle/pois">🔊</button>
       <button class="ib" id="bLang" title="Kieli / Language">EN</button>
+      <button class="ib" id="bFarm" title="Vaihda farmia" hidden>🚜</button>
       <button class="ib" id="bHelp" title="Ohjeet">?</button>
     </div>
   </div>
@@ -823,6 +826,17 @@ function stationImg(kind){
     fillCircle(g,x-8,y-18,8,'#2f7a33');fillCircle(g,x+8,y-18,8,'#2f7a33');fillCircle(g,x,y-25,12,'#2f7a33');
     fillCircle(g,x-1,y-27,9,'#3f9a3f');fillCircle(g,x-4,y-30,4,'#5bb84f');
     for(const [ax,ay] of [[-9,-18],[7,-21],[2,-30],[-5,-24],[9,-14],[-2,-15],[5,-27]]){R(g,x+ax,y+ay,2,2,'#d6332b');R(g,x+ax,y+ay,1,1,'#ff8a80');}
+  }else if(kind==='tractor'){
+    R(g,x-4,y-17,18,8,'#3f9a3f');R(g,x-4,y-17,18,2,'#5fbf4f');R(g,x+12,y-15,2,5,'#2a2a2a');
+    R(g,x-12,y-28,10,14,'#3f9a3f');R(g,x-10,y-26,6,6,'#9fd3f2');R(g,x-13,y-29,12,2,'#2f7a2f');
+    R(g,x+7,y-25,2,8,'#6f7176');R(g,x+6,y-26,4,1,'#4a4a4a');
+    fillCircle(g,x-6,y-7,7,'#2a2a2a');fillCircle(g,x-6,y-7,3,'#f2c230');fillCircle(g,x+10,y-4,4,'#2a2a2a');fillCircle(g,x+10,y-4,1,'#f2c230');
+  }else if(kind==='scarecrow'){
+    R(g,x-1,y-30,3,30,'#7a4a22');R(g,x-12,y-24,25,2,'#7a4a22');
+    R(g,x-6,y-26,13,13,'#c8432f');R(g,x-6,y-22,13,1,'#8a2a1f');R(g,x-2,y-26,1,13,'#8a2a1f');R(g,x+3,y-26,1,13,'#8a2a1f');
+    R(g,x-11,y-25,5,4,'#c8432f');R(g,x+7,y-25,5,4,'#c8432f');R(g,x-13,y-25,2,3,'#e8c14c');R(g,x+12,y-25,2,3,'#e8c14c');R(g,x-4,y-13,9,2,'#e8c14c');
+    fillCircle(g,x,y-31,4,'#d8c08a');R(g,x-2,y-32,1,1,'#2a1a0a');R(g,x+2,y-32,1,1,'#2a1a0a');R(g,x-1,y-29,3,1,'#2a1a0a');
+    R(g,x-6,y-35,13,1,'#6b4a2a');R(g,x-3,y-39,7,4,'#6b4a2a');
   }else if(kind==='sign'){
     R(g,x-1,y-28,3,28,'#7a4a22');
     R(g,x-3,y-27,15,6,'#c99a62');R(g,x+12,y-26,1,4,'#c99a62');R(g,x+13,y-25,1,2,'#c99a62');R(g,x-3,y-22,15,1,'#a4763f');
@@ -874,13 +888,73 @@ function buildBG(){
 }
 const BG=buildBG();
 
+/* ---------- FARMI 2: iso lato ja paljon peltoa ---------- */
+const CROPS=[
+ {id:'vehna',name:['Vehnä','Wheat'],fact:['Vehnästä jauhetaan jauhoja leipään.','Wheat is ground into flour for bread.']},
+ {id:'porkkana',name:['Porkkana','Carrot'],fact:['Porkkana on juures: syömme kasvin juuren.','A carrot is a root vegetable: we eat the plant’s root.']},
+ {id:'kurpitsa',name:['Kurpitsa','Pumpkin'],fact:['Kurpitsa voi kasvaa yli 100 kilon painoiseksi!','A pumpkin can grow to weigh over 100 kilos!']},
+ {id:'mansikka',name:['Mansikka','Strawberry'],fact:['Mansikan siemenet ovat marjan pinnalla.','A strawberry’s seeds are on the outside of the berry.']},
+ {id:'maissi',name:['Maissi','Corn'],fact:['Popcorn tehdään maissinjyvistä.','Popcorn is made from corn kernels.']},
+ {id:'auringonkukka',name:['Auringonkukka','Sunflower'],fact:['Nuori auringonkukka kääntyy Auringon mukaan.','A young sunflower turns to follow the Sun.']}];
+const CROP=Object.fromEntries(CROPS.map(c=>[c.id,c]));
+const cropSnd=()=>{tone({f:660,f2:990,d:.12,v:.18,type:'triangle'});tone({f:1320,d:.15,v:.12,t:.12,type:'triangle'});};
+SPR.vehna=makeSprite(["..y.y..",".yyyyy.","..yyy..",".yyyyy.","..yyy..","...g...","..gg...","...g...","...gg..","...g..."],{y:'#e8c14c',g:'#b39a3a'});
+SPR.porkkana=makeSprite([".g.g.g.","..ggg..","...g...",".ooooo.",".oOooo.","..ooo..","..oOo..","...o...","...o..."],{g:'#3fa03f',o:'#f08a24',O:'#c8661a'});
+SPR.kurpitsa=makeSprite([".....gg....","....g......","..ooooooo..",".oooOoOooo.","ooOooOooOoo","ooOooOooOoo","ooOooOooOoo",".oooOoOooo.","..ooooooo.."],{o:'#f08a24',O:'#c8661a',g:'#3f7a2f'});
+SPR.mansikka=makeSprite(["..g.g.g..","...ggg...",".rrrrrrr.",".rwrrrwr.","..rrwrr..","..rwrrr..","...rrr...","....r...."],{r:'#e23a3a',w:'#ffe680',g:'#3fa03f'});
+SPR.maissi=makeSprite(["...g...","..gyg..",".gyyyg.",".gyYyg.",".gyyyg.",".gYyyg.",".gyyyg.","..yyg..","...g...","..gg...","...g..."],{y:'#f7d03a',Y:'#d9a520',g:'#4f9a3a'});
+SPR.auringonkukka=makeSprite(["..yyyyy..",".yybbbyy.","yybbbbbyy","yybbbbbyy",".yybbbyy.","..yyyyy..","....g....","..ggg....","....g....","....ggg..","....g....","....g...."],{y:'#f7c51e',b:'#6b3a1a',g:'#3f9a3f'});
+const FIELDS2=[{x:12,y:18,w:74,h:46},{x:234,y:18,w:74,h:46},{x:12,y:116,w:64,h:38},{x:84,y:116,w:64,h:38},{x:172,y:116,w:64,h:38},{x:244,y:116,w:64,h:38}];
+FIELDS2.forEach((f,i)=>{
+  const mk=()=>{const c=document.createElement('canvas');c.width=f.w;c.height=f.h;const g=c.getContext('2d');
+    R(g,0,0,f.w,f.h,'#5e3a17');R(g,1,1,f.w-2,f.h-2,'#7a4e2a');for(let y=4;y<f.h-1;y+=5)R(g,1,y,f.w-2,1,'#8f5f36');return [c,g];};
+  const [p]=mk();f.plow=p;
+  const [c,g]=mk(),sp=SPR[CROPS[i].id];
+  for(let y=2;y+sp.h<=f.h-1;y+=sp.h+2)for(let x=2+((y/(sp.h+2))%2?Math.floor(sp.w/2):0);x+sp.w<=f.w-1;x+=sp.w+3)g.drawImage(sp.c,x,y);
+  f.full=c;
+});
+const SOLIDS2=[{x:98,y:4,w:124,h:68}];
+const STATIONS2=[
+ {id:'mat',name:['Traktori','Tractor'],subject:['Matematiikka','Maths'],icon:'🔢',x:50,y:98,kind:'tractor',h:29},
+ {id:'aid',name:['Postilaatikko','Mailbox'],subject:['Äidinkieli','Finnish language'],icon:'📖',x:88,y:98,kind:'mail',h:28},
+ {id:'his',name:['Tienviitta','Signpost'],subject:['Historia ja maantieto','History & geography'],icon:'🗺️',x:196,y:98,kind:'sign',h:29},
+ {id:'eng',name:['Liitutaulu','Chalkboard'],subject:['Englanti','English'],icon:'💬',x:236,y:98,kind:'board',h:31},
+ {id:'ymp',name:['Linnunpelätin','Scarecrow'],subject:['Ympäristöoppi','Science'],icon:'🌱',x:290,y:98,kind:'scarecrow',h:40}];
+STATIONS2.forEach(s=>s.img=stationImg(s.kind));
+function buildBG2(){
+  const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');const rn=mulberry32(21);
+  R(g,0,0,W,H,'#7cc053');
+  for(let i=0;i<650;i++){const x=rn()*W|0,y=rn()*H|0;R(g,x,y,1,2,rn()<.5?'#68a844':'#90d064');}
+  const fl=['#ffffff','#ffe066','#ff9ec4'];for(let i=0;i<40;i++)R(g,rn()*W|0,rn()*H|0,1,1,fl[rn()*3|0]);
+  R(g,154,72,12,136,'#cfae73');R(g,6,100,308,8,'#cfae73');
+  for(let i=0;i<260;i++){R(g,6+rn()*308|0,100+rn()*8|0,1,1,'#b8955c');R(g,154+rn()*12|0,72+rn()*136|0,1,1,'#b8955c');}
+  // isot koristepellot alhaalla
+  for(const [x,y,w,h] of [[12,160,136,44],[172,160,136,44]]){R(g,x,y,w,h,'#5e3a17');R(g,x+1,y+1,w-2,h-2,'#7a4e2a');
+    for(let yy=y+4;yy<y+h-1;yy+=5){R(g,x+1,yy,w-2,1,'#8f5f36');for(let xx=x+4;xx<x+w-3;xx+=7){R(g,xx,yy-2,1,2,'#4f9a3a');R(g,xx-1,yy-3,3,1,'#6bbf4a');}}}
+  // iso lato
+  R(g,159,0,2,6,'#3a3a3a');R(g,156,1,8,1,'#3a3a3a');
+  for(let i=0;i<27;i++){const hw=Math.min(64,10+i*2.3)|0;R(g,160-hw,4+i,hw*2,1,i%3===2?'#4a3a33':'#5e4a40');}
+  R(g,100,30,120,42,'#b8352a');for(let xx=102;xx<220;xx+=4)R(g,xx,30,1,42,'#9c2b22');R(g,100,30,120,2,'#f4ede0');R(g,100,70,120,2,'#7e2018');
+  R(g,152,33,16,9,'#f4ede0');R(g,153,34,14,7,'#3a2414');R(g,154,38,12,3,'#e8c14c');
+  for(const wx of [108,202]){R(g,wx,44,12,10,'#f4ede0');R(g,wx+1,45,10,8,'#3a2414');R(g,wx+5,45,1,8,'#f4ede0');R(g,wx+1,49,10,1,'#f4ede0');}
+  R(g,138,44,44,28,'#f4ede0');R(g,140,46,40,26,'#9c2b22');
+  for(let t=0;t<26;t++){const dx=(t*18/26)|0;R(g,140+dx,46+t,2,1,'#f4ede0');R(g,158-dx,46+t,2,1,'#f4ede0');R(g,160+dx,46+t,2,1,'#f4ede0');R(g,178-dx,46+t,2,1,'#f4ede0');}
+  R(g,159,46,2,26,'#f4ede0');
+  // heinäpaalit ladon vieressä
+  for(const [x,y] of [[84,62],[90,66],[226,64]]){R(g,x,y,10,7,'#e8c14c');R(g,x,y,10,1,'#f2d77a');R(g,x+3,y,1,7,'#c99a2e');R(g,x+7,y,1,7,'#c99a2e');}
+  return c;
+}
+const BG2=buildBG2();
+
 /* ---------- TILA ---------- */
-function freshState(level){return {owned:{},tasks:0,correct:0,answered:0,last:null,dup:0,won:false,chests:0,restarts:0,level:level||5,boss:'none',bossTries:0,doneSt:[],stone:false,unlocked78:false};}
+function freshState(level){return {owned:{},tasks:0,correct:0,answered:0,last:null,dup:0,won:false,chests:0,restarts:0,level:level||5,boss:'none',bossTries:0,doneSt:[],stone:false,unlocked78:false,farm:1,farm2:false,crops:{},dup2:0,farm2Done:false};}
 function loadState(){try{const s=JSON.parse(localStorage.getItem(SKEY));if(s&&s.owned)return Object.assign(freshState(),s);}catch(e){}return null;}
 function save(){try{localStorage.setItem(SKEY,JSON.stringify(state));}catch(e){}}
 let state=loadState()||freshState();
 const allAnimals=()=>ANIMALS.every(a=>state.owned[a.id]);
 if(allAnimals()&&state.boss!=='beaten')state.boss='awake';
+if(state.boss==='beaten')state.farm2=true;
+if(!state.crops)state.crops={};
 let pendingLevel=state.level;
 let started=false,modalType=null,quiz=null,chest=null,nearSt=null;
 const P={x:150,y:100,flip:false,walkT:0,moving:false,target:null,autoSt:null,stuck:0};
@@ -917,9 +991,19 @@ const silverSlot=(()=>{const d=document.createElement('div');d.className='slot';
 const goldSlot=(()=>{const d=document.createElement('div');d.className='slot';d.hidden=true;d.style.borderColor='#f2c230';
   const s=SPR.kulta,c=document.createElement('canvas');c.width=s.w;c.height=s.h;c.getContext('2d').drawImage(s.c,0,0);c.style.width=s.w*2.2+'px';d.append(c);
   d.onclick=()=>{initAudio();ANIM.kulta.snd();};coll.append(d);return d;})();
+CROPS.forEach(cr=>{
+  const d=document.createElement('div');d.className='slot miss';d.hidden=true;
+  const s=SPR[cr.id],c=document.createElement('canvas');c.width=s.w;c.height=s.h;c.getContext('2d').drawImage(s.c,0,0);c.style.width=Math.min(30,s.w*2.6)+'px';
+  const n=document.createElement('span');n.className='cnt';d.append(c,n);coll.append(d);cr.slot=d;cr.cnt=n;
+  d.onclick=()=>{if(state.crops[cr.id]){initAudio();cropSnd();}};
+});
 function updateHUD(){
-  silverSlot.hidden=!state.silver;silverSlot.cnt.textContent=state.silver>1?'×'+state.silver:'';silverSlot.title=L2(ANIM.hopea.name);
-  goldSlot.hidden=!state.golden;goldSlot.title=L2(ANIM.kulta.name);
+  const f2=state.farm===2;
+  ANIMALS.forEach(a=>a.slot.hidden=f2);
+  CROPS.forEach(c=>{const n=state.crops[c.id]||0;c.slot.hidden=!f2;c.slot.classList.toggle('miss',!n);c.cnt.textContent=n>1?'×'+n:'';c.slot.title=n?L2(c.name):L('??? – vielä löytämättä','??? – not found yet');});
+  $('#bFarm').hidden=!state.farm2;$('#bFarm').title=f2?L('Takaisin farmille 1','Back to farm 1'):L('Farmille 2','To farm 2');
+  silverSlot.hidden=!state.silver||f2;silverSlot.cnt.textContent=state.silver>1?'×'+state.silver:'';silverSlot.title=L2(ANIM.hopea.name);
+  goldSlot.hidden=!state.golden||f2;goldSlot.title=L2(ANIM.kulta.name);
   ANIMALS.forEach(a=>{const n=state.owned[a.id]||0;a.slot.classList.toggle('miss',!n);a.cnt.textContent=n>1?'×'+n:'';a.slot.title=n?L2(a.name):L('??? – vielä löytämättä','??? – not found yet');});
   $('#stTasks').textContent='📝 '+state.tasks;
   $('#stAcc').textContent='✔ '+(state.answered?Math.round(state.correct/state.answered*100)+' %':'–');
@@ -1005,6 +1089,7 @@ function showHelp(){
   <li>👑 Kun kaikki eläimet on kerätty, pellolta nousee <b>Perunapomo</b>. Pomotaistelussa jokaisessa kysymyksessä on <b>20 sekunnin aikaraja</b>. Oikea vastaus tekee vahinkoa (nopea vastaus tekee enemmän), väärä vastaus tai loppunut aika vie sydämen. Voita pomo, niin voitat pelin!</li>
   <li>🔁 Voiton jälkeen Perunapomo jää pellolle, ja voit haastaa sen <b>uusintaotteluun</b> milloin vain. Yritä rikkoa ennätyksesi!</li>
   <li>🪨 Kun olet saanut arkun jokaiselta viideltä pisteeltä, farmin keskelle nousee <b>salaperäinen kivi</b>. Sitä klikkaamalla voit nostaa tehtävät <b>7.–8. luokan</b> tasolle.</li>
+  <li>🚜 Perunapomon voitettuasi pääset <b>seuraavalle farmille</b>, jossa on iso lato ja paljon peltoa. Siellä arkuista tulee kasveja: kasvata kaikki kuusi peltoa täyteen! Farmia vaihdetaan yläpalkin 🚜-napista.</li>
   <li>🥈 Joka kerta kun voitat Perunapomon, ladosta tulee yksi <b>hopeaperuna</b>.</li>`,`
   <li>🚶 Move with the <b>arrow keys / WASD</b> or <b>tap</b> the ground.</li>
   <li>❗ Walk to a task point and press <b>E</b> – or tap it.</li>
@@ -1018,6 +1103,7 @@ function showHelp(){
   <li>👑 When you have every animal, the <b>Potato Boss</b> rises from the field. In the boss fight every question has a <b>20-second time limit</b>. A right answer deals damage (fast answers deal more); a wrong answer or running out of time costs a heart. Beat the boss to win the game!</li>
   <li>🔁 After you win, the Potato Boss stays in the field and you can challenge it to a <b>rematch</b> any time. Try to beat your record!</li>
   <li>🪨 Once you have earned a chest at all five points, a <b>mysterious stone</b> rises in the middle of the farm. Click it to raise the tasks to <b>grade 7–8</b>.</li>
+  <li>🚜 After beating the Potato Boss you can move to the <b>next farm</b> with a big barn and lots of fields. There, chests give crops: fill all six fields! Switch farms with the 🚜 button at the top.</li>
   <li>🥈 Every time you beat the Potato Boss, a <b>silver potato</b> comes out of the barn.</li>`)}</ul>
   <div class="row"><button class="btn big" id="hBack">${L('Selvä!','Got it!')}</button></div>`);
   bind('hBack',()=>{started?closeModal():showTitle();});
@@ -1108,32 +1194,46 @@ function rollAnimal(gold){
   if(missing.length===ids.length||rand()<pNew){state.dup=0;return pick(missing);}
   state.dup++;return pick(ids.filter(i=>state.owned[i]));
 }
+function rollCrop(gold){
+  const ids=CROPS.map(c=>c.id),missing=ids.filter(i=>!state.crops[i]);
+  if(!missing.length)return pick(ids);
+  const pNew=state.dup2>=2?1:(gold?.85:.6);
+  if(missing.length===ids.length||rand()<pNew){state.dup2=0;return pick(missing);}
+  state.dup2++;return pick(ids.filter(i=>state.crops[i]));
+}
 function openChest(gold){
-  const id=rollAnimal(gold),isNew=!state.owned[id];
-  state.owned[id]=(state.owned[id]||0)+1;state.chests++;save();
+  const crop=state.farm===2,store=crop?state.crops:state.owned,id=crop?rollCrop(gold):rollAnimal(gold),isNew=!store[id];
+  store[id]=(store[id]||0)+1;state.chests++;save();
   openModal('chest',`<h2>${gold?L('Kultainen arkku','Golden chest'):L('Puuarkku','Wooden chest')}</h2><canvas id="chestCv" width="64" height="60"></canvas>
   <p id="chestTxt">${L('Napauta arkkua avataksesi sen!','Tap the chest to open it!')}</p><div class="row" id="chestRow"></div>`);
-  chest={gold,id,isNew,phase:'idle',t:0,tick:-1,voiced:false,revealed:false};
+  chest={gold,id,isNew,crop,phase:'idle',t:0,tick:-1,voiced:false,revealed:false};
   $('#chestCv').onclick=startChest;
 }
 function startChest(){if(chest&&chest.phase==='idle'){initAudio();chest.phase='shake';chest.t=0;}}
 function revealChest(){
-  const A=ANIM[chest.id],n=state.owned[chest.id],nm=L2(A.name);chest.revealed=true;
-  $('#chestTxt').innerHTML=chest.isNew?`<span class="new">${L('UUSI!','NEW!')}</span> ${L('Sait eläimen','You got')}: <b>${nm}</b>!`
+  const A=chest.crop?CROP[chest.id]:ANIM[chest.id],n=(chest.crop?state.crops:state.owned)[chest.id],nm=L2(A.name);chest.revealed=true;
+  $('#chestTxt').innerHTML=chest.isNew?`<span class="new">${L('UUSI!','NEW!')}</span> ${chest.crop?L('Sait kasvin','You got the crop'):L('Sait eläimen','You got')}: <b>${nm}</b>!`
+    :chest.crop?L(`Sait: <b>${nm}</b> – nyt sinulla on ${n} kpl. Uusi kasvi voi tulla seuraavasta arkusta!`,`You got: <b>${nm}</b> – now you have ${n}. The next chest may hold a new crop!`)
     :L(`Sait: <b>${nm}</b> – nyt sinulla on ${n} kpl. Uusi eläin voi tulla seuraavasta arkusta!`,`You got: <b>${nm}</b> – now you have ${n}. The next chest may hold a new animal!`);
   $('#chestTxt').insertAdjacentHTML('afterend',`<div class="fact">💡 ${L2(A.fact)}</div>`);
-  $('#chestRow').innerHTML=`<button class="btn big" id="cGo">${L('Vie farmille ▶','To the farm ▶')}</button>`;
+  $('#chestRow').innerHTML=`<button class="btn big" id="cGo">${chest.crop?L('Istuta pellolle ▶','Plant it ▶'):L('Vie farmille ▶','To the farm ▶')}</button>`;
   bind('cGo',closeChest);setTimeout(()=>{const b=$('#cGo');if(b)b.focus({preventScroll:true});},30);
 }
 function closeChest(){
-  const id=chest.id;closeModal();spawnAnimal(id,true);updateHUD();save();
+  const id=chest.id;
+  if(chest.crop){closeModal();const f=FIELDS2[CROPS.findIndex(c=>c.id===id)];
+    for(let i=0;i<40;i++)parts.push({x:f.x+rand()*f.w,y:f.y+rand()*f.h,vx:(rand()-.5)*30,vy:-rand()*40,life:1.2,max:1.2,kind:'spark',color:pick(['#fff6a0','#ffffff','#9be07a'])});
+    cropSnd();updateHUD();save();
+    if(!state.farm2Done&&CROPS.every(c=>state.crops[c.id])){state.farm2Done=true;save();setTimeout(showFarm2Win,900);}
+    return;}
+  closeModal();spawnAnimal(id,true);updateHUD();save();
   if(state.boss==='none'&&allAnimals()){state.boss='awake';save();setTimeout(()=>{bossRise=0;showBossIntro(true);},900);}
 }
 function drawChest(dt){
   const c=$('#chestCv');if(!c||!chest)return;const g=c.getContext('2d');g.imageSmoothingEnabled=false;
   chest.t+=dt;
   if(chest.phase==='shake'){const tk=Math.floor(chest.t*9);if(tk!==chest.tick){chest.tick=tk;sfx.tick();}if(chest.t>.9){chest.phase='open';chest.t=0;sfx.fanfare();}}
-  if(chest.phase==='open'&&!chest.voiced&&chest.t>.65){chest.voiced=true;ANIM[chest.id].snd();revealChest();}
+  if(chest.phase==='open'&&!chest.voiced&&chest.t>.65){chest.voiced=true;(chest.crop?cropSnd:ANIM[chest.id].snd)();revealChest();}
   g.clearRect(0,0,64,60);
   const open=chest.phase==='open';
   if(open){g.save();g.translate(32,40);g.rotate(chest.t*.7);for(let k=0;k<8;k++){g.fillStyle=k%2?'rgba(255,220,100,.55)':'rgba(255,255,255,.4)';g.beginPath();g.moveTo(0,0);g.arc(0,0,48,k*Math.PI/4,k*Math.PI/4+Math.PI/8);g.closePath();g.fill();}g.restore();}
@@ -1176,7 +1276,7 @@ const BOSS={id:'boss',name:['Perunapomo','Potato Boss'],x:160,y:184,h:40};
 const BOSS_HP=100,BOSS_HEARTS=5,BOSS_TIME=20;
 let fight=null,bossRise=bossOnFarm()?1:0;
 function bossOnFarm(){return state.boss==='awake'||state.boss==='beaten';}
-const activeStations=()=>[...STATIONS,...(bossOnFarm()?[BOSS]:[]),...(state.stone?[STONE]:[])];
+const activeStations=()=>state.farm===2?STATIONS2:[...STATIONS,...(bossOnFarm()?[BOSS]:[]),...(state.stone?[STONE]:[])];
 function showBossIntro(first){
   setMusic('boss');sfx.bossRoar();
   fight={phase:'intro',t:0,hp:BOSS_HP,hearts:BOSS_HEARTS,anims:[],bossFlash:0,lunge:0,hurt:0};
@@ -1243,7 +1343,7 @@ function bossLose(){
 }
 function bossWin(){
   const first=state.boss!=='beaten',hearts=fight.hearts;
-  state.boss='beaten';state.won=true;state.bossWins=(state.bossWins||0)+1;
+  state.boss='beaten';state.won=true;state.farm2=true;state.bossWins=(state.bossWins||0)+1;
   const record=hearts>(state.bestHearts||0);if(record)state.bestHearts=hearts;
   state.silver=(state.silver||0)+1;
   lastBossResult={hearts,record,first};save();closeModal();silverFromBarn();updateHUD();
@@ -1300,17 +1400,17 @@ function showRematchWin(){
   openModal('win',`<div class="logo small">${L('POMO KAATUI!','BOSS DEFEATED!')}</div>
   <p>${L('Voitit Perunapomon taas!','You beat the Potato Boss again!')} ${r.record?`<span class="new">${L('UUSI ENNÄTYS!','NEW RECORD!')}</span>`:''}</p>${silverLine()}
   <div class="stats" style="grid-template-columns:repeat(3,1fr)"><div>${L('Sydämiä jäljellä','Hearts left')}<b>${r.hearts} ❤️</b></div><div>${L('Paras tulos','Best')}<b>${state.bestHearts||0} ❤️</b></div><div>${L('Pomovoitot','Boss wins')}<b>${state.bossWins}</b></div></div>
-  <div class="row"><button class="btn big" id="wAgain">⚔️ ${L('Taistele uudelleen','Fight again')}</button><button class="btn" id="wCont">${L('Jatka farmilla','Keep playing')}</button></div>`);
-  bind('wAgain',startFight);bind('wCont',closeModal);
+  <div class="row"><button class="btn big" id="wFarm">🚜 ${L('Seuraavalle farmille','To the next farm')}</button><button class="btn" id="wAgain">⚔️ ${L('Taistele uudelleen','Fight again')}</button><button class="btn" id="wCont">${L('Jatka farmilla','Keep playing')}</button></div>`);
+  bind('wAgain',startFight);bind('wCont',closeModal);bind('wFarm',()=>{closeModal();goFarm(2);});
 }
 function showWin(){
   sfx.win();
   for(let i=0;i<120;i++)parts.push({x:rand()*W,y:-rand()*40,vx:(rand()-.5)*30,vy:20+rand()*40,life:4,max:4,kind:'confetti',color:pick(['#e8435a','#ffd34d','#6fcf4f','#4fa3e8','#b97ae8'])});
     openModal('win',`<div class="logo small">${L('VOITIT!','YOU WON!')}</div><p>${L('Keräsit kaikki eläimet ja voitit Perunapomon! Farmi on pelastettu! 🎉','You collected every animal and beat the Potato Boss! The farm is saved! 🎉')}</p>${state.silver?silverLine():''}<canvas id="parade" width="160" height="26"></canvas>
   <div class="stats"><div>${L('Tehtäviä','Tasks')}<b>${state.tasks}</b></div><div>${L('Oikein','Correct')}<b>${state.answered?Math.round(state.correct/state.answered*100):0} %</b></div><div>${L('Arkkuja','Chests')}<b>${state.chests}</b></div><div>${L('Sydämiä jäljellä','Hearts left')}<b>${lastBossResult?lastBossResult.hearts:state.bestHearts||0} ❤️</b></div></div>
-  <div class="row"><button class="btn big" id="wCont">${L('Jatka farmilla','Keep playing')}</button><button class="btn" id="wAgain">⚔️ ${L('Pomotaistelu uudelleen','Fight the boss again')}</button><button class="btn" id="wNew">${L('Uusi peli','New game')}</button></div>
-  <p style="font-size:.8em">${L('Perunapomo jää pellolle – voit haastaa sen uusintaotteluun milloin tahansa.','The Potato Boss stays in the field – challenge it to a rematch any time.')}</p>`);
-  bind('wCont',closeModal);bind('wAgain',startFight);
+  <div class="row"><button class="btn big" id="wFarm">🚜 ${L('Seuraavalle farmille','To the next farm')}</button></div>
+  <div class="row" style="font-size:.85em"><button class="btn" id="wCont">${L('Jatka farmilla','Keep playing')}</button><button class="btn" id="wAgain">⚔️ ${L('Pomo uudelleen','Boss again')}</button><button class="btn" id="wNew">${L('Uusi peli','New game')}</button></div>`);
+  bind('wCont',closeModal);bind('wAgain',startFight);bind('wFarm',()=>{closeModal();goFarm(2);});
   bind('wNew',()=>{state=freshState(state.level);bossRise=0;rebuildAnimals();updateHUD();save();P.x=150;P.y=100;closeModal();});
 }
 function drawParade(){
@@ -1346,7 +1446,7 @@ addEventListener('blur',()=>keys.clear());
 cv.addEventListener('pointerdown',e=>{
   if(modalType)return;initAudio();
   const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,y=(e.clientY-r.top)/r.height*H;
-  for(const a of animals){const s=SPR[a.id];if(Math.abs(x-a.x)<s.w/2+2&&y>a.y-s.h-3&&y<a.y+3){ANIM[a.id].snd();a.wait=1.2;a.moving=false;
+  if(state.farm!==2)for(const a of animals){const s=SPR[a.id];if(Math.abs(x-a.x)<s.w/2+2&&y>a.y-s.h-3&&y<a.y+3){ANIM[a.id].snd();a.wait=1.2;a.moving=false;
     parts.push({x:a.x,y:a.y-s.h-2,vx:0,vy:-16,life:1.2,max:1.2,kind:'heart'});return;}}
   for(const st of activeStations()){if(Math.abs(x-st.x)<(st.id==='boss'?20:st.id==='stone'?12:15)&&y>st.y-st.h-2&&y<st.y+6){
     if(Math.hypot(P.x-st.x,P.y-(st.y+7))<(st.id==='boss'?24:18)){openStation(st);return;}
@@ -1535,6 +1635,7 @@ function runCmd(raw){
   tila             – näytä pelin tila
   nollaa           – aloita koko peli alusta
   kivi             – tuo 7.–8. luokan kivi heti
+  farmi 1 / farmi 2 – siirry farmille
   tyhjennä / sulje`,`Commands:
   animals          – get every animal now
   give <animal>    – one animal (duck, pig, chicken, cow, sheep, potato)
@@ -1550,6 +1651,7 @@ function runCmd(raw){
   status           – show game status
   reset            – start the whole game over
   stone            – bring the grade 7–8 stone now
+  farm 1 / farm 2  – go to a farm
   clear / close`));break;
   case 'eläimet':case 'elaimet':case 'animals':{
     let n=0;for(const A of ANIMALS)if(!state.owned[A.id]){state.owned[A.id]=1;spawnAnimal(A.id,true);n++;}
@@ -1587,13 +1689,16 @@ function runCmd(raw){
     const n=parseFloat(a);if(!(n>=1&&n<=4))return err(L('Käytä: nopeus 1–4','Use: speed 1–4'));SPEED=n;ok(L(`Kävelynopeus ×${n}`,`Walking speed ×${n}`));break;}
   case 'tila':case 'status':{
     const have=ANIMALS.filter(A=>state.owned[A.id]).map(A=>L2(A.name)).join(', ')||'–';
-    ok(L(`Eläimet: ${have}\nTehtäviä: ${state.tasks} · oikein ${state.correct}/${state.answered} · arkkuja ${state.chests}\nTaso: ${levelName(state.level)} · pisteitä tehty ${(state.doneSt||[]).length}/5 · pomo: ${{none:'nukkuu',awake:'hereillä',beaten:'voitettu'}[state.boss]} · pomovoitot: ${state.bossWins||0} · hopeaperunat: ${state.silver||0}`,
-      `Animals: ${have}\nTasks: ${state.tasks} · correct ${state.correct}/${state.answered} · chests ${state.chests}\nLevel: ${levelName(state.level)} · points done ${(state.doneSt||[]).length}/5 · boss: ${state.boss} · boss wins: ${state.bossWins||0} · silver potatoes: ${state.silver||0}`));break;}
+    ok(L(`Eläimet: ${have}\nTehtäviä: ${state.tasks} · oikein ${state.correct}/${state.answered} · arkkuja ${state.chests}\nTaso: ${levelName(state.level)} · pisteitä tehty ${(state.doneSt||[]).length}/5 · pomo: ${{none:'nukkuu',awake:'hereillä',beaten:'voitettu'}[state.boss]} · pomovoitot: ${state.bossWins||0} · hopeaperunat: ${state.silver||0}\nFarmi: ${state.farm||1} · kasveja: ${CROPS.filter(c=>state.crops[c.id]).length}/6`,
+      `Animals: ${have}\nTasks: ${state.tasks} · correct ${state.correct}/${state.answered} · chests ${state.chests}\nLevel: ${levelName(state.level)} · points done ${(state.doneSt||[]).length}/5 · boss: ${state.boss} · boss wins: ${state.bossWins||0} · silver potatoes: ${state.silver||0}\nFarm: ${state.farm||1} · crops: ${CROPS.filter(c=>state.crops[c.id]).length}/6`));break;}
   case 'nollaa':case 'reset':
     state=freshState(state.level);bossRise=0;rebuildAnimals();updateHUD();save();P.x=150;P.y=100;if(modalType)closeModal();started=true;ok(L('Peli aloitettiin alusta.','The game was reset.'));break;
   case 'tyhjennä':case 'tyhjenna':case 'clear':$('#cmdLog').innerHTML='';break;
   case 'sulje':case 'close':case 'exit':closeCmd();break;
   case 'kivi':case 'stone':state.doneSt=STATIONS.map(x=>x.id);if(!state.stone){state.stone=true;stoneRise=0;}save();ok(L('🪨 Kivi ilmestyi farmin keskelle!','🪨 The stone appeared in the middle of the farm!'));break;
+  case 'farmi':case 'farm':{const n=+a;if(n!==1&&n!==2)return err(L('Käytä: farmi 1 tai farmi 2','Use: farm 1 or farm 2'));
+    if(['quiz','boss','chest','result','dodge'].includes(modalType))return err(L('Sulje ensin avoin ikkuna.','Close the open window first.'));
+    if(n===2&&!state.farm2){state.farm2=true;}if(modalType)closeModal();started=true;goFarm(n);ok(L(`🚜 Farmi ${n}`,`🚜 Farm ${n}`));break;}
   case 'tirppa':openTirppa();ok(L('🐦 Tirppa-valikko avattu ruudun reunaan!','🐦 Tirppa menu opened at the edge of the screen!'));break;
   default:err(L(`Tuntematon komento "${c}". Kirjoita "apua".`,`Unknown command "${c}". Type "help".`));
   }
@@ -1606,6 +1711,7 @@ $('#bHelp').onclick=()=>{if(['quiz','chest','result','boss','bossintro'].include
 /* ---------- PÄIVITYS ---------- */
 function blocked(x,y){
   if(x<6||x>314||y<18||y>205)return true;
+  if(state.farm===2){for(const s of SOLIDS2)if(x>s.x&&x<s.x+s.w&&y>s.y&&y<s.y+s.h)return true;return false;}
   for(const s of SOLIDS)if(x>s.x&&x<s.x+s.w&&y>s.y&&y<s.y+s.h)return true;
   const dx=(x-POND.cx)/(POND.rx-2),dy=(y-POND.cy)/(POND.ry-2);return dx*dx+dy*dy<1;
 }
@@ -1628,7 +1734,7 @@ function update(dt){
     let best=null,bd=18;for(const st of activeStations()){const d=Math.hypot(P.x-st.x,P.y-(st.y+7))-(st.id==='boss'?8:0);if(d<bd){bd=d;best=st;}}
     if(best!==nearSt){nearSt=best;renderPrompt();}
     // Salainen pikseli lammikon vieressä alareunassa: päälle astuminen = perunajumpscare.
-    const sd=Math.hypot(P.x-SECRET_PX.x,P.y-SECRET_PX.y);
+    const sd=state.farm===2?99:Math.hypot(P.x-SECRET_PX.x,P.y-SECRET_PX.y);
     if(sd<4&&SECRET_PX.armed){SECRET_PX.armed=false;keys.clear();P.target=null;potatoScare();}
     else if(sd>9)SECRET_PX.armed=true;
   }else P.moving=false;
@@ -1654,6 +1760,8 @@ function renderPrompt(){
   else{pr.innerHTML=`<span>${st.icon} ${L2(st.subject)}</span><button>${L('Tee tehtävä','Do the task')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
   pr.hidden=false;
   // Vinkki heti kohteen yläpuolelle. Jos se ei mahdu (kaivo, liitutaulu), se tulee heti pelaajan jalkojen alle.
+  const sw=$('#stage').clientWidth,half=pr.offsetWidth/2;
+  pr.style.left=Math.max(half+2,Math.min(sw-half-2,st.x/W*sw))+'px';   // pysy pelialueen sisällä myös reunoilla
   const hL=pr.offsetHeight/$('#stage').clientHeight*H,above=st.y-st.h+2;
   if(above-hL<1){pr.style.top=((st.y+8)/H*100)+'%';pr.style.transform='translate(-50%,0)';}
   else{pr.style.top=(above/H*100)+'%';pr.style.transform='';}
@@ -1661,10 +1769,45 @@ function renderPrompt(){
 addEventListener('resize',()=>{if(nearSt)renderPrompt();});
 
 const SECRET_PX={x:104,y:199,armed:true};
+function goFarm(n){
+  if(n===2&&!state.farm2)return;initAudio();
+  state.farm=n;P.target=null;P.autoSt=null;keys.clear();
+  if(n===2){P.x=160;P.y=112;}else{P.x=150;P.y=100;}
+  nearSt=null;renderPrompt();updateHUD();save();
+  noise({d:.5,v:.25,f:120});tone({f:70,f2:95,d:.6,v:.3,type:'sawtooth',filt:{type:'lowpass',f:400}});
+  for(let i=0;i<20;i++)parts.push({x:P.x+(rand()-.5)*20,y:P.y-4,vx:(rand()-.5)*40,vy:-rand()*30,life:.8,max:.8,kind:'spark',color:pick(['#cfae73','#e8d7b0','#ffffff'])});
+  toast(n===2?L('🚜 Saavuit farmille 2! Tee tehtäviä ja kasvata pellot täyteen.','🚜 You arrived at farm 2! Do tasks and fill the fields with crops.'):L('🚜 Takaisin farmilla 1.','🚜 Back at farm 1.'));
+}
+$('#bFarm').onclick=()=>{if(modalType&&modalType!=='title')return;if(modalType==='title'){started=true;closeModal();}goFarm(state.farm===2?1:2);};
+function showFarm2Win(){
+  sfx.win();
+  for(let i=0;i<120;i++)parts.push({x:rand()*W,y:-rand()*40,vx:(rand()-.5)*30,vy:20+rand()*40,life:4,max:4,kind:'confetti',color:pick(['#e8435a','#ffd34d','#6fcf4f','#4fa3e8','#b97ae8'])});
+  openModal('win',`<div class="logo small">${L('SATO VALMIS!','HARVEST DONE!')}</div><p>${L('Kaikki pellot kasvavat! Farmi 2 on valmis. 🌻','Every field is growing! Farm 2 is complete. 🌻')}</p>
+  <div style="display:flex;gap:.6em;justify-content:center;margin:.4em 0">${CROPS.map(c=>`<canvas data-c="${c.id}" width="${SPR[c.id].w}" height="${SPR[c.id].h}" style="width:${SPR[c.id].w*4}px;image-rendering:pixelated"></canvas>`).join('')}</div>
+  <div class="row"><button class="btn big" id="w2Cont">${L('Jatka farmilla','Keep playing')}</button><button class="btn" id="w2Back">🚜 ${L('Farmille 1','To farm 1')}</button></div>`);
+  panel.querySelectorAll('canvas[data-c]').forEach(c=>c.getContext('2d').drawImage(SPR[c.dataset.c].c,0,0));
+  bind('w2Cont',closeModal);bind('w2Back',()=>{closeModal();goFarm(1);});
+}
+function drawFarm2(){
+  ctx.drawImage(BG2,0,0);const tt=performance.now()/1000;
+  FIELDS2.forEach((f,i)=>ctx.drawImage(state.crops[CROPS[i].id]?f.full:f.plow,f.x,f.y));
+  const ents=[];
+  for(const st of STATIONS2)ents.push({y:st.y,d:()=>{shadow(st.x,st.y+1,st.kind==='tractor'?22:12);ctx.drawImage(st.img,st.x-20,st.y-42);}});
+  ents.push({y:P.y,d:()=>{const fr=P.moving?(Math.floor(P.walkT*8)%2?1:2):0,s=SPR.player[fr],px=Math.round(P.x-s.w/2),py=Math.round(P.y-s.h);shadow(P.x,P.y,s.w);ctx.drawImage(P.flip?s.f:s.c,px,py);if(TIR.big)bigHead(s,'player',P.flip,px,py);}});
+  ents.sort((a,b)=>a.y-b.y).forEach(e=>e.d());
+  if(started)for(const st of STATIONS2){if(st===nearSt&&!modalType)continue;
+    if(state.last===st.id){const z=Math.floor(tt*2)%2;R(ctx,st.x+6,st.y-st.h-6-z*2,3,1,'#ffffff');R(ctx,st.x+7,st.y-st.h-5-z*2,1,1,'#ffffff');R(ctx,st.x+6,st.y-st.h-4-z*2,3,1,'#ffffff');continue;}
+    const y=Math.round(st.y-st.h-14+Math.sin(tt*4+st.x)*1.5);R(ctx,st.x-3,y-1,7,11,'#3a2414');R(ctx,st.x-2,y,5,9,'#fff6d5');R(ctx,st.x-1,y+1,3,4,'#d6332b');R(ctx,st.x-1,y+6,3,2,'#d6332b');}
+  if(P.target&&!modalType){const b=Math.floor(tt*6)%2;R(ctx,P.target.x-2-b,P.target.y,2,1,'#fff6d5');R(ctx,P.target.x+1+b,P.target.y,2,1,'#fff6d5');}
+  for(const p of parts){const al=Math.min(1,p.life/p.max*1.5);ctx.globalAlpha=al;
+    if(p.kind==='heart')ctx.drawImage(SPR.heart.c,Math.round(p.x-2),Math.round(p.y));
+    else if(p.kind==='confetti')R(ctx,p.x,p.y,2,1,p.color);else R(ctx,p.x,p.y,1,1,p.color);ctx.globalAlpha=1;}
+}
 
 /* ---------- PIIRTO ---------- */
 function shadow(x,y,w){ctx.fillStyle='rgba(0,0,0,.22)';ctx.fillRect(Math.round(x-w/2+1),Math.round(y-1),w-2,2);}
 function draw(){
+  if(state.farm===2)return drawFarm2();
   ctx.drawImage(BG,0,0);
   const tt=performance.now()/1000;
   for(let i=0;i<4;i++){const k=(tt*.35+i/4)%1,sy=9-k*26,sx=63+Math.sin(k*6+i)*3+k*6,sz=2+Math.round(k*3);
