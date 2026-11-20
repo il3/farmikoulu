@@ -17,6 +17,7 @@ Retrotyylinen selainpeli 3.–6.-luokkalaisille. Tee koulutehtäviä 2D-farmilla
 - Kun sinulla on kaikki eläimet, pellolta nousee **Perunapomo**. Pomotaistelussa jokaisessa kysymyksessä on 20 sekunnin aikaraja. Voita pomo, niin voitat pelin!
 - Alussa valitaan **pelaajanimi**, ja peliaika näkyy yläpalkissa. Kun Perunapomo kaatuu ensimmäisen kerran, aika tallentuu **tulostauluun** (🏆), jossa näkyvät nopeimmat suoritukset. GitHub Pagesissa tulostaulu tallentuu laitteelle.
 - Pelaamaan pääsee kirjautumalla **pelaajanimellä ja PIN-koodilla** (uusi pelaaja keksii omat). Claude-julkaisussa samalla nimellä ja PIN-koodilla pääsee samaan peliin millä tahansa laitteella. GitHub Pagesissa käyttäjät tallentuvat laitteelle, joten samalla koneella voi olla monta pelaajaa omine peleineen.
+- Ylläpitäjällä on **admin-paneeli** (👑): käyttäjien hallinta, tulostaulun siivous, pelitoiminnot ja tilastot. Supabase-versiossa ylläpitäjän oikeudet tarkistetaan palvelimella (`supabase/asennus.sql` ja `supabase/paivitys-admin.sql`).
 - Jokaisesta pomovoitosta ladosta tulee hopeaperuna, ja pomon voi haastaa uusintaotteluun.
 - Perunapomon voitettuasi pääset **seuraavalle farmille**, jossa on yksi iso lato ja paljon peltoa. Siellä arkuista tulee kasveja: vehnä, porkkana, kurpitsa, mansikka, maissi ja auringonkukka. Kasvata kaikki pellot täyteen!
 - Kun olet tehnyt tehtävän jokaisella pisteellä, farmin keskelle ilmestyy salaperäinen kivi, josta tehtävät voi nostaa 7.–8. luokan tasolle.

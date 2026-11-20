@@ -125,6 +125,19 @@ body.phone #bossCv,body.phone #dodgeCv{width:min(100%,460px)}
 .lbNote{font-size:.8em;opacity:.8}
 .pinIn{width:8.5em}
 .bad{color:#a8321f}
+.adm td{padding:.1em .25em}
+.adm .acts{white-space:nowrap}
+.adm .acts .btn{font-size:.8em;padding:0 .35em;margin:0 1px;box-shadow:0 2px 0 var(--wood2)}
+.adm .acts .btn.sure{background:#e9654f;color:#fff}
+.adm input{font:inherit;width:5em;padding:0 .2em;border:2px solid var(--wood2)}
+.admGrid{display:grid;grid-template-columns:1fr 1fr;gap:.4em;margin:.3em 0}
+.admGrid .btn{font-size:.9em}
+.admStats{display:grid;grid-template-columns:repeat(3,1fr);gap:.4em;margin:.4em 0}
+.admStats div{background:#fff8e1;border:3px solid var(--wood2);padding:.2em}.admStats b{display:block;font-size:1.4em}
+.panel.admin{max-width:760px;font-size:clamp(13px,2.35cqw,20px)}
+.panel.admin .lbTabs{flex-wrap:wrap;gap:.3em}.panel.admin .lbTabs .btn{font-size:.85em;padding:.05em .5em}
+.panel.admin .admGrid .btn{font-size:.85em;padding:.1em .4em}
+.panel.admin h2{margin:.2em 0 .4em}
 .credit{font-size:.8em;opacity:.75;margin:.4em 0 0}
 #cmd{position:absolute;left:0;right:0;bottom:0;z-index:20;background:rgba(10,14,8,.92);border-top:3px solid #6fcf4f;color:#9dff7a;font-size:clamp(15px,2.6cqw,22px);padding:.2em .5em;font-family:'VT323',monospace}
 #cmdLog{max-height:7.5em;overflow:auto;white-space:pre-wrap;line-height:1.1}
@@ -180,6 +193,7 @@ body.phone #bossCv,body.phone #dodgeCv{width:min(100%,460px)}
     <div id="coll"></div>
     <div id="stats"><span id="stTasks" title="Tehtyjä tehtäviä">📝 0</span><span id="stAcc" title="Oikeat vastaukset">✔ –</span><span id="stTime" title="Peliaika">⏱️ 0:00</span><span id="stWho" hidden></span></div>
     <div id="btns">
+      <button class="ib" id="bAdmin" title="Admin-paneeli" hidden>👑</button>
       <button class="ib" id="bMenu" title="Aloitusvalikko">🏠</button>
       <button class="ib" id="bMusic" title="Musiikki päälle/pois">♪</button>
       <button class="ib" id="bSfx" title="Äänet päälle/pois">🔊</button>
@@ -1068,6 +1082,7 @@ function updateHUD(){
   ANIMALS.forEach(a=>{const n=state.owned[a.id]||0;a.slot.classList.toggle('miss',!n);a.cnt.textContent=n>1?'×'+n:'';a.slot.title=n?L2(a.name):L('??? – vielä löytämättä','??? – not found yet');});
   $('#stTasks').textContent='📝 '+state.tasks;
   updateTimeHUD();
+  {const ab=$('#bAdmin');if(ab)ab.hidden=!(typeof isAdmin==='function'&&isAdmin());}
   {const w=$('#stWho');if(w){w.hidden=!(ADMIN&&ACC);if(ADMIN&&ACC){w.textContent='👑→'+ACC.name;w.title=L('Ylläpitäjä pelaa tämän pelaajan peliä','Admin is playing this player’s game');}}}
   $('#stAcc').textContent='✔ '+(state.answered?Math.round(state.correct/state.answered*100)+' %':'–');
 }
@@ -1111,7 +1126,7 @@ function pickerHTML(){
   return `<div class="pick">${L('Kieli','Language')}:
     <button class="btn ${settings.lang==='fi'?'on':''}" id="pFi">Suomi</button><button class="btn ${settings.lang==='en'?'on':''}" id="pEn">English</button></div>
   ${ACC?`<div class="pick">👤 ${L('Kirjautunut','Logged in')}: <b>${esc(ACC.name)}</b> ${isAdmin()?'👑':'☁️'} <button class="btn" id="aOut">${L('Kirjaudu ulos','Log out')}</button><input type="hidden" id="pName" value="${esc(ACC.name)}"></div>
-  ${isAdmin()?`<div class="pick"><button class="btn" id="adOpen">👑 ${L('Vaihda käyttäjää','Switch user')}</button>${ADMIN?`<button class="btn" id="adHome">↩ ${L('Palaa käyttäjään','Back to')} leetu1234</button>`:''}</div>`:''}`
+  ${isAdmin()?`<div class="pick"><button class="btn" id="adOpen">👑 ${L('Admin-paneeli','Admin panel')}</button>${ADMIN?`<button class="btn" id="adHome">↩ ${L('Palaa käyttäjään','Back to')} leetu1234</button>`:''}</div>`:''}`
   :`<div class="pick">👤 ${L('Pelaajanimi','Player name')}: <input class="nameIn" id="pName" maxlength="16" autocomplete="username" spellcheck="false" placeholder="${L('Kirjoita nimi','Type a name')}" value="${esc(settings.name||state.name||'')}"></div>
   ${ACCDB?`<div class="pick">🔑 PIN: <input class="nameIn pinIn" id="pPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="current-password" placeholder="4–6 ${L('numeroa','digits')}"><button class="btn" id="aIn">${L('Kirjaudu / luo käyttäjä','Log in / sign up')}</button></div>
   <p class="lbNote" id="aMsg" style="margin:0">🔒 ${cloudMode()?L('Kirjaudu tai keksi uusi nimi + PIN. Toimii joka laitteella.','Log in, or make up a new name + PIN. Works on any device.')
@@ -1133,6 +1148,7 @@ function bindPicker(){
 }
 const hasProgress=()=>Object.keys(state.owned).length>0||state.tasks>0;
 function showTitle(){
+  updateHUD();
   const has=hasProgress();
   openModal('title',`<div class="logo">FARMI<span>KOULU</span></div>
   <p class="sub">${L('Tee koulutehtäviä, ansaitse arkkuja ja kerää kaikki farmin eläimet!','Do school tasks, earn chests and collect every farm animal!')}</p>
@@ -1519,7 +1535,7 @@ addEventListener('keydown',e=>{
   if(e.target&&(e.target.id==='cmdIn'||e.target.tagName==='INPUT'))return;
   const k=e.key.toLowerCase();
   if(modalType){
-    if(k==='escape'){if(modalType==='title'&&started&&ACC){closeModal();e.preventDefault();return;}if(['quiz','boss','dodge'].includes(modalType))exitTask();else if(['help','bossintro','board'].includes(modalType))(started?closeModal():showTitle());e.preventDefault();return;}
+    if(k==='escape'){if(modalType==='title'&&started&&ACC){closeModal();e.preventDefault();return;}if(['quiz','boss','dodge'].includes(modalType))exitTask();else if(['help','bossintro','board','admin'].includes(modalType))(started?closeModal():showTitle());e.preventDefault();return;}
     if(modalType==='dodge'&&['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(k)){keys.add(k);e.preventDefault();return;}
     if(modalType==='quiz'&&quiz){
       if(['1','2','3','4'].includes(k)&&!quiz.answered){answer(+k-1);e.preventDefault();}
@@ -1902,7 +1918,7 @@ const dbReady=(async()=>{try{if(!(window.claude&&claude.use))return null;const [
 const LACC='farmikoulu-kayttajat';
 const lget=()=>{try{return JSON.parse(localStorage.getItem(LACC))||{};}catch(e){return {};}};
 const lset=o=>{try{localStorage.setItem(LACC,JSON.stringify(o));}catch(e){}};
-const LOCALDB={doc:p=>{const id=p.split('/')[1];return {get:async()=>{const v=lget()[id];return {id,exists:!!v,data:()=>v};},set:async v=>{const all=lget();all[id]=JSON.parse(JSON.stringify(v));lset(all);}};},
+const LOCALDB={doc:p=>{const id=p.split('/')[1];return {get:async()=>{const v=lget()[id];return {id,exists:!!v,data:()=>v};},set:async v=>{const all=lget();all[id]=JSON.parse(JSON.stringify(v));lset(all);},delete:async()=>{const all=lget();delete all[id];lset(all);}};},
   collection:()=>({limit:()=>({get:async()=>{const all=lget();return {docs:Object.keys(all).map(id=>({id,exists:true,data:()=>all[id]}))};}})})};
 let ACCDB=null;
 // Supabase: yhteinen tietokanta muille versioille (esim. GitHub Pages). Julkinen avain on tarkoitettu selaimeen;
@@ -2089,7 +2105,8 @@ async function switchToAccount(id){
     toast(id===ADMIN_ID?L('👑 Palasit omaan peliisi.','👑 Back in your own game.'):L(`👑 Olet nyt pelaajan ${ACC.name} pelissä. Muutokset tallentuvat hänen peliinsä.`,`👑 You are now in ${ACC.name}’s game. Changes are saved to their game.`));
   }catch(e){toast(L('Vaihto epäonnistui.','Switch failed.'));}
 }
-async function showAdmin(){
+function showAdmin(){showAdminPanel('users');}
+async function showAdminOld(){
   if(!isAdmin()||!ACCDB)return;
   openModal('board',`<h2>👑 ${L('Ylläpito – vaihda käyttäjää','Admin – switch user')}</h2>
   <p class="lbNote">${L('Valitse käyttäjä, jonka peliin haluat siirtyä. Muutokset tallentuvat sen käyttäjän peliin.','Pick the user whose game you want to enter. Changes are saved to that user’s game.')}</p>
@@ -2111,6 +2128,134 @@ async function showAdmin(){
     body.querySelectorAll('[data-sw]').forEach(b=>b.onclick=()=>{initAudio();switchToAccount(b.dataset.sw);});
   }catch(e){const body=$('#lbBody');if(body)body.innerHTML=`<p class="lbNote">${L('Käyttäjälistaa ei saatu ladattua.','Couldn’t load the user list.')}</p>`;}
 }
+/* ---------- ADMIN-PANEELI (vain leetu1234) ---------- */
+// Supabase-versiossa jokainen toiminto tarkistetaan palvelimella ylläpitäjän tunnisteella.
+const adminToken=()=>(ADMIN||ACC||{}).token;
+let admTab='users';
+async function admUsers(){
+  if(SUPA){const r=await rpc('fk_admin_list',{p_admin_token:adminToken()});if(!r||!r.ok)throw new Error('list');
+    return (r.users||[]).map(u=>({id:u.id,name:u.name,updated:u.updated,save:{owned:u.owned||{},boss:u.boss}}));}
+  const all=await ACCDB.collection('accounts').limit(500).get();
+  return all.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>(b.updated||0)-(a.updated||0));
+}
+async function admGetSave(id){
+  if(SUPA){const r=await rpc('fk_admin_open',{p_admin_token:adminToken(),p_id:id});if(!r||!r.ok)throw new Error('open');return {save:hasSave(r.save)?r.save:freshState(),token:r.token};}
+  const sn=await ACCDB.doc('accounts/'+id).get();if(!sn.exists)throw new Error('nf');return {save:hasSave(sn.data().save)?sn.data().save:freshState(),doc:sn.data()};
+}
+async function admPutSave(id,info,sv){
+  sv.updated=Date.now();sv.dev=devId();
+  if(SUPA){const r=await rpc('fk_save',{p_id:id,p_token:info.token,p_save:sv});if(!r||!r.ok)throw new Error('save');}
+  else await ACCDB.doc('accounts/'+id).set({...info.doc,save:sv,updated:Date.now()});
+  if(ACC&&ACC.id===id){applySave(sv);}   // jos muokkaat peliä, joka on juuri auki
+}
+async function admSetPin(id,pin){
+  if(SUPA){const r=await rpc('fk_admin_set_pin',{p_admin_token:adminToken(),p_id:id,p_pin:pin});if(!r||!r.ok)throw new Error('pin');return;}
+  const sn=await ACCDB.doc('accounts/'+id).get();if(!sn.exists)throw new Error('nf');
+  const d=sn.data(),salt=crypto.getRandomValues(new Uint32Array(2)).join('-'),h=await pinHash(id,pin,salt);
+  await ACCDB.doc('accounts/'+id).set({...d,pinHash:h,salt});
+}
+async function admDeleteUser(id){
+  if(id===ADMIN_ID)throw new Error('admin');
+  if(SUPA){const r=await rpc('fk_admin_delete_user',{p_admin_token:adminToken(),p_id:id});if(!r||!r.ok)throw new Error('del');return;}
+  await ACCDB.doc('accounts/'+id).delete();
+}
+async function admScores(){
+  if(SUPA){const r=await rpc('fk_admin_scores',{p_admin_token:adminToken()});if(!r||!r.ok)throw new Error('scores');return r.scores||[];}
+  if(SDB){const all=await SDB.collection('scores').orderBy('time').limit(500).get();return all.docs.map(x=>({id:x.id,...x.data()}));}
+  return localScores().map((v,i)=>({id:'L'+i,...v}));
+}
+async function admDeleteScore(id){
+  if(SUPA){const r=await rpc('fk_admin_delete_score',{p_admin_token:adminToken(),p_score_id:+id});if(!r||!r.ok)throw new Error('del');return;}
+  if(SDB){await SDB.doc('scores/'+id).delete();return;}
+  const loc=localScores();loc.splice(+String(id).slice(1),1);try{localStorage.setItem(LKEY,JSON.stringify(loc));}catch(e){}
+}
+const admErr=e=>toast(L('Toiminto epäonnistui.','Action failed.')+(SUPA?' '+L('(Onko admin-lisäskripti ajettu Supabasessa?)','(Has the admin add-on script been run in Supabase?)'):''));
+// Kaksivaiheinen varmistus vaarallisille napeille
+function sureClick(btn,fn){if(btn.classList.contains('sure')){fn();return;}btn.classList.add('sure');btn.dataset.t=btn.textContent;btn.textContent=L('Varmasti?','Sure?');
+  setTimeout(()=>{if(btn.isConnected){btn.classList.remove('sure');btn.textContent=btn.dataset.t;}},3000);}
+function showAdminPanel(tab){
+  if(!isAdmin()){toast(L('Admin-paneeli on vain ylläpitäjälle.','The admin panel is for the admin only.'));return;}
+  admTab=tab||admTab;
+  openModal('admin',`<h2>👑 ${L('Admin-paneeli','Admin panel')}</h2>
+  <div class="lbTabs"><button class="btn" data-at="users">👥 ${L('Käyttäjät','Users')}</button><button class="btn" data-at="scores">🏆 ${L('Tulostaulu','Leaderboard')}</button><button class="btn" data-at="game">🎮 ${L('Pelitoiminnot','Game tools')}</button><button class="btn" data-at="stats">📊 ${L('Tilastot','Stats')}</button></div>
+  <div id="admBody"><p>${L('Ladataan…','Loading…')}</p></div>
+  <div class="row"><button class="btn big" id="admClose">${L('Sulje','Close')}</button></div>`);
+  panel.querySelectorAll('[data-at]').forEach(b=>{b.classList.toggle('on',b.dataset.at===admTab);b.onclick=()=>{initAudio();showAdminPanel(b.dataset.at);};});
+  bind('admClose',()=>{closeModal();if(!started)showTitle();});
+  ({users:admRenderUsers,scores:admRenderScores,game:admRenderGame,stats:admRenderStats})[admTab]();
+}
+async function admRenderUsers(){
+  const body=$('#admBody');
+  try{
+    const rows=await admUsers();if(!$('#admBody')||admTab!=='users')return;
+    body.innerHTML=`<p class="lbNote">${L('▶ = siirry peliin · 🐾 = anna kaikki eläimet · 🔄 = nollaa peli · 🔑 = vaihda PIN · 🗑️ = poista','▶ = enter game · 🐾 = give all animals · 🔄 = reset game · 🔑 = change PIN · 🗑️ = delete')}</p>
+    <table class="lb adm"><tr><th>${L('Käyttäjä','User')}</th><th>🐾</th><th>👑</th><th>${L('Päiv.','Upd.')}</th><th></th></tr>`+
+      rows.map(r=>{const sv=r.save||{},n=ANIMALS.filter(a=>(sv.owned||{})[a.id]).length,cur=ACC&&ACC.id===r.id,adm=r.id===ADMIN_ID;
+        return `<tr class="${cur?'me':''}" data-id="${esc(r.id)}"><td>${adm?'👑 ':''}${esc(cleanName(r.name)||r.id)}</td><td>${n}/6</td><td>${sv.boss==='beaten'?'✅':'–'}</td>
+        <td>${r.updated?esc(shortDate(new Date(r.updated).toISOString())):'–'}</td>
+        <td class="acts">${cur?`<b>${L('nyt','now')}</b> `:`<button class="btn" data-a="go" title="${L('Siirry peliin','Enter game')}">▶</button>`}<button class="btn" data-a="animals" title="${L('Anna kaikki eläimet','Give all animals')}">🐾</button><button class="btn" data-a="reset" title="${L('Nollaa peli','Reset game')}">🔄</button><button class="btn" data-a="pin" title="${L('Vaihda PIN','Change PIN')}">🔑</button>${adm||cur?'':`<button class="btn" data-a="del" title="${L('Poista käyttäjä','Delete user')}">🗑️</button>`}</td></tr>`;}).join('')+'</table>';
+    body.querySelectorAll('tr[data-id]').forEach(tr=>{const id=tr.dataset.id;tr.querySelectorAll('[data-a]').forEach(btn=>btn.onclick=()=>{initAudio();admAction(id,btn.dataset.a,btn,tr);});});
+  }catch(e){if($('#admBody'))body.innerHTML=`<p class="lbNote">${L('Käyttäjälistaa ei saatu ladattua.','Couldn’t load the user list.')}</p>`;}
+}
+async function admAction(id,a,btn,tr){
+  try{
+    if(a==='go'){switchToAccount(id);return;}
+    if(a==='animals'){const info=await admGetSave(id),sv=info.save;sv.owned=sv.owned||{};ANIMALS.forEach(x=>{if(!sv.owned[x.id])sv.owned[x.id]=1;});sv.cheated=true;
+      await admPutSave(id,info,sv);sfx.ok();toast(L('🐾 Kaikki eläimet annettu.','🐾 All animals given.'));admRenderUsers();return;}
+    if(a==='reset'){sureClick(btn,async()=>{try{const info=await admGetSave(id),sv=Object.assign(freshState(info.save.level),{name:info.save.name||'',owner:id});
+      await admPutSave(id,info,sv);sfx.ok();toast(L('🔄 Peli nollattu.','🔄 Game reset.'));admRenderUsers();}catch(e){admErr(e);}});return;}
+    if(a==='pin'){const cell=tr.querySelector('.acts');cell.innerHTML=`<input type="password" inputmode="numeric" maxlength="6" placeholder="PIN"><button class="btn" data-ok>OK</button><button class="btn" data-no>✕</button>`;
+      const inp=cell.querySelector('input');inp.focus();cell.querySelector('[data-no]').onclick=admRenderUsers;
+      const go=async()=>{if(!/^\d{4,6}$/.test(inp.value)){toast(L('PIN: 4–6 numeroa.','PIN: 4–6 digits.'));return;}
+        try{await admSetPin(id,inp.value);sfx.ok();toast(L('🔑 PIN vaihdettu.','🔑 PIN changed.'));admRenderUsers();}catch(e){admErr(e);}};
+      cell.querySelector('[data-ok]').onclick=go;inp.addEventListener('keydown',e=>{if(e.key==='Enter')go();});return;}
+    if(a==='del'){sureClick(btn,async()=>{try{await admDeleteUser(id);sfx.ok();toast(L('🗑️ Käyttäjä poistettu.','🗑️ User deleted.'));admRenderUsers();}catch(e){admErr(e);}});return;}
+  }catch(e){admErr(e);}
+}
+async function admRenderScores(){
+  const body=$('#admBody');
+  try{const rows=await admScores();if(!$('#admBody')||admTab!=='scores')return;
+    if(!rows.length){body.innerHTML=`<p>${L('Ei tuloksia.','No results.')}</p>`;return;}
+    body.innerHTML=`<p class="lbNote">${L('Poista epäilyttävät tai testitulokset 🗑️-napilla.','Remove suspicious or test results with 🗑️.')}</p><table class="lb adm"><tr><th>#</th><th>${L('Nimi','Name')}</th><th class="r">${L('Aika','Time')}</th><th>${L('Lk','Gr.')}</th><th>${L('Päivä','Date')}</th><th></th></tr>`+
+      rows.map((r,i)=>`<tr data-sid="${esc(String(r.id))}"><td>${i+1}</td><td>${esc(cleanName(r.name)||'?')}</td><td class="r">${fmtClock(+r.time||0)}</td><td>${esc(shortLevel(+r.level||5))}</td><td>${esc(shortDate(r.date))}</td><td class="acts"><button class="btn" data-a="del">🗑️</button></td></tr>`).join('')+'</table>';
+    body.querySelectorAll('tr[data-sid]').forEach(tr=>tr.querySelector('[data-a]').onclick=e=>sureClick(e.currentTarget,async()=>{try{await admDeleteScore(tr.dataset.sid);sfx.ok();admRenderScores();}catch(err){admErr(err);}}));
+  }catch(e){if($('#admBody'))body.innerHTML=`<p class="lbNote">${L('Tuloksia ei saatu ladattua.','Couldn’t load results.')}</p>`;admErr(e);}
+}
+function admRenderGame(){
+  const who=ACC?ACC.name:'?';
+  $('#admBody').innerHTML=`<p class="lbNote">${L(`Toiminnot koskevat auki olevaa peliä: <b>${esc(who)}</b>. Peli merkitään ylläpitäjän muokkaamaksi, joten sen aika ei mene tulostaululle.`,`Tools apply to the open game: <b>${esc(who)}</b>. The game is marked as admin-edited, so its time won’t go on the leaderboard.`)}</p>
+  <div class="admGrid">
+   <button class="btn" data-g="animals">🐾 ${L('Kaikki eläimet','All animals')}</button>
+   <button class="btn" data-g="crops">🌻 ${L('Kaikki kasvit','All crops')}</button>
+   <button class="btn" data-g="boss">👑 ${L('Herätä Perunapomo','Wake the Potato Boss')}</button>
+   <button class="btn" data-g="farm2">🚜 ${L('Avaa farmi 2','Unlock farm 2')}</button>
+   <button class="btn" data-g="stone">🪨 ${L('Avaa 7.–8. luokan kivi','Unlock the grade 7–8 stone')}</button>
+   <button class="btn" data-g="silver">🥈 ${L('Hopeaperuna +1','Silver potato +1')}</button>
+   <button class="btn" data-g="golden">✨ ${L('Kultainen peruna','Golden potato')}</button>
+   <button class="btn" data-g="rest">💤 ${L('Kaikki pisteet käyttöön','All points usable')}</button>
+  </div>`;
+  $('#admBody').querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{initAudio();
+    const g=b.dataset.g;state.cheated=true;
+    if(g==='animals'){ANIMALS.forEach(a=>{if(!state.owned[a.id])state.owned[a.id]=1;});rebuildAnimals();if(state.boss==='none')state.boss='awake';bossRise=1;}
+    if(g==='crops'){CROPS.forEach(c=>{if(!state.crops[c.id])state.crops[c.id]=1;});state.farm2=true;}
+    if(g==='boss'){if(state.boss==='none')state.boss='awake';bossRise=1;}
+    if(g==='farm2')state.farm2=true;
+    if(g==='stone'){state.doneSt=STATIONS.map(x=>x.id);state.stone=true;state.unlocked78=true;stoneRise=1;}
+    if(g==='silver'){state.silver=(state.silver||0)+1;rebuildAnimals();}
+    if(g==='golden'){state.golden=true;rebuildAnimals();}
+    if(g==='rest')state.last=null;
+    save();updateHUD();sfx.ok();toast('👑 '+b.textContent.trim());});
+}
+async function admRenderStats(){
+  const body=$('#admBody');
+  try{const [us,sc]=await Promise.all([admUsers(),admScores().catch(()=>[])]);if(!$('#admBody')||admTab!=='stats')return;
+    const boss=us.filter(u=>(u.save||{}).boss==='beaten').length,all6=us.filter(u=>ANIMALS.every(a=>((u.save||{}).owned||{})[a.id])).length;
+    const best=sc.length?Math.min(...sc.map(x=>+x.time||1e9)):0;
+    body.innerHTML=`<div class="admStats"><div>${L('Käyttäjiä','Users')}<b>${us.length}</b></div><div>${L('Kaikki eläimet','All animals')}<b>${all6}</b></div><div>${L('Pomo voitettu','Boss beaten')}<b>${boss}</b></div>
+      <div>${L('Tuloksia','Results')}<b>${sc.length}</b></div><div>${L('Paras aika','Best time')}<b>${best?fmtClock(best):'–'}</b></div><div>${L('Tallennus','Storage')}<b style="font-size:1em">${SUPA?'Supabase':SDB?'Claude':L('laite','device')}</b></div></div>`;
+  }catch(e){if($('#admBody'))body.innerHTML=`<p class="lbNote">${L('Tilastoja ei saatu ladattua.','Couldn’t load stats.')}</p>`;}
+}
+$('#bAdmin').onclick=()=>{if(busyModal())return;initAudio();showAdminPanel(admTab);};
 async function submitScore(){
   if(state.cheated)return null;
   const acc=ACC?ACC.id:'',rec={name:state.name||'?',time:Math.round(state.time||0),level:state.level,date:new Date().toISOString().slice(0,10),acc};
