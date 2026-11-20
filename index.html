@@ -1,0 +1,1593 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Farmikoulu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#2b1d0e;--paper:#f6e7b8;--paper2:#ecd89a;--wood:#8b5a2b;--wood2:#4a2c14;--gold:#f2b632;--green:#4f9a3a;--red:#c8432f}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;min-height:100%}
+body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:8px;color:var(--ink);font-family:'VT323',monospace;
+  background:repeating-linear-gradient(45deg,#2f5126 0 10px,#2a4a22 10px 20px)}
+#game{width:min(960px,calc(100vw - 16px),calc((100vh - 110px) * 320 / 208));display:flex;flex-direction:column;gap:6px}
+#hud{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--wood);border:4px solid var(--wood2);padding:5px 8px;color:#fff3d0;font-size:22px;box-shadow:inset 0 -4px 0 rgba(0,0,0,.25)}
+#coll{display:flex;gap:5px;flex:1;flex-wrap:wrap}
+.slot{position:relative;width:44px;height:38px;background:#5e3a17;border:3px solid #3a2410;display:grid;place-items:center;cursor:pointer}
+.slot canvas{image-rendering:pixelated;max-width:38px}
+.slot.miss canvas{filter:brightness(0);opacity:.35}
+.slot.miss{cursor:default}
+.slot .cnt{position:absolute;right:1px;bottom:-4px;font-size:18px;color:#fff3d0;text-shadow:1px 1px 0 #000,-1px 1px 0 #000}
+#stats{display:flex;gap:12px;white-space:nowrap}
+#btns{display:flex;gap:4px}
+.ib{font:inherit;font-size:20px;width:36px;height:34px;background:#f6e7b8;color:var(--ink);border:3px solid var(--wood2);cursor:pointer;box-shadow:0 3px 0 var(--wood2);padding:0}
+.ib.off{opacity:.45;text-decoration:line-through}
+#stage{position:relative;width:100%;aspect-ratio:320/208;border:4px solid var(--wood2);background:#74b84f;container-type:inline-size;overflow:hidden;box-shadow:0 6px 0 rgba(0,0,0,.35)}
+#cv{width:100%;height:100%;display:block;image-rendering:pixelated;image-rendering:crisp-edges;cursor:pointer;touch-action:none}
+#prompt{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none;font-size:clamp(14px,2.6cqw,22px)}
+#prompt span{background:rgba(43,29,14,.85);color:#fff3d0;padding:0 .4em;white-space:nowrap}
+#prompt button{pointer-events:auto;font:inherit;background:var(--gold);color:var(--ink);border:3px solid var(--wood2);padding:0 .5em;cursor:pointer;box-shadow:0 3px 0 var(--wood2);white-space:nowrap}
+#toast{position:absolute;left:50%;top:6%;transform:translate(-50%,-30px);opacity:0;transition:.25s;background:var(--paper);border:3px solid var(--wood2);padding:.15em .7em;font-size:clamp(15px,2.8cqw,24px);pointer-events:none;text-align:center;max-width:90%}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+.overlay{z-index:16;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(25,15,5,.55);padding:3%}
+.panel{background:var(--paper);border:4px solid var(--wood2);box-shadow:inset 0 0 0 3px var(--paper2),6px 6px 0 rgba(0,0,0,.4);padding:.6em 1em;width:100%;max-width:640px;max-height:100%;overflow:auto;font-size:clamp(16px,3.3cqw,28px);line-height:1.15;text-align:center}
+.panel h2{font-family:'Press Start 2P',monospace;font-size:.75em;margin:.4em 0 .6em;line-height:1.4}
+.panel p{margin:.35em 0}
+.logo{font-family:'Press Start 2P',monospace;font-size:1.5em;color:var(--gold);text-shadow:3px 3px 0 var(--wood2),-1px -1px 0 var(--wood2);margin:.3em 0 .2em;letter-spacing:2px}
+.logo span{color:#7ccf4f}
+.logo.small{font-size:1.2em}
+.sub{font-size:1em}
+.row{display:flex;gap:.5em;justify-content:center;flex-wrap:wrap;margin:.5em 0 .2em}
+.btn{font:inherit;background:#fff8e1;color:var(--ink);border:3px solid var(--wood2);padding:.15em .8em;cursor:pointer;box-shadow:0 4px 0 var(--wood2);transition:transform .05s}
+.btn:active,.opt:active,.ib:active{transform:translateY(3px);box-shadow:0 1px 0 var(--wood2)}
+.btn.big{background:var(--gold);font-size:1.1em}
+.btn:focus-visible,.opt:focus-visible{outline:3px dashed var(--red);outline-offset:2px}
+#parade{width:min(80%,420px);image-rendering:pixelated;display:block;margin:.3em auto}
+.help{text-align:left;padding-left:1.2em;margin:.3em 0}
+.help li{margin:.2em 0}
+.qhead{display:flex;justify-content:space-between;align-items:center;gap:.5em;border-bottom:3px dashed var(--wood);padding-bottom:.2em;margin-bottom:.4em;font-size:.95em}
+.dots{display:flex;gap:4px}
+.dot{width:.7em;height:.7em;border:2px solid var(--wood2);background:#fff8e1}
+.dot.r{background:#6fcf4f}.dot.w{background:#e9654f}.dot.cur{background:var(--gold)}
+.qtext{font-size:1.15em;margin:.4em 0 .6em;min-height:2.2em}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:.4em}
+.opt{font:inherit;text-align:left;background:#fff8e1;color:var(--ink);border:3px solid var(--wood2);box-shadow:0 4px 0 var(--wood2);padding:.25em .5em;cursor:pointer;display:flex;gap:.4em;align-items:center}
+.opt:hover:not(:disabled){background:#fff0bf}
+.opt .k{display:inline-grid;place-items:center;min-width:1.2em;height:1.2em;background:var(--wood);color:#fff3d0;font-size:.8em}
+.opt.right{background:#9be07a}.opt.wrong{background:#f2917e}
+.opt:disabled{cursor:default}
+.qfoot{display:flex;align-items:center;justify-content:space-between;gap:.5em;margin-top:.5em;min-height:1.8em;text-align:left}
+#fb{flex:1}
+#fb .good{color:#2e7d22;font-weight:bold}
+#fb .bad{color:#a8321f}
+#chestCv{width:min(45%,240px);image-rendering:pixelated;cursor:pointer;display:block;margin:0 auto}
+.new{display:inline-block;background:#e9654f;color:#fff;padding:0 .3em;animation:blink .6s steps(2) infinite}
+@keyframes blink{50%{opacity:.4}}
+.fact{font-size:.85em;background:#fff8e1;border:2px dashed var(--wood);padding:.2em .5em;margin:.4em auto;max-width:90%}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.4em;margin:.4em 0}
+.stats div{background:#fff8e1;border:3px solid var(--wood2);padding:.1em}
+.stats b{display:block;font-size:1.3em}
+#foot{color:#e8f5d0;text-align:center;font-size:20px;text-shadow:1px 1px 0 #000}
+#bLang{font-family:'Press Start 2P',monospace;font-size:10px}
+.lives{letter-spacing:2px;white-space:nowrap}
+.lives .lost{filter:grayscale(1);opacity:.35}
+.pick{display:flex;gap:.4em;justify-content:center;align-items:center;flex-wrap:wrap;margin:.3em 0;font-size:.9em}
+.pick .btn{padding:.05em .6em}
+.pick .btn.on{background:#9be07a}
+.redo{font-size:2em;margin:.1em 0}
+#cmd{position:absolute;left:0;right:0;bottom:0;z-index:20;background:rgba(10,14,8,.92);border-top:3px solid #6fcf4f;color:#9dff7a;font-size:clamp(15px,2.6cqw,22px);padding:.2em .5em;font-family:'VT323',monospace}
+#cmdLog{max-height:7.5em;overflow:auto;white-space:pre-wrap;line-height:1.1}
+#cmdLog .err{color:#ff8a7a}#cmdLog .me{color:#d8e8d0;opacity:.75}
+.cmdrow{display:flex;align-items:center;gap:.3em}
+#cmdIn{flex:1;background:transparent;border:0;outline:0;color:#c8ffb0;font:inherit;caret-color:#9dff7a}
+.tt small{opacity:.8}
+#tirppa{position:absolute;right:1%;top:3%;width:min(36%,240px);z-index:15;background:rgba(43,29,14,.93);border:3px solid var(--gold);padding:.3em;display:flex;flex-direction:column;gap:.25em;font-size:clamp(13px,2.2cqw,19px);color:#fff3d0;box-shadow:4px 4px 0 rgba(0,0,0,.4)}
+#tirppa .th{display:flex;justify-content:space-between;align-items:center;font-family:'Press Start 2P',monospace;font-size:.6em;color:var(--gold);padding:.2em}
+#tirppa .th button{background:none;border:0;color:#fff3d0;font:inherit;font-size:1.4em;cursor:pointer}
+.tt{font:inherit;text-align:left;background:#5e3a17;color:#fff3d0;border:2px solid #3a2410;padding:.15em .4em;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:.3em}
+.tt:hover{background:#73491f}.tt.on{background:#3f7a2f;border-color:#9be07a}
+.tt b{font-weight:normal;font-size:.8em;background:rgba(0,0,0,.3);padding:0 .3em;white-space:nowrap}
+#dodgeCv{width:min(72%,460px);image-rendering:pixelated;display:block;margin:.2em auto;touch-action:none;border:3px solid var(--wood2);background:#120a06}
+.panel.dodge{max-width:700px}
+#scare{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,#5a0000 0%,#000 75%);pointer-events:none;animation:scareBg 1.4s forwards}
+#scare canvas{height:88%;image-rendering:pixelated;animation:scareZoom 1.4s forwards;filter:drop-shadow(0 0 12px #ff2020)}
+#scare b{position:absolute;bottom:6%;left:0;right:0;text-align:center;font-family:'Press Start 2P',monospace;font-size:clamp(24px,9cqw,80px);color:#fff;text-shadow:4px 4px 0 #a00000;animation:scareTxt 1.4s forwards}
+@keyframes scareBg{0%{opacity:0}5%{opacity:1}80%{opacity:1}100%{opacity:0}}
+@keyframes scareZoom{0%{transform:scale(.05)}10%{transform:scale(1.25)}16%{transform:scale(1) translate(-3%,1%)}22%{transform:scale(1.05) translate(3%,-1%)}28%{transform:scale(1) translate(-2%,2%)}34%{transform:scale(1.04) translate(2%,0)}40%{transform:scale(1)}80%{transform:scale(1.02);opacity:1}100%{transform:scale(1.6);opacity:0}}
+@keyframes scareTxt{0%,8%{transform:scale(0)}14%{transform:scale(1.3)}20%{transform:scale(1)}80%{opacity:1}100%{opacity:0}}
+#cmdX{background:none;border:0;color:#9dff7a;font:inherit;cursor:pointer}
+#bossCv{width:min(70%,420px);image-rendering:pixelated;display:block;margin:0 auto .2em;border:3px solid var(--wood2)}
+.bars{display:grid;grid-template-columns:auto 1fr;gap:.15em .5em;align-items:center;text-align:left;font-size:.9em;margin-bottom:.3em}
+.bar{height:.8em;border:3px solid var(--wood2);background:#3a2414;position:relative}
+.bar>div{height:100%;transition:width .3s}
+#hpBar{background:#e9654f}#tBar{background:#6fcf4f;transition:none}
+#tBar.low{background:#e9654f}
+.panel.boss{max-width:700px}
+.panel{position:relative}
+.panel.quiz,.panel.boss,.panel.dodge{padding-top:2em}
+.xbtn{position:absolute;top:.35em;right:.4em;font:inherit;font-size:.8em;background:#fff8e1;color:var(--ink);border:2px solid var(--wood2);box-shadow:0 2px 0 var(--wood2);padding:0 .45em;cursor:pointer}
+.xbtn:hover{background:#ffe0d0}.xbtn.sure{background:#e9654f;color:#fff}
+.panel.bossintro{font-size:clamp(14px,2.7cqw,24px)}
+.panel.bossintro #bossCv{width:min(50%,300px)}
+.stats div{font-size:.85em;overflow-wrap:anywhere}
+.panel.boss .qtext{min-height:1.2em;margin:.2em 0 .4em}
+.shake{animation:shake .35s}
+@keyframes shake{20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
+@media (max-width:560px){.opts{grid-template-columns:1fr}#hud{font-size:18px}.slot{width:38px;height:34px}}
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="hud">
+    <div id="coll"></div>
+    <div id="stats"><span id="stTasks" title="Tehtyjä tehtäviä">📝 0</span><span id="stAcc" title="Oikeat vastaukset">✔ –</span></div>
+    <div id="btns">
+      <button class="ib" id="bMusic" title="Musiikki päälle/pois">♪</button>
+      <button class="ib" id="bSfx" title="Äänet päälle/pois">🔊</button>
+      <button class="ib" id="bLang" title="Kieli / Language">EN</button>
+      <button class="ib" id="bHelp" title="Ohjeet">?</button>
+    </div>
+  </div>
+  <div id="stage">
+    <canvas id="cv" width="320" height="208"></canvas>
+    <div id="prompt" hidden></div>
+    <div id="toast"></div>
+    <div id="cmd" hidden><div id="cmdLog"></div><div class="cmdrow"><span>&gt;</span><input id="cmdIn" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Komento"><button id="cmdX" title="Sulje">✕</button></div></div>
+    <div id="tirppa" hidden></div>
+    <div id="modal" class="overlay" hidden><div class="panel" id="panel"></div></div>
+  </div>
+  <div id="foot">Nuolet / WASD tai napautus = liiku · E = tee tehtävä · klikkaa eläimiä!</div>
+</div>
+
+<script>
+'use strict';
+const W=320,H=208;
+const $=s=>document.querySelector(s);
+const cv=$('#cv'),ctx=cv.getContext('2d');ctx.imageSmoothingEnabled=false;
+const rand=Math.random,ri=(a,b)=>a+Math.floor(rand()*(b-a+1)),pick=a=>a[Math.floor(rand()*a.length)];
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rand()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function R(g,x,y,w,h,c){g.fillStyle=c;g.fillRect(Math.round(x),Math.round(y),w,h);}
+function fillCircle(g,cx,cy,r,c){for(let dy=-r;dy<=r;dy++){const hw=Math.floor(Math.sqrt(r*r-dy*dy));R(g,cx-hw,cy+dy,hw*2+1,1,c);}}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- SPRITET ---------- */
+function makeSprite(rows,pal){
+  const w=Math.max(...rows.map(r=>r.length)),h=rows.length;
+  const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');
+  rows.forEach((r,j)=>[...r].forEach((ch,i)=>{const col=pal[ch];if(col){x.fillStyle=col;x.fillRect(i,j,1,1);}}));
+  const f=document.createElement('canvas');f.width=w;f.height=h;const fx=f.getContext('2d');fx.translate(w,0);fx.scale(-1,1);fx.drawImage(c,0,0);
+  return {c,f,w,h};
+}
+const SPR={};
+const PPAL={h:'#f2cf63',r:'#c8432f',H:'#c99a2e',s:'#f1c39a',e:'#2b1d0e',c:'#d9534f',u:'#3e6fb5',y:'#f2c230',k:'#4a2c14'};
+const PBASE=["...hhhh...","..hrrrrh..",".HHHHHHHH.","...ssss...","...ssse...","...ssss...","..cuccuc..",".cuuuuuuc.",".suuyyuus.","..uuuuuu.."];
+SPR.player=[
+  makeSprite([...PBASE,"..uu..uu..","..kk..kk.."],PPAL),
+  makeSprite([...PBASE,".uu...uu..",".kk....kk."],PPAL),
+  makeSprite([...PBASE,"...uu.uu..","...kk.kk.."],PPAL)];
+SPR.kana=makeSprite([".....r....","....rr....","....WWW...","....WeWyy.","....WWWy..","wWWWWWWr..","WWWWWWWW..",".WwWWWWW..","..WWWWW...","...y.y....","..yy.yy..."],
+  {W:'#fbf8ef',w:'#d9d3c3',r:'#d6332b',y:'#f2b632',e:'#1b1410'});
+SPR.sorsa=makeSprite(["......ggg...",".....gGgGg..",".....ggegyy.",".....gggg.yy","......cc....",".bbbbbbbbb..","bBBbbbbbbbb.","bbBBBbbbbb..",".bbbbbbbb...","..o....o....","..oo...oo..."],
+  {g:'#2e7d4f',G:'#3fa565',y:'#f2b632',e:'#111111',c:'#f4f0e0',b:'#8a6a4a',B:'#b0916c',o:'#f08a24'});
+SPR.possu=makeSprite(["..........pp...","..pppppppppPp..",".ppppppppppep..","pppppppppppPPPP",".ppppppppppPnPn",".pppppppppppPP.","..ppppppppppp..","..pPpppppppPp..","..PP.PP..PP.PP."],
+  {p:'#f4a3b4',P:'#e07f98',n:'#8a3a50',e:'#1b1410'});
+SPR.lehma=makeSprite(["...........h...h.","...........wwwww.","..kkwwwwwkkkwewk.","kwkkwwwwwkkwwwwww",".wwwwwkkwwwwwPPPP",".wwwwkkkwwwwwPnPn",".wwwwwwwwwwww.PP.",".wwwwwwwwwwww....",".ww.ww...ww.ww...",".kk.kk...kk.kk..."],
+  {w:'#f7f5ee',k:'#262019',P:'#f0a7a7',n:'#8a3a3a',e:'#111111',h:'#e8dcc0'});
+SPR.lammas=makeSprite(["..WwWWwWW.....",".WWWWWWWWWW...","WWwWWWWwWWWkkk","WWWWWWWWWWkkek","WWWWwWWWWWkkkk",".WWWWWWWWWWkk.","..WWwWWWwWW...","...k.k..k.k...","...k.k..k.k..."],
+  {W:'#f3ecd8',w:'#d8cfb5',k:'#3a3330',e:'#ffffff'});
+SPR.peruna=makeSprite(["...bbbb...",".bbbbbbbb.","bbBbbbbbBb","bbWebbWebb","bbbbbbbbbb","bbbmmmmbbb",".bbbbmmbB.","..bbbbbb..","..k....k..",".kk....kk."],
+  {b:'#c9995a',B:'#a4763f',W:'#ffffff',e:'#1b1410',m:'#6b3a1a',k:'#6b3a1a'});
+SPR.heart=makeSprite([".r.r.","rrrrr",".rrr.","..r.."],{r:'#e8435a'});
+const CH_C=["..DDDDDDDDDD..",".DbbbbbbbbbbD.","DbbbbbbbbbbbbD","DbbbbbbbbbbbbD","MMMMMMyyMMMMMM","DbbbbbykbbbbbD","DbbbbbyybbbbbD","DbbbbbbbbbbbbD","DbbbbbbbbbbbbD","MMMMMMMMMMMMMM"];
+const CH_O=["..DDDDDDDDDD..",".DbbbbbbbbbbD.","DmmmmmmmmmmmmD","MMMMMMMMMMMMMM","..............","DyyyyyyyyyyyyD","MMMMMMyyMMMMMM","DbbbbbykbbbbbD","DbbbbbyybbbbbD","DbbbbbbbbbbbbD","DbbbbbbbbbbbbD","MMMMMMMMMMMMMM"];
+const WOODP={D:'#4a2c14',b:'#9a6532',M:'#6f7176',y:'#f2c230',k:'#1b1410',m:'#2a170a'};
+const GOLDP={D:'#7a5410',b:'#f2c230',M:'#b8860b',y:'#fff3b0',k:'#7a5410',m:'#5a3a08'};
+SPR.chestW=makeSprite(CH_C,WOODP);SPR.chestWO=makeSprite(CH_O,WOODP);
+SPR.chestG=makeSprite(CH_C,GOLDP);SPR.chestGO=makeSprite(CH_O,GOLDP);
+const BOSS_ROWS=["....y..y..y..y....","....yyyyyyyyyy....","....yryyyGyyry....","....yyyyyyyyyy....","...bbbbbbbbbbbb...",".bbbbbbbbbbbbbbbb.",
+ "bbbkkbbbbbbbbkkbbb","bbbbbkkbbbbkkbbbbb","bbbbWWebbbbeWWbbbb","bbbbWWebbbbeWWbbbb","bBbbbbbbbbbbbbbbBb","bbbbbmmmmmmmmbbbbb",
+ "bbbbbmWmWWmWmbbbbb","bbbbbbmmmmmmbbbbbb",".bbBbbbbbbbbbbbbb.","..bbbbbbbbbbbBbb..","....bbbbbbbbbb....","....kk......kk....","...kkk......kkk..."];
+SPR.boss=makeSprite(BOSS_ROWS,{b:'#c9995a',B:'#a4763f',y:'#f2c230',r:'#d6332b',G:'#4fa3e8',k:'#4a2c14',W:'#ffffff',e:'#1b1410',m:'#6b1a1a'});
+SPR.bossW=makeSprite(BOSS_ROWS,{b:'#fff',B:'#fff',y:'#fff',r:'#fff',G:'#fff',k:'#fff',W:'#fff',e:'#fff',m:'#fff'});
+SPR.kulta=makeSprite(["...bbbb...",".bbbbbbbb.","bbBbbbbbBb","bbWebbWebb","bbbbbbbbbb","bbbmmmmbbb",".bbbbmmbB.","..bbbbbb..","..k....k..",".kk....kk."],
+  {b:'#f7cf3a',B:'#d9a520',W:'#ffffff',e:'#1b1410',m:'#9a6a00',k:'#9a6a00'});
+SPR.bossEvil=makeSprite(BOSS_ROWS,{b:'#8a6a3a',B:'#6a4a22',y:'#7a3ab0',r:'#ff2020',G:'#ff2020',k:'#2a160a',W:'#ffd0d0',e:'#ff2020',m:'#300808'});
+SPR.sprout=makeSprite(["..g.g..",".gGgGg.","..gGg..","...b...","..bbb..",".bbbbb.","..bbb.."],{g:'#6fcf4f',G:'#3f9a3f',b:'#c9995a'});
+SPR.apple=makeSprite(["..g.",".rr.","rrrr","rrrr",".rr."],{g:'#3f9a3f',r:'#d6332b'});
+
+/* ---------- ÄÄNET ---------- */
+let AC=null,master,musicGain,sfxGain,NB=null,musTimer=null,musStep=0,musNext=0;
+const SKEY='farmikoulu-v1',OKEY='farmikoulu-asetukset';
+let settings={music:true,sfx:true,lang:'fi'};
+try{const s=JSON.parse(localStorage.getItem(OKEY));if(s)settings=Object.assign(settings,s);}catch(e){}
+function saveSettings(){try{localStorage.setItem(OKEY,JSON.stringify(settings));}catch(e){}}
+function initAudio(){
+  if(AC){if(AC.state==='suspended')AC.resume();return;}
+  try{
+    AC=new (window.AudioContext||window.webkitAudioContext)();
+    master=AC.createGain();master.gain.value=.8;master.connect(AC.destination);
+    musicGain=AC.createGain();musicGain.connect(master);
+    sfxGain=AC.createGain();sfxGain.connect(master);
+    applyVolumes();startMusic();
+  }catch(e){AC=null;}
+}
+function applyVolumes(){
+  if(AC){musicGain.gain.value=settings.music?.33:0;sfxGain.gain.value=settings.sfx?.55:0;}
+  $('#bMusic').classList.toggle('off',!settings.music);$('#bSfx').classList.toggle('off',!settings.sfx);
+}
+function tone(o){
+  if(!AC)return;
+  const {f=440,f2=null,d=.15,type='square',v=.3,vib=0,vibF=6,filt=null}=o;
+  const dest=o.dest||sfxGain;const t0=o.at!=null?o.at:AC.currentTime+(o.t||0);
+  const osc=AC.createOscillator();osc.type=type;osc.frequency.setValueAtTime(f,t0);
+  if(f2)osc.frequency.exponentialRampToValueAtTime(f2,t0+d);
+  const gn=AC.createGain();gn.gain.setValueAtTime(.0001,t0);gn.gain.exponentialRampToValueAtTime(v,t0+.012);gn.gain.exponentialRampToValueAtTime(.0001,t0+d);
+  if(vib){const l=AC.createOscillator();l.frequency.value=vibF;const lg=AC.createGain();lg.gain.value=vib;l.connect(lg);lg.connect(osc.frequency);l.start(t0);l.stop(t0+d+.05);}
+  if(filt){const bq=AC.createBiquadFilter();bq.type=filt.type||'bandpass';bq.frequency.value=filt.f;bq.Q.value=filt.q||1;osc.connect(bq);bq.connect(gn);}else osc.connect(gn);
+  gn.connect(dest);osc.start(t0);osc.stop(t0+d+.05);
+}
+function noise(o){
+  if(!AC)return;
+  if(!NB){NB=AC.createBuffer(1,AC.sampleRate*.5|0,AC.sampleRate);const a=NB.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=rand()*2-1;}
+  const {d=.1,v=.2,f=2000,q=1}=o;const dest=o.dest||sfxGain;const t0=o.at!=null?o.at:AC.currentTime+(o.t||0);
+  const s=AC.createBufferSource();s.buffer=NB;const bq=AC.createBiquadFilter();bq.type='bandpass';bq.frequency.value=f;bq.Q.value=q;
+  const gn=AC.createGain();gn.gain.setValueAtTime(v,t0);gn.gain.exponentialRampToValueAtTime(.0001,t0+d);
+  s.connect(bq);bq.connect(gn);gn.connect(dest);s.start(t0);s.stop(t0+d+.02);
+}
+function nf(n){const m=n.match(/^([A-G])(#?)(\d)$/);const idx={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]?1:0);return 440*Math.pow(2,((+m[3]+1)*12+idx-69)/12);}
+const MEL=("G4 G4 B4 D5 E5 D5 B4 G4 A4 A4 C5 E5 D5 C5 B4 A4 G4 G4 B4 D5 G5 E5 D5 B4 A4 C5 B4 A4 G4 - G4 - "+
+  "D5 D5 E5 F#5 G5 F#5 E5 D5 C5 C5 E5 G5 E5 D5 C5 B4 B4 D5 G5 D5 C5 E5 A4 C5 B4 A4 G4 F#4 G4 - - -").split(' ');
+const BASS=['G2','A2','G2','D2','D2','C2','G2','D2'];
+const STEP=.19;
+const FARM_TRACK={mel:MEL,bass:BASS,step:STEP};
+const BOSS_TRACK={step:.15,bass:['E2','A2','E2','B1','G2','C2','G2','B1'],
+  mel:("E4 E4 G4 E4 B4 A4 G4 F#4 E4 E4 G4 E4 C5 B4 A4 B4 E4 E4 G4 E4 B4 A4 G4 F#4 G4 F#4 E4 D4 E4 - E4 - "+
+  "B4 B4 C5 B4 A4 G4 A4 B4 C5 C5 B4 A4 G4 F#4 G4 A4 B4 - B4 C5 D5 C5 B4 A4 G4 F#4 D4 F#4 E4 - - -").split(' ')};
+let musicMode='farm';
+const FINAL_TRACK={mel:BOSS_TRACK.mel,bass:BOSS_TRACK.bass,step:.12};
+function setMusic(m){if(musicMode===m)return;musicMode=m;musStep=0;}
+function startMusic(){musNext=AC.currentTime+.15;musTimer=setInterval(schedMusic,40);}
+function schedMusic(){
+  if(!AC)return;
+  if(musNext<AC.currentTime)musNext=AC.currentTime+.05;
+  while(musNext<AC.currentTime+.25){
+    const T=musicMode==='boss'?BOSS_TRACK:musicMode==='final'?FINAL_TRACK:FARM_TRACK,i=musStep%64,n=T.mel[i];
+    if(n!=='-')tone({f:nf(n),at:musNext,d:T.step*.8,v:.11,type:'square',dest:musicGain});
+    if(i%2===0){const root=nf(T.bass[Math.floor(i/8)]);const beat=(i%8)/2;tone({f:beat%2?root*1.5:root,at:musNext,d:T.step*1.7,v:.3,type:'triangle',dest:musicGain});}
+    else noise({at:musNext,d:.03,v:musicMode!=='farm'?.1:.06,f:7000,dest:musicGain});
+    if(musicMode!=='farm'&&i%(musicMode==='final'?2:4)===0)noise({at:musNext,d:.08,v:.22,f:150,dest:musicGain});
+    musStep++;musNext+=T.step;
+  }
+}
+const sfx={
+  ui:()=>tone({f:660,d:.05,v:.12}),
+  deny:()=>{tone({f:300,d:.08,v:.15});tone({f:230,d:.12,v:.15,t:.09});},
+  ok:()=>[523,659,784,1047].forEach((f,i)=>tone({f,d:.12,v:.16,t:i*.07})),
+  bad:()=>{tone({f:220,f2:180,d:.18,v:.22,type:'sawtooth',filt:{type:'lowpass',f:900}});tone({f:165,d:.28,v:.22,t:.17,type:'sawtooth',filt:{type:'lowpass',f:900}});},
+  tick:()=>noise({d:.05,v:.3,f:1500}),
+  fanfare:()=>{[[523,0],[659,.1],[784,.2],[1047,.3]].forEach(([f,t])=>tone({f,t,d:t===.3?.55:.12,v:.18}));tone({f:262,t:.3,d:.55,type:'triangle',v:.35});},
+  win:()=>{["C5","E5","G5","C6","G5","C6","E6"].forEach((n,i)=>tone({f:nf(n),t:i*.13,d:i===6?.7:.14,v:.18}));tone({f:131,t:.78,d:.8,type:'triangle',v:.4});},
+  pop:()=>tone({f:700,f2:1400,d:.08,v:.14,type:'sine'}),
+  throw:()=>tone({f:400,f2:900,d:.25,v:.15,type:'triangle'}),
+  bossHurt:()=>{noise({d:.15,v:.35,f:400});tone({f:180,f2:90,d:.25,v:.35,type:'square'});},
+  bossHit:()=>{noise({d:.3,v:.4,f:120});tone({f:110,f2:55,d:.4,v:.45,type:'sawtooth',filt:{type:'lowpass',f:500}});},
+  bossRoar:()=>{tone({f:90,f2:60,d:1.1,v:.5,type:'sawtooth',vib:8,vibF:7,filt:{type:'lowpass',f:500}});noise({d:.9,v:.25,f:200});}
+};
+
+/* ---------- KIELI ---------- */
+const L=(fi,en)=>settings.lang==='en'?en:fi;
+const L2=a=>Array.isArray(a)?a[settings.lang==='en'?1:0]:a;
+
+/* ---------- ELÄIMET ---------- */
+const ANIMALS=[
+  {id:'sorsa',name:['Sorsa','Duck'],region:'pond',speed:9,fact:['Sorsan höyhenissä on rasvaa, joten vesi valuu niistä pois.','A duck’s feathers are oily, so water runs right off them.'],
+    snd:()=>{for(const t of [0,.2]){tone({f:560,f2:300,d:.14,v:.55,type:'sawtooth',t,filt:{f:1100,q:3}});}}},
+  {id:'possu',name:['Possu','Pig'],region:'pen',speed:11,fact:['Sika on yksi älykkäimmistä kotieläimistä.','Pigs are among the smartest farm animals.'],
+    snd:()=>{for(const t of [0,.28]){tone({f:270,f2:160,d:.2,v:.6,type:'sawtooth',t,filt:{f:650,q:2}});noise({t,d:.15,v:.12,f:500});}}},
+  {id:'kana',name:['Kana','Chicken'],region:'pen',speed:14,fact:['Hyvä munijakana voi munia lähes munan päivässä.','A good laying hen can lay almost one egg a day.'],
+    snd:()=>{[0,.09,.18].forEach(t=>tone({f:950,f2:700,d:.05,v:.35,t,filt:{f:1500,q:2}}));tone({f:620,f2:950,d:.3,v:.4,type:'sawtooth',t:.32,filt:{f:1400,q:2}});}},
+  {id:'lehma',name:['Lehmä','Cow'],region:'pen',speed:6,fact:['Lehmä märehtii: sen mahassa on neljä osaa.','Cows chew the cud: their stomach has four parts.'],
+    snd:()=>{tone({f:115,f2:150,d:.35,v:.55,type:'sawtooth',filt:{type:'lowpass',f:650}});tone({f:150,f2:105,d:1,v:.55,type:'sawtooth',t:.28,vib:4,vibF:5,filt:{type:'lowpass',f:650}});}},
+  {id:'lammas',name:['Lammas','Sheep'],region:'pen',speed:8,fact:['Lampaan villa kasvaa koko ajan, siksi lammas keritään.','A sheep’s wool never stops growing, so sheep are sheared.'],
+    snd:()=>{tone({f:390,f2:330,d:.75,v:.5,type:'sawtooth',vib:28,vibF:9,filt:{f:1300,q:1.5}});}},
+  {id:'peruna',name:['Peruna','Potato'],region:'field',speed:12,fact:['Peruna on varsimukula. Se yleistyi Suomessa 1700-luvulla.','A potato is a stem tuber. It became common in Finland in the 1700s.'],
+    snd:()=>{tone({f:180,f2:560,d:.2,v:.5,type:'sine'});tone({f:800,f2:1300,d:.07,v:.25,t:.22});}}
+];
+const ANIM=Object.fromEntries(ANIMALS.map(a=>[a.id,a]));
+SPR.hopea=makeSprite(["...bbbb...",".bbbbbbbb.","bbBbbbbbBb","bbWebbWebb","bbbbbbbbbb","bbbmmmmbbb",".bbbbmmbB.","..bbbbbb..","..k....k..",".kk....kk."],
+  {b:'#cfd4da',B:'#9aa1aa',W:'#ffffff',e:'#1b1410',m:'#5a5f66',k:'#5a5f66'});
+ANIM.hopea={id:'hopea',name:['Hopeaperuna','Silver potato'],region:'barnyard',speed:12,
+  snd:()=>[784,988,1175].forEach((f,i)=>tone({f,d:.2,v:.13,t:i*.08,type:'triangle'}))};
+ANIM.kulta={id:'kulta',name:['Kultainen peruna','Golden potato'],region:'field',speed:15,fact:['Harvinaisin peruna koko farmilla!','The rarest potato on the whole farm!'],
+  snd:()=>[1047,1319,1568,2093].forEach((f,i)=>tone({f,d:.18,v:.14,t:i*.07,type:'triangle'}))};
+
+/* ---------- KYSYMYKSET ---------- */
+// [kysymys, oikea, väärä, väärä, väärä, selitys?]
+const BANK={
+aid:[
+ ["Mikä sanaluokka on sana ”nopeasti”?","adverbi","adjektiivi","verbi","substantiivi","Adverbi kertoo, miten jotain tehdään."],
+ ["Mikä seuraavista on verbi?","juoksee","pelto","pörröinen","huomenna"],
+ ["Mikä seuraavista on adjektiivi?","pörröinen","lammas","ammuu","ehkä"],
+ ["Mikä seuraavista on yhdyssana?","lumiukko","iloinen","juosta","punainen"],
+ ["Mikä on kirjoitettu oikein?","kesäloma","kesä loma","kesä-loma","kesälooma"],
+ ["Mikä on sanan ”lammas” monikko?","lampaat","lammasit","lammaat","lampaset"],
+ ["Mikä on sanan ”iloinen” vastakohta?","surullinen","onnellinen","nopea","pieni"],
+ ["Mikä on lauseen ”Kana muni munan.” predikaatti?","muni","Kana","munan","Kana muni","Predikaatti on lauseen verbi."],
+ ["Mikä on lauseen ”Lehmä syö heinää.” subjekti?","Lehmä","syö","heinää","Lehmä syö","Subjekti on se, joka tekee."],
+ ["Mikä sana on synonyymi sanalle ”nopea”?","vikkelä","hidas","iso","hiljainen"],
+ ["Mikä näistä kirjoitetaan aina isolla alkukirjaimella?","Suomi","maanantai","tammikuu","suomalainen","Maiden nimet isolla; viikonpäivät, kuukaudet ja kansallisuudet pienellä."],
+ ["Mikä on verbin ”syödä” imperfekti (minä)?","söin","syön","syöin","olen syönyt"],
+ ["Miten sana ”maatila” tavutetaan?","maa-ti-la","ma-a-ti-la","maat-i-la","maa-til-a"],
+ ["Missä sanassa on diftongi?","poika","talo","kissa","kala","oi on diftongi."],
+ ["Mikä seuraavista on erisnimi?","Helsinki","kaupunki","kissa","koulu"],
+ ["Mikä on sanan ”possu” monikon partitiivi (esim. ”paljon ___”)?","possuja","possut","possujen","possuilla"],
+ ["Mikä sana on substantiivi?","ystävyys","ystävällinen","ystävällisesti","ystävystyä"],
+ ["Mikä lause on huudahduslause?","Apua, lehmä karkasi!","Lehmä on laitumella.","Missä lehmä on?","Lehmä söi heinää."],
+ ["Missä aikamuodossa on lause ”Olen syönyt aamupalan.”?","perfekti","preesens","imperfekti","pluskvamperfekti"],
+ ["Mikä välimerkki kuuluu kysymyslauseen loppuun?","?","!",".",","],
+ ["Mikä sana on monikossa?","kanat","kana","kanan","kanaa"],
+ ["Mikä on sanan ”pieni” vertailumuoto (komparatiivi)?","pienempi","pienin","pienesti","pienenä"]
+],
+eng:[
+ ["Mitä on ”lehmä” englanniksi?","cow","pig","sheep","duck"],
+ ["Mitä on ”sorsa” englanniksi?","duck","goose","hen","dog"],
+ ["Mitä on ”lammas” englanniksi?","sheep","goat","horse","cow"],
+ ["Mitä on ”peruna” englanniksi?","potato","tomato","carrot","onion"],
+ ["Mitä tarkoittaa ”barn”?","lato","pelto","aita","traktori"],
+ ["What is the plural of ”sheep”?","sheep","sheeps","sheepes","shoop","Sheep on monikossakin sheep."],
+ ["What is the plural of ”mouse”?","mice","mouses","mices","mousen"],
+ ["What is the plural of ”child”?","children","childs","childrens","childes"],
+ ["Valitse oikea: She ___ a cat.","has","have","haves","are"],
+ ["Valitse oikea: There ___ three pigs on the farm.","are","is","am","be"],
+ ["Valitse oikea: Yesterday I ___ football.","played","play","plays","playing","Yesterday → menneen ajan muoto."],
+ ["Valitse oikea: I ___ to school every day.","go","goes","going","gos"],
+ ["Mitä tarkoittaa ”hungry”?","nälkäinen","janoinen","väsynyt","iloinen"],
+ ["Mikä päivä tulee maanantain jälkeen? (englanniksi)","Tuesday","Thursday","Sunday","Wednesday"],
+ ["What is the opposite of ”big”?","small","tall","long","old"],
+ ["Miten sanotaan ”kaksitoista” englanniksi?","twelve","twenty","eleven","two"],
+ ["Mitä tarkoittaa ”field”?","pelto","metsä","järvi","mäki"],
+ ["Valitse oikea: The chicken ___ eggs.","lays","lay","laying","layed"],
+ ["Mikä on ”talvi” englanniksi?","winter","summer","autumn","spring"],
+ ["Mikä kysymys on oikein?","Do you like apples?","Does you like apples?","Do you likes apples?","Like you apples?"]
+],
+ymp:[
+ ["Mitä kaasua kasvit tuottavat yhteyttäessään?","happea","hiilidioksidia","typpeä","heliumia"],
+ ["Mitä kasvi tarvitsee yhteyttämiseen?","valoa, vettä ja hiilidioksidia","vain multaa","happea ja sokeria","pimeyttä ja lämpöä"],
+ ["Mihin eläinryhmään kana kuuluu?","linnut","nisäkkäät","matelijat","sammakkoeläimet"],
+ ["Mikä seuraavista on nisäkäs?","lammas","sorsa","kana","sammakko"],
+ ["Lehmä syö ruohoa ja heinää. Se on siis…","kasvinsyöjä","petoeläin","sekaravinnon syöjä","hajottaja"],
+ ["Mikä kasvin osa peruna on?","varsimukula","juuri","siemen","hedelmä","Peruna kasvaa maavarren paksuuntumana."],
+ ["Missä lämpötilassa vesi jäätyy?","0 °C","10 °C","−10 °C","100 °C"],
+ ["Missä lämpötilassa vesi kiehuu normaalipaineessa?","100 °C","50 °C","0 °C","200 °C"],
+ ["Mikä elin pumppaa verta elimistössä?","sydän","keuhkot","maksa","munuaiset"],
+ ["Mikä planeetta on lähimpänä Aurinkoa?","Merkurius","Venus","Maa","Mars"],
+ ["Kuinka monta jalkaa hyönteisellä on?","6","8","4","10"],
+ ["Mikä on veden kemiallinen kaava?","H₂O","CO₂","O₂","NaCl"],
+ ["Mikä aine johtaa sähköä hyvin?","kupari","muovi","puu","lasi"],
+ ["Mitä lampaasta saadaan?","villaa","munia","hunajaa","silkkiä"],
+ ["Mitkä ovat ravintoketjun alussa?","kasvit eli tuottajat","petoeläimet","sienet","ihmiset"],
+ ["Kauanko Maalta kestää kiertää Aurinko kerran?","noin vuoden","yhden päivän","kuukauden","viikon"],
+ ["Mikä aiheuttaa vuodenajat?","Maan akselin kallistus","Kuun vetovoima","Maan etäisyys Auringosta","pilvet"],
+ ["Mitä vedelle tapahtuu, kun se haihtuu?","siitä tulee vesihöyryä","siitä tulee jäätä","se katoaa kokonaan","siitä tulee suolaa"],
+ ["Mikä seuraavista on uusiutuva energianlähde?","tuulivoima","kivihiili","maaöljy","maakaasu"],
+ ["Mikä kerros suojaa Maata Auringon UV-säteilyltä?","otsonikerros","pilvikerros","maankuori","jääkerros"]
+],
+his:[
+ ["Mikä on Suomen pääkaupunki?","Helsinki","Turku","Tampere","Oulu"],
+ ["Mikä on Ruotsin pääkaupunki?","Tukholma","Oslo","Kööpenhamina","Tallinna"],
+ ["Mikä on Viron pääkaupunki?","Tallinna","Riika","Vilna","Tartto"],
+ ["Minä vuonna Suomi itsenäistyi?","1917","1809","1945","1995"],
+ ["Mikä on Suomen suurin järvi?","Saimaa","Päijänne","Inarijärvi","Oulujärvi"],
+ ["Mikä on Suomen korkein tunturi?","Halti","Saana","Pallas","Koli"],
+ ["Mikä on Suomen pisin joki?","Kemijoki","Kymijoki","Tornionjoki","Oulujoki"],
+ ["Mihin maanosaan Suomi kuuluu?","Eurooppa","Aasia","Afrikka","Pohjois-Amerikka"],
+ ["Mikä on maailman suurin valtameri?","Tyynimeri","Atlantti","Intian valtameri","Pohjoinen jäämeri"],
+ ["Kuka oli Suomen ensimmäinen presidentti?","K. J. Ståhlberg","Urho Kekkonen","C. G. E. Mannerheim","Tarja Halonen"],
+ ["Mikä on Suomen kansalliseepos?","Kalevala","Seitsemän veljestä","Tuntematon sotilas","Vänrikki Stoolin tarinat"],
+ ["Kuka kokosi Kalevalan?","Elias Lönnrot","Aleksis Kivi","J. L. Runeberg","Mikael Agricola"],
+ ["Kuka teki ensimmäisen suomenkielisen kirjan, aapisen?","Mikael Agricola","Elias Lönnrot","Aleksis Kivi","Zachris Topelius"],
+ ["Minä vuonna ihminen kävi ensimmäisen kerran Kuussa?","1969","1957","1979","1989"],
+ ["Mikä ilmansuunta on pohjoista vastapäätä?","etelä","itä","länsi","koillinen"],
+ ["Missä maakunnassa Tampere sijaitsee?","Pirkanmaa","Satakunta","Kanta-Häme","Uusimaa"],
+ ["Mikä on Euroopan pisin joki?","Volga","Tonava","Rein","Seine"],
+ ["Kuka kehitti kirjapainotaidon Euroopassa 1400-luvulla?","Johannes Gutenberg","Leonardo da Vinci","Kristoffer Kolumbus","Galileo Galilei"],
+ ["Missä maanosassa Egypti sijaitsee?","Afrikka","Aasia","Eurooppa","Etelä-Amerikka"],
+ ["Mikä merenlahti on Suomen ja Ruotsin välissä?","Pohjanlahti","Suomenlahti","Pohjanmeri","Välimeri"],
+ ["Minkä valtakunnan osa Suomi oli ennen vuotta 1809?","Ruotsin","Venäjän","Tanskan","Saksan"]
+]};
+// Englanninkieliset versiot (sama järjestys). Äidinkieli pysyy suomeksi, koska se on suomen kielen tunti.
+const BANK_EN={
+eng:[
+ ["What is ”lehmä” in English?","cow","pig","sheep","duck"],
+ ["What is ”sorsa” in English?","duck","goose","hen","dog"],
+ ["What is ”lammas” in English?","sheep","goat","horse","cow"],
+ ["What is ”peruna” in English?","potato","tomato","carrot","onion"],
+ ["What does ”barn” mean in Finnish?","lato","pelto","aita","traktori"],
+ ["What is the plural of ”sheep”?","sheep","sheeps","sheepes","shoop","The plural of sheep is sheep."],
+ ["What is the plural of ”mouse”?","mice","mouses","mices","mousen"],
+ ["What is the plural of ”child”?","children","childs","childrens","childes"],
+ ["Choose the right word: She ___ a cat.","has","have","haves","are"],
+ ["Choose: There ___ three pigs on the farm.","are","is","am","be"],
+ ["Choose: Yesterday I ___ football.","played","play","plays","playing","Yesterday → past tense."],
+ ["Choose: I ___ to school every day.","go","goes","going","gos"],
+ ["What does ”hungry” mean in Finnish?","nälkäinen","janoinen","väsynyt","iloinen"],
+ ["Which day comes after Monday?","Tuesday","Thursday","Sunday","Wednesday"],
+ ["What is the opposite of ”big”?","small","tall","long","old"],
+ ["How do you say ”kaksitoista” in English?","twelve","twenty","eleven","two"],
+ ["What does ”field” mean in Finnish?","pelto","metsä","järvi","mäki"],
+ ["Choose: The chicken ___ eggs.","lays","lay","laying","layed"],
+ ["What is ”talvi” in English?","winter","summer","autumn","spring"],
+ ["Which question is correct?","Do you like apples?","Does you like apples?","Do you likes apples?","Like you apples?"]
+],
+ymp:[
+ ["Which gas do plants produce in photosynthesis?","oxygen","carbon dioxide","nitrogen","helium"],
+ ["What does a plant need for photosynthesis?","light, water and carbon dioxide","only soil","oxygen and sugar","darkness and heat"],
+ ["Which animal group does the chicken belong to?","birds","mammals","reptiles","amphibians"],
+ ["Which of these is a mammal?","sheep","duck","chicken","frog"],
+ ["A cow eats grass and hay. So it is a…","herbivore","predator","omnivore","decomposer"],
+ ["Which part of the plant is a potato?","stem tuber","root","seed","fruit","A potato is a thickened underground stem."],
+ ["At what temperature does water freeze?","0 °C","10 °C","−10 °C","100 °C"],
+ ["At what temperature does water boil at normal pressure?","100 °C","50 °C","0 °C","200 °C"],
+ ["Which organ pumps blood around the body?","heart","lungs","liver","kidneys"],
+ ["Which planet is closest to the Sun?","Mercury","Venus","Earth","Mars"],
+ ["How many legs does an insect have?","6","8","4","10"],
+ ["What is the chemical formula of water?","H₂O","CO₂","O₂","NaCl"],
+ ["Which material conducts electricity well?","copper","plastic","wood","glass"],
+ ["What do we get from sheep?","wool","eggs","honey","silk"],
+ ["What is at the start of a food chain?","plants (producers)","predators","fungi","humans"],
+ ["How long does it take the Earth to orbit the Sun once?","about a year","one day","a month","a week"],
+ ["What causes the seasons?","the tilt of Earth’s axis","the Moon’s gravity","Earth’s distance from the Sun","clouds"],
+ ["What happens to water when it evaporates?","it turns into water vapour","it turns into ice","it disappears completely","it turns into salt"],
+ ["Which of these is a renewable energy source?","wind power","coal","oil","natural gas"],
+ ["Which layer protects Earth from the Sun’s UV radiation?","the ozone layer","the cloud layer","the Earth’s crust","the ice layer"]
+],
+his:[
+ ["What is the capital of Finland?","Helsinki","Turku","Tampere","Oulu"],
+ ["What is the capital of Sweden?","Stockholm","Oslo","Copenhagen","Tallinn"],
+ ["What is the capital of Estonia?","Tallinn","Riga","Vilnius","Tartu"],
+ ["In which year did Finland become independent?","1917","1809","1945","1995"],
+ ["What is Finland’s largest lake?","Saimaa","Päijänne","Inarijärvi","Oulujärvi"],
+ ["What is Finland’s highest fell?","Halti","Saana","Pallas","Koli"],
+ ["What is Finland’s longest river?","Kemijoki","Kymijoki","Tornionjoki","Oulujoki"],
+ ["Which continent is Finland in?","Europe","Asia","Africa","North America"],
+ ["What is the largest ocean in the world?","Pacific Ocean","Atlantic Ocean","Indian Ocean","Arctic Ocean"],
+ ["Who was the first President of Finland?","K. J. Ståhlberg","Urho Kekkonen","C. G. E. Mannerheim","Tarja Halonen"],
+ ["What is Finland’s national epic?","Kalevala","Seven Brothers","The Unknown Soldier","The Tales of Ensign Stål"],
+ ["Who compiled the Kalevala?","Elias Lönnrot","Aleksis Kivi","J. L. Runeberg","Mikael Agricola"],
+ ["Who made the first book in Finnish, an ABC book?","Mikael Agricola","Elias Lönnrot","Aleksis Kivi","Zachris Topelius"],
+ ["In which year did people first walk on the Moon?","1969","1957","1979","1989"],
+ ["Which direction is opposite to north?","south","east","west","north-east"],
+ ["Which region of Finland is Tampere in?","Pirkanmaa","Satakunta","Kanta-Häme","Uusimaa"],
+ ["What is the longest river in Europe?","Volga","Danube","Rhine","Seine"],
+ ["Who developed printing in Europe in the 1400s?","Johannes Gutenberg","Leonardo da Vinci","Christopher Columbus","Galileo Galilei"],
+ ["Which continent is Egypt in?","Africa","Asia","Europe","South America"],
+ ["Which gulf lies between Finland and Sweden?","Gulf of Bothnia","Gulf of Finland","North Sea","Mediterranean Sea"],
+ ["Which kingdom was Finland part of before 1809?","Sweden","Russia","Denmark","Germany"]
+]};
+// Lisää vääriä vaihtoehtoja: joka kerralla arvotaan 3 väärää isommasta joukosta, joten vaihtoehdot vaihtelevat.
+const XTRA={
+aid:[["pronomini","numeraali","konjunktio"],["talo","kaunis","iloisesti"],["juoksee","nopeasti","kana"],["kaunis","hyppiä","vihreä"],["kessäloma","käsäloma","kesälomma"],
+ ["lammakset","lampat","lammaset"],["hauska","kova","vihreä"],["Kana munan","muni munan"],["syö heinää","Lehmä heinää"],["laiska","pitkä","kova"],["kesäkuu","ruotsalainen","sunnuntai"],
+ ["söi","syömme","sain"],["m-aa-ti-la","maa-t-ila","maati-la"],["sika","lammas","pelto"],["joki","maatila","traktori"],["possulle","possussa","possuista"],["ystävällisempi","ystävystyi"],
+ ["Lehmä karkasi eilen.","Karkasiko lehmä?"],["futuuri","konditionaali","imperatiivi"],[":",";","-"],["kanalle","kanassa","kanasta"],["pienimpi","pienemmin","pieni"]],
+eng:[["horse","hen","goat"],["cat","cow","swan"],["pig","dog","duck"],["cucumber","apple","pea"],["kaivo","katto","metsä"],["sheepies","shoops"],["meese","mouse"],["childer","childen"],
+ ["is","hass","having"],["was","being","been"],["plaid","playes","plaied"],["gone","goed","to go"],["vihainen","surullinen","kylmä"],["Friday","Saturday","Monday"],["huge","wide","heavy"],
+ ["thirteen","ten","twelf"],["joki","suo","tie"],["lais","laies","lying"],["snow","cold","weather"],["Do like you apples?","You likes apples?"]],
+ymp:[["vetyä","metaania","argonia"],["vain vettä","kylmää ja tuulta","typpeä ja suolaa"],["kalat","hyönteiset"],["kala","käärme","hyttynen"],["lihansyöjä","raadonsyöjä"],["lehti","kukka","sipuli"],
+ ["−20 °C","5 °C","32 °C"],["80 °C","150 °C","37 °C"],["aivot","mahalaukku","haima"],["Jupiter","Saturnus","Neptunus"],["2","12","100"],["H₂O₂","HO","CH₄"],["kumi","paperi","villa"],
+ ["höyheniä","puuvillaa","pellavaa"],["hyönteiset","linnut"],["kymmenen vuotta","tunnin","sata päivää"],["tuuli","Auringon pilkut","meret"],["siitä tulee hiekkaa","siitä tulee öljyä","siitä tulee kiveä"],
+ ["dieselöljy","bensiini","raakaöljy"],["savukerros","hiekkakerros","vesikerros"]],
+his:[["Kuopio","Jyväskylä","Lahti"],["Göteborg","Malmö","Helsinki"],["Pärnu","Helsinki","Narva"],["1939","1918","1900"],["Pielinen","Näsijärvi","Lappajärvi"],["Aavasaksa","Ylläs","Levi"],
+ ["Vantaanjoki","Aurajoki","Porvoonjoki"],["Etelä-Amerikka","Australia","Etelämanner"],["Itämeri","Välimeri","Pohjanmeri"],["Sauli Niinistö","Martti Ahtisaari","J. K. Paasikivi"],
+ ["Kanteletar","Maamme-kirja","Muumipeikko ja pyrstötähti"],["Zachris Topelius","Minna Canth","Eino Leino"],["Minna Canth","J. V. Snellman","Eino Leino"],["1961","1972","1999"],
+ ["luode","kaakko","lounas"],["Pohjanmaa","Lappi","Kainuu"],["Elbe","Thames","Dnepr"],["Isaac Newton","William Shakespeare","Martti Luther"],["Australia","Pohjois-Amerikka","Etelämanner"],
+ ["Riianlahti","Laatokka","Atlantti"],["Norjan","Puolan","Englannin"]]};
+const XTRA_EN={eng:XTRA.eng,
+ymp:[["hydrogen","methane","argon"],["only water","cold and wind","nitrogen and salt"],["fish","insects"],["fish","snake","mosquito"],["carnivore","scavenger"],["leaf","flower","bulb"],
+ ["−20 °C","5 °C","32 °C"],["80 °C","150 °C","37 °C"],["brain","stomach","pancreas"],["Jupiter","Saturn","Neptune"],["2","12","100"],["H₂O₂","HO","CH₄"],["rubber","paper","wool"],
+ ["feathers","cotton","linen"],["insects","birds"],["ten years","an hour","a hundred days"],["wind","sunspots","the oceans"],["it turns into sand","it turns into oil","it turns into stone"],
+ ["diesel","petrol","crude oil"],["the smoke layer","the sand layer","the water layer"]],
+his:[["Kuopio","Jyväskylä","Lahti"],["Gothenburg","Malmö","Helsinki"],["Pärnu","Helsinki","Narva"],["1939","1918","1900"],["Pielinen","Näsijärvi","Lappajärvi"],["Aavasaksa","Ylläs","Levi"],
+ ["Vantaanjoki","Aurajoki","Porvoonjoki"],["South America","Australia","Antarctica"],["Baltic Sea","Mediterranean Sea","North Sea"],["Sauli Niinistö","Martti Ahtisaari","J. K. Paasikivi"],
+ ["Kanteletar","The Book of Our Land","Comet in Moominland"],["Zachris Topelius","Minna Canth","Eino Leino"],["Minna Canth","J. V. Snellman","Eino Leino"],["1961","1972","1999"],
+ ["north-west","south-east","south-west"],["Pohjanmaa","Lappi","Kainuu"],["Elbe","Thames","Dnieper"],["Isaac Newton","William Shakespeare","Martin Luther"],["Australia","North America","Antarctica"],
+ ["Gulf of Riga","Lake Ladoga","Atlantic Ocean"],["Norway","Poland","England"]]};
+const lastWrong={};  // edellisen kerran väärät vaihtoehdot kysymyksittäin
+function bankQ(id){
+  // Pakka tallennetaan, joten kysymykset kiertävät koko pankin ennen toistoa – myös uudelleenlatauksen jälkeen.
+  if(!state.decks)state.decks={};
+  let d=state.decks[id];
+  if(!Array.isArray(d)||!d.length||d.some(i=>i>=BANK[id].length))d=state.decks[id]=shuffle(BANK[id].map((_,i)=>i));
+  const idx=d.pop();
+  const en=settings.lang==='en'&&BANK_EN[id],src=en?BANK_EN[id]:BANK[id],xs=((en?XTRA_EN:XTRA)[id]||[])[idx]||[];
+  const [q,c,...rest]=src[idx];let ex=null;if(rest.length>3)ex=rest.pop();
+  const pool=[...new Set([...rest,...xs])].filter(w=>w!==c),key=id+idx+(en?'e':'f');
+  let wrong;for(let n=0;n<10;n++){wrong=shuffle(pool).slice(0,3);if(wrong.slice().sort().join('|')!==lastWrong[key])break;}
+  lastWrong[key]=wrong.slice().sort().join('|');
+  return {q,correct:c,opts:shuffle([c,...wrong]),ex};
+}
+const fmtN=n=>String(n).replace('-','−');
+function numOpts(ans,cands,neg){
+  const set=new Set([ans]),out=[],okv=c=>Number.isInteger(c)&&(neg||c>0)&&!set.has(c);
+  for(const c of shuffle(cands)){if(out.length>=3)break;if(okv(c)){set.add(c);out.push(c);}}
+  let k=1;while(out.length<3){for(const c of [ans+k,ans-k]){if(out.length<3&&okv(c)){set.add(c);out.push(c);}}k++;}
+  return {correct:fmtN(ans),opts:shuffle([ans,...out]).map(fmtN)};
+}
+// Matematiikka: kertotaulu, jakolasku, yhteenlasku, vähennyslasku – taso 5. tai 6. luokka
+function genMath(){
+  if(state.level===78)return genMath78();
+  const g6=state.level===6,en=settings.lang==='en';
+  const MUL=en?'×':'·',DIV=en?'÷':':';
+  const kind=pick(['mul','div','add','sub']),story=rand()<.3;
+  let q,o,ex=null;
+  if(kind==='mul'){
+    const a=g6?ri(3,12):ri(2,9),b=g6?ri(3,12):ri(2,9),ans=a*b;
+    q=story?L(`Farmilla on ${a} kanaa. Jokainen kana munii ${b} munaa viikossa. Montako munaa kanat munivat yhteensä?`,`The farm has ${a} hens. Each hen lays ${b} eggs a week. How many eggs do they lay altogether?`):`${a} ${MUL} ${b} = ?`;
+    o=numOpts(ans,[a*(b+1),a*(b-1),(a+1)*b,(a-1)*b,ans+10,a+b]);
+  }else if(kind==='div'){
+    const b=g6?ri(3,12):ri(2,9),c=g6?ri(3,12):ri(2,9),a=b*c;
+    q=story?L(`${a} perunaa jaetaan tasan ${b} koriin. Montako perunaa on yhdessä korissa?`,`${a} potatoes are shared equally into ${b} baskets. How many potatoes are in one basket?`):`${a} ${DIV} ${b} = ?`;
+    o=numOpts(c,[c+1,c-1,c+2,b,c*2]);ex=L(`Tarkistus: ${c} ${MUL} ${b} = ${a}`,`Check: ${c} ${MUL} ${b} = ${a}`);
+  }else if(kind==='add'){
+    const a=g6?ri(120,899):ri(12,89),b=g6?ri(45,499):ri(11,79),ans=a+b;
+    q=story?L(`Farmilla on ${a} lammasta ja ${b} possua. Montako eläintä on yhteensä?`,`The farm has ${a} sheep and ${b} pigs. How many animals are there altogether?`):`${a} + ${b} = ?`;
+    o=numOpts(ans,[ans+10,ans-10,ans+1,ans-1,g6?ans+100:ans+2,g6?ans-100:ans-2]);
+  }else{
+    const a=g6?ri(300,999):ri(30,99),b=g6?ri(45,a-60):ri(11,a-8),ans=a-b;
+    q=story?L(`Lehmä antoi viikossa ${a} litraa maitoa. Siitä myytiin ${b} litraa. Montako litraa jäi?`,`A cow gave ${a} litres of milk in a week. ${b} litres were sold. How many litres are left?`):`${a} − ${b} = ?`;
+    o=numOpts(ans,[ans+10,ans-10,ans+1,ans-1,a+b,g6?ans+100:ans+2]);ex=L(`Tarkistus: ${ans} + ${b} = ${a}`,`Check: ${ans} + ${b} = ${a}`);
+  }
+  return {q,correct:o.correct,opts:o.opts,ex};
+}
+const mathRecent=[];
+function mathQ(){let q;for(let n=0;n<20;n++){q=genMath();if(!mathRecent.includes(q.q))break;}mathRecent.push(q.q);if(mathRecent.length>40)mathRecent.shift();return q;}
+// ---- 7.–8. luokan taso (avautuu farmin keskelle ilmestyvästä kivestä) ----
+function genMath78(){
+  const en=settings.lang==='en',MUL=en?'×':'·',DIV=en?'÷':':',P=n=>n<0?`(${fmtN(n)})`:String(n);
+  const kind=pick(['mul','div','add','sub']),story=rand()<.25;let q,o,ex=null;
+  if(kind==='mul'){const a=ri(11,25),b=ri(3,12),ans=a*b;
+    q=story?L(`Yhdessä laatikossa on ${a} munaa. Montako munaa on ${b} laatikossa?`,`One box holds ${a} eggs. How many eggs are in ${b} boxes?`):`${a} ${MUL} ${b} = ?`;
+    o=numOpts(ans,[a*(b+1),a*(b-1),(a+1)*b,ans+10,ans-10]);ex=L(`Vinkki: ${a} ${MUL} ${b} = ${Math.floor(a/10)*10} ${MUL} ${b} + ${a%10} ${MUL} ${b}`,`Tip: ${a} ${MUL} ${b} = ${Math.floor(a/10)*10} ${MUL} ${b} + ${a%10} ${MUL} ${b}`);}
+  else if(kind==='div'){const b=ri(3,15),c=ri(11,25),a=b*c;
+    q=story?L(`${a} perunaa pakataan ${b} säkkiin tasan. Montako perunaa on säkissä?`,`${a} potatoes are packed equally into ${b} sacks. How many are in each sack?`):`${a} ${DIV} ${b} = ?`;
+    o=numOpts(c,[c+1,c-1,c+10,c-10,b]);ex=L(`Tarkistus: ${c} ${MUL} ${b} = ${a}`,`Check: ${c} ${MUL} ${b} = ${a}`);}
+  else if(kind==='add'){
+    if(rand()<.5){const a=ri(-60,60)||-7,b=ri(-60,60)||9,ans=a+b;q=`${P(a)} + ${P(b)} = ?`;o=numOpts(ans,[-ans,ans+10,ans-10,a-b,ans+1],true);ex=L('Negatiivisen luvun lisääminen = vähentäminen.','Adding a negative number = subtracting.');}
+    else{const a=ri(1200,8500),b=ri(150,1499),ans=a+b;q=story?L(`Farmi myi keväällä ${a} kg ja syksyllä ${b} kg perunaa. Paljonko yhteensä?`,`The farm sold ${a} kg of potatoes in spring and ${b} kg in autumn. How much in total?`):`${a} + ${b} = ?`;o=numOpts(ans,[ans+100,ans-100,ans+10,ans-10,ans+1000],false);}}
+  else{
+    if(rand()<.5){const a=ri(5,80),b=a+ri(5,60),ans=a-b;q=story?L(`Lämpötila oli ${a} °C ja laski ${b} astetta. Mikä on uusi lämpötila (°C)?`,`It was ${a} °C and the temperature fell by ${b} degrees. What is it now (°C)?`):`${a} − ${b} = ?`;o=numOpts(ans,[-ans,ans+10,ans-10,ans+1,ans-1],true);ex=L(`Tarkistus: ${fmtN(ans)} + ${b} = ${a}`,`Check: ${fmtN(ans)} + ${b} = ${a}`);}
+    else{const a=ri(2000,9999),b=ri(300,a-500),ans=a-b;q=`${a} − ${b} = ?`;o=numOpts(ans,[ans+100,ans-100,ans+10,ans-10,a+b]);ex=L(`Tarkistus: ${ans} + ${b} = ${a}`,`Check: ${ans} + ${b} = ${a}`);}}
+  return {q,correct:o.correct,opts:o.opts,ex};
+}
+const B78={
+aid:[
+ {q:'Mikä on lauseen ”Isä antoi pojalle kirjan.” objekti?',c:'kirjan',w:['Isä','pojalle','antoi','pojalle kirjan']},
+ {q:'Missä sijamuodossa on sana ”talossa”?',c:'inessiivi',w:['elatiivi','illatiivi','adessiivi','essiivi']},
+ {q:'Missä sijamuodossa on sana ”talosta”?',c:'elatiivi',w:['inessiivi','ablatiivi','illatiivi','translatiivi']},
+ {q:'Mikä on verbin ”lukea” passiivin preesens?',c:'luetaan',w:['luettiin','lukee','lukisi','on luettu']},
+ {q:'Mikä seuraavista on konditionaalissa?',c:'lukisin',w:['luin','luen','lukekoon','olen lukenut']},
+ {q:'Mikä sana on lauseen ”Uimme eilen.” adverbiaali?',c:'eilen',w:['Uimme','me','uida','ui']},
+ {q:'Mikä on verbin ”kirjoittaa” agenttipartisiippi?',c:'kirjoittama',w:['kirjoittava','kirjoittanut','kirjoitettu','kirjoittaen']},
+ {q:'Mikä seuraavista on alistuskonjunktio?',c:'koska',w:['ja','mutta','sekä','tai']},
+ {q:'Mikä on sanan ”hyvä” superlatiivi?',c:'paras',w:['parempi','hyvin','hyvempi','hyvin hyvä']},
+ {q:'Mikä on kirjoitettu oikein?',c:'kahdeksantoista',w:['kahdeksan toista','kahdeksan-toista','kahdeksantoist','kaheksantoista']},
+ {q:'Mikä tekstilaji pyrkii vakuuttamaan lukijan?',c:'mielipidekirjoitus',w:['uutinen','resepti','käyttöohje','sääennuste']},
+ {q:'Mikä on lauseen ”Lammas on valkoinen.” predikatiivi?',c:'valkoinen',w:['Lammas','on','on valkoinen','Lammas on']},
+ {q:'Missä sanaparissa on astevaihtelu?',c:'kauppa – kaupan',w:['talo – talon','kissa – kissan','auto – auton','kala – kalan']}],
+eng:[
+ {q:'Valitse oikea: If I ___ rich, I would buy a farm.',c:'were',w:['am','be','will be','been']},
+ {q:'Valitse oikea: She has lived here ___ 2015.',c:'since',w:['for','from','at','during']},
+ {q:'Valitse oikea: I have ___ been to London.',c:'never',w:['ever','yet','ago','still']},
+ {q:'Mikä on verbin ”go” 3. muoto (past participle)?',c:'gone',w:['went','goed','going','goes']},
+ {q:'Mikä on verbin ”write” imperfekti?',c:'wrote',w:['written','writed','writes','writen']},
+ {q:'Valitse oikea: This is the ___ day of my life!',c:'best',w:['goodest','better','most good','bestest']},
+ {q:'Valitse oikea: The cows ___ milked every morning.',c:'are',w:['is','be','has','does']},
+ {q:'Mitä tarkoittaa ”harvest”?',c:'sato',w:['kylvö','lanta','aura','aita']},
+ {q:'Valitse oikea: He ___ TV when the phone rang.',c:'was watching',w:['watches','is watching','were watching','has watched']},
+ {q:'Valitse oikea: There isn’t ___ milk left.',c:'any',w:['some','many','a','few']},
+ {q:'Mitä tarkoittaa ”although”?',c:'vaikka',w:['koska','siksi','jos','kunnes']},
+ {q:'Valitse oikea: The farmer ___ tractor is red lives here.',c:'whose',w:['who','which','who’s','whom']}],
+ymp:[
+ {q:'Mikä soluelin tuottaa solulle energiaa?',c:'mitokondrio',w:['tuma','viherhiukkanen','solukalvo','ribosomi']},
+ {q:'Missä solun perintöaines (DNA) pääosin on?',c:'tumassa',w:['solukalvossa','soluseinässä','vakuolissa','solulimassa']},
+ {q:'Mikä on happaman liuoksen pH?',c:'alle 7',w:['tasan 7','yli 7','tasan 14','yli 14']},
+ {q:'Mikä on nopeuden yksikkö SI-järjestelmässä?',c:'m/s',w:['km','kg','N','J']},
+ {q:'Mikä on voiman yksikkö?',c:'newton (N)',w:['joule (J)','watti (W)','pascal (Pa)','kilogramma (kg)']},
+ {q:'Auto ajaa 120 km kahdessa tunnissa. Mikä on sen keskinopeus?',c:'60 km/h',w:['240 km/h','120 km/h','30 km/h','122 km/h']},
+ {q:'Mikä on hapen kemiallinen merkki?',c:'O',w:['H','Ox','C','He']},
+ {q:'Mitä syntyy, kun vety palaa?',c:'vettä',w:['hiilidioksidia','suolaa','typpeä','tuhkaa']},
+ {q:'Mikä verisolu kuljettaa happea?',c:'punasolu',w:['valkosolu','verihiutale','hermosolu','lihassolu']},
+ {q:'Mikä seuraavista on hajottaja?',c:'sieni',w:['ilves','koivu','jänis','kotka']},
+ {q:'Mikä ilmiö lämmittää ilmastoa, kun ilmassa on paljon hiilidioksidia?',c:'kasvihuoneilmiö',w:['otsonikato','happosade','revontulet','vuorovesi']},
+ {q:'Mikä on valon nopeus tyhjiössä suunnilleen?',c:'300 000 km/s',w:['300 km/s','340 m/s','3 000 km/h','30 km/s']},
+ {q:'Mikä alkuaine on veren hemoglobiinissa?',c:'rauta',w:['kulta','kupari','alumiini','lyijy']}],
+his:[
+ {q:'Minä vuonna ensimmäinen maailmansota alkoi?',c:'1914',w:['1918','1939','1905','1923']},
+ {q:'Minä vuonna toinen maailmansota päättyi?',c:'1945',w:['1939','1944','1950','1918']},
+ {q:'Mikä keksintö käynnisti teollisen vallankumouksen Britanniassa 1700-luvulla?',c:'höyrykone',w:['sähkölamppu','auto','puhelin','lentokone']},
+ {q:'Milloin talvisota käytiin?',c:'1939–1940',w:['1941–1944','1918','1914–1918','1950–1953']},
+ {q:'Minä vuonna Suomen naiset saivat äänioikeuden?',c:'1906',w:['1917','1945','1863','1995']},
+ {q:'Minä vuonna Ranskan suuri vallankumous alkoi?',c:'1789',w:['1917','1492','1848','1066']},
+ {q:'Minä vuonna Suomi liittyi Euroopan unioniin?',c:'1995',w:['1917','1989','2002','1975']},
+ {q:'Mikä elin säätää Suomen lait?',c:'eduskunta',w:['hallitus','korkein oikeus','kunnanvaltuusto','presidentti']},
+ {q:'Montako kansanedustajaa eduskunnassa on?',c:'200',w:['100','150','300','250']},
+ {q:'Mikä muuri kaatui vuonna 1989?',c:'Berliinin muuri',w:['Kiinan muuri','Hadrianuksen valli','Itkumuuri','Konstantinopolin muuri']},
+ {q:'Kuka johti Neuvostoliittoa toisen maailmansodan aikana?',c:'Josif Stalin',w:['Vladimir Lenin','Nikita Hruštšov','Mihail Gorbatšov','Leo Trotski']},
+ {q:'Missä maanosassa asuu eniten ihmisiä?',c:'Aasia',w:['Afrikka','Eurooppa','Pohjois-Amerikka','Etelä-Amerikka']},
+ {q:'Mikä on Suomen valuutta nykyään?',c:'euro',w:['markka','kruunu','dollari','rupla']}]};
+const B78_EN={
+eng:[
+ {q:'Choose: If I ___ rich, I would buy a farm.',c:'were',w:['am','be','will be','been']},
+ {q:'Choose: She has lived here ___ 2015.',c:'since',w:['for','from','at','during']},
+ {q:'Choose: I have ___ been to London.',c:'never',w:['ever','yet','ago','still']},
+ {q:'What is the past participle of ”go”?',c:'gone',w:['went','goed','going','goes']},
+ {q:'What is the past simple of ”write”?',c:'wrote',w:['written','writed','writes','writen']},
+ {q:'Choose: This is the ___ day of my life!',c:'best',w:['goodest','better','most good','bestest']},
+ {q:'Choose: The cows ___ milked every morning.',c:'are',w:['is','be','has','does']},
+ {q:'What does ”harvest” mean in Finnish?',c:'sato',w:['kylvö','lanta','aura','aita']},
+ {q:'Choose: He ___ TV when the phone rang.',c:'was watching',w:['watches','is watching','were watching','has watched']},
+ {q:'Choose: There isn’t ___ milk left.',c:'any',w:['some','many','a','few']},
+ {q:'What does ”although” mean in Finnish?',c:'vaikka',w:['koska','siksi','jos','kunnes']},
+ {q:'Choose: The farmer ___ tractor is red lives here.',c:'whose',w:['who','which','who’s','whom']}],
+ymp:[
+ {q:'Which organelle produces energy for the cell?',c:'mitochondrion',w:['nucleus','chloroplast','cell membrane','ribosome']},
+ {q:'Where is most of a cell’s DNA?',c:'in the nucleus',w:['in the cell membrane','in the cell wall','in the vacuole','in the cytoplasm']},
+ {q:'What is the pH of an acidic solution?',c:'below 7',w:['exactly 7','above 7','exactly 14','above 14']},
+ {q:'What is the SI unit of speed?',c:'m/s',w:['km','kg','N','J']},
+ {q:'What is the unit of force?',c:'newton (N)',w:['joule (J)','watt (W)','pascal (Pa)','kilogram (kg)']},
+ {q:'A car drives 120 km in two hours. What is its average speed?',c:'60 km/h',w:['240 km/h','120 km/h','30 km/h','122 km/h']},
+ {q:'What is the chemical symbol for oxygen?',c:'O',w:['H','Ox','C','He']},
+ {q:'What forms when hydrogen burns?',c:'water',w:['carbon dioxide','salt','nitrogen','ash']},
+ {q:'Which blood cell carries oxygen?',c:'red blood cell',w:['white blood cell','platelet','nerve cell','muscle cell']},
+ {q:'Which of these is a decomposer?',c:'a fungus',w:['a lynx','a birch tree','a hare','an eagle']},
+ {q:'What warms the climate when there is a lot of carbon dioxide in the air?',c:'the greenhouse effect',w:['ozone depletion','acid rain','the northern lights','the tides']},
+ {q:'Roughly how fast does light travel in a vacuum?',c:'300 000 km/s',w:['300 km/s','340 m/s','3 000 km/h','30 km/s']},
+ {q:'Which element is in the haemoglobin of blood?',c:'iron',w:['gold','copper','aluminium','lead']}],
+his:[
+ {q:'In which year did the First World War begin?',c:'1914',w:['1918','1939','1905','1923']},
+ {q:'In which year did the Second World War end?',c:'1945',w:['1939','1944','1950','1918']},
+ {q:'Which invention started the Industrial Revolution in Britain in the 1700s?',c:'the steam engine',w:['the light bulb','the car','the telephone','the aeroplane']},
+ {q:'When was the Winter War fought?',c:'1939–1940',w:['1941–1944','1918','1914–1918','1950–1953']},
+ {q:'In which year did women in Finland get the right to vote?',c:'1906',w:['1917','1945','1863','1995']},
+ {q:'In which year did the French Revolution begin?',c:'1789',w:['1917','1492','1848','1066']},
+ {q:'In which year did Finland join the European Union?',c:'1995',w:['1917','1989','2002','1975']},
+ {q:'Which body makes Finland’s laws?',c:'Parliament (eduskunta)',w:['the Government','the Supreme Court','a municipal council','the President']},
+ {q:'How many members does the Finnish Parliament have?',c:'200',w:['100','150','300','250']},
+ {q:'Which wall fell in 1989?',c:'the Berlin Wall',w:['the Great Wall of China','Hadrian’s Wall','the Western Wall','the Walls of Constantinople']},
+ {q:'Who led the Soviet Union during the Second World War?',c:'Joseph Stalin',w:['Vladimir Lenin','Nikita Khrushchev','Mikhail Gorbachev','Leon Trotsky']},
+ {q:'Which continent has the most people?',c:'Asia',w:['Africa','Europe','North America','South America']},
+ {q:'What is Finland’s currency today?',c:'the euro',w:['the markka','the krona','the dollar','the rouble']}]};
+function bankQ78(id){
+  if(!state.decks)state.decks={};const key=id+'78';let d=state.decks[key];
+  if(!Array.isArray(d)||!d.length||d.some(i=>i>=B78[id].length))d=state.decks[key]=shuffle(B78[id].map((_,i)=>i));
+  const idx=d.pop(),src=(settings.lang==='en'&&B78_EN[id])?B78_EN[id]:B78[id],r=src[idx];
+  return {q:r.q,correct:r.c,opts:shuffle([r.c,...shuffle(r.w).slice(0,3)]),ex:r.ex||null};
+}
+const nextQ=id=>id==='mat'?mathQ():(state.level===78?bankQ78(id):bankQ(id));
+
+/* ---------- MAAILMA ---------- */
+const POND={cx:58,cy:162,rx:38,ry:24};
+const SOLIDS=[{x:14,y:14,w:68,h:50},{x:230,y:10,w:76,h:56}];
+const STATIONS=[
+ {id:'mat',name:['Kaivo','Well'],subject:['Matematiikka','Maths'],icon:'🔢',x:120,y:58,kind:'well',h:34},
+ {id:'aid',name:['Postilaatikko','Mailbox'],subject:['Äidinkieli','Finnish language'],icon:'📖',x:92,y:82,kind:'mail',h:28},
+ {id:'eng',name:['Liitutaulu','Chalkboard'],subject:['Englanti','English'],icon:'💬',x:196,y:58,kind:'board',h:31},
+ {id:'ymp',name:['Omenapuu','Apple tree'],subject:['Ympäristöoppi','Science'],icon:'🌱',x:104,y:128,kind:'tree',h:37},
+ {id:'his',name:['Tienviitta','Signpost'],subject:['Historia ja maantieto','History & geography'],icon:'🗺️',x:200,y:126,kind:'sign',h:29}
+];
+function stationImg(kind){
+  const c=document.createElement('canvas');c.width=40;c.height=44;const g=c.getContext('2d');const x=20,y=42;
+  if(kind==='well'){
+    R(g,x-10,y-11,21,11,'#8d8f94');R(g,x-11,y-13,23,3,'#b4b6bb');R(g,x-8,y-13,17,2,'#24496e');
+    for(let r=0;r<3;r++){R(g,x-10,y-8+r*3,21,1,'#6f7176');for(let k=0;k<4;k++)R(g,x-8+k*5+(r%2?2:0),y-10+r*3,1,2,'#6f7176');}
+    R(g,x-10,y-1,21,1,'#5a5c60');R(g,x-10,y-27,2,14,'#7a4a22');R(g,x+9,y-27,2,14,'#7a4a22');R(g,x-9,y-24,19,2,'#5e3a17');
+    R(g,x,y-22,1,6,'#e3d3a5');R(g,x-2,y-17,5,4,'#7c8086');R(g,x-2,y-17,5,1,'#a9adb3');
+    for(let i=0;i<6;i++){const hw=(3+i*2.4)|0;R(g,x-hw,y-33+i,hw*2+1,1,i%2?'#a33a28':'#c8432f');}
+  }else if(kind==='mail'){
+    R(g,x-1,y-14,3,14,'#7a4a22');R(g,x-7,y-23,15,9,'#d23f31');R(g,x-7,y-23,15,2,'#e8665a');R(g,x-7,y-15,15,1,'#9c2b22');
+    R(g,x-6,y-20,4,3,'#7e1d16');R(g,x+8,y-27,1,10,'#5e3a17');R(g,x+9,y-27,4,3,'#f2c230');R(g,x-9,y-21,3,2,'#ffffff');
+  }else if(kind==='board'){
+    R(g,x-11,y-12,2,12,'#7a4a22');R(g,x+10,y-12,2,12,'#7a4a22');R(g,x-1,y-12,2,10,'#5e3a17');
+    R(g,x-14,y-30,29,19,'#7a4a22');R(g,x-12,y-28,25,15,'#2f5a3f');
+    const LT={A:["010","101","111","101","101"],B:["110","101","110","101","110"],C:["011","100","100","100","011"]};
+    ['A','B','C'].forEach((ch,n)=>LT[ch].forEach((row,j)=>[...row].forEach((b,i)=>{if(b==='1')R(g,x-9+n*4+i,y-26+j,1,1,'#e8f0e8');})));
+    R(g,x+4,y-24,6,1,'#cfe0cf');R(g,x-9,y-19,18,1,'#cfe0cf');R(g,x-9,y-16,12,1,'#cfe0cf');
+    R(g,x-14,y-13,29,2,'#5e3a17');R(g,x+6,y-14,3,1,'#ffffff');
+  }else if(kind==='tree'){
+    R(g,x-3,y-14,6,14,'#7a4a22');R(g,x-3,y-14,2,14,'#8f5a2c');R(g,x-5,y-1,10,1,'#5e3a17');
+    fillCircle(g,x-8,y-18,8,'#2f7a33');fillCircle(g,x+8,y-18,8,'#2f7a33');fillCircle(g,x,y-25,12,'#2f7a33');
+    fillCircle(g,x-1,y-27,9,'#3f9a3f');fillCircle(g,x-4,y-30,4,'#5bb84f');
+    for(const [ax,ay] of [[-9,-18],[7,-21],[2,-30],[-5,-24],[9,-14],[-2,-15],[5,-27]]){R(g,x+ax,y+ay,2,2,'#d6332b');R(g,x+ax,y+ay,1,1,'#ff8a80');}
+  }else if(kind==='sign'){
+    R(g,x-1,y-28,3,28,'#7a4a22');
+    R(g,x-3,y-27,15,6,'#c99a62');R(g,x+12,y-26,1,4,'#c99a62');R(g,x+13,y-25,1,2,'#c99a62');R(g,x-3,y-22,15,1,'#a4763f');
+    R(g,x-12,y-18,15,6,'#c99a62');R(g,x-13,y-17,1,4,'#c99a62');R(g,x-14,y-16,1,2,'#c99a62');R(g,x-12,y-13,15,1,'#a4763f');
+    R(g,x,y-25,8,1,'#5e3a17');R(g,x-9,y-16,8,1,'#5e3a17');
+  }
+  return c;
+}
+STATIONS.forEach(s=>s.img=stationImg(s.kind));
+
+function buildBG(){
+  const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');const rn=mulberry32(7);
+  R(g,0,0,W,H,'#74b84f');
+  for(let i=0;i<650;i++){const x=rn()*W|0,y=rn()*H|0;R(g,x,y,1,2,rn()<.5?'#5f9f3f':'#86c95c');}
+  const fl=['#ffffff','#ffe066','#ff9ec4','#b9a7ff'];
+  for(let i=0;i<55;i++){const x=rn()*W|0,y=rn()*H|0;R(g,x,y,1,1,fl[rn()*4|0]);}
+  for(const [x,y,w,h] of [[43,62,10,28],[20,86,270,10],[262,64,12,26],[259,94,12,20]]){R(g,x,y,w,h,'#cfae73');}
+  for(let i=0;i<220;i++){const x=20+rn()*270|0,y=86+rn()*10|0;R(g,x,y,1,1,'#b8955c');}
+  for(let y=POND.cy-POND.ry-3;y<=POND.cy+POND.ry+3;y++)for(let x=POND.cx-POND.rx-3;x<=POND.cx+POND.rx+3;x++){
+    const d=((x-POND.cx)/POND.rx)**2+((y-POND.cy)/POND.ry)**2;
+    if(d<1)R(g,x,y,1,1,d>.85?'#3d7fb8':d>.6?'#4f95cc':'#5aa8de');else if(d<1.16)R(g,x,y,1,1,'#d4bd84');}
+  for(const [x,y] of [[42,152],[72,170],[60,148]]){fillCircle(g,x,y,3,'#3f9a3f');R(g,x,y-3,1,3,'#4f95cc');}
+  R(g,75,170,1,1,'#ff9ec4');
+  for(const x of [21,24,27,92,95]){R(g,x,150+(x%3)*3,1,8,'#3f7a2f');R(g,x,149+(x%3)*3,1,2,'#7a4a22');}
+  R(g,117,147,86,52,'#5e3a17');R(g,118,148,84,50,'#7a4e2a');
+  for(let yy=151;yy<198;yy+=6){R(g,118,yy,84,2,'#8f5f36');for(let xx=122;xx<200;xx+=8){R(g,xx,yy-2,1,2,'#4f9a3a');R(g,xx-1,yy-3,3,1,'#6bbf4a');}}
+  const fx0=220,fy0=112,fx1=308,fy1=198;
+  R(g,236,182,10,6,'#e8c14c');R(g,238,180,6,2,'#f2d77a');R(g,288,184,14,5,'#7a4a22');R(g,289,185,12,2,'#5aa8de');
+  for(const yy of [fy0+2,fy0+5,fy1-6,fy1-3]){
+    if(yy<fy0+10){R(g,fx0,yy,258-fx0,1,'#e8d7b0');R(g,272,yy,fx1-272,1,'#e8d7b0');}else R(g,fx0,yy,fx1-fx0,1,'#e8d7b0');}
+  for(const xx of [fx0+1,fx1-2])R(g,xx,fy0,1,fy1-fy0,'#e8d7b0');
+  for(let x=fx0;x<=fx1;x+=8){if(x>258&&x<272)continue;R(g,x,fy0,2,8,'#c9b080');R(g,x,fy1-8,2,8,'#c9b080');}
+  for(let y=fy0;y<=fy1;y+=8){R(g,fx0,y,2,6,'#c9b080');R(g,fx1-2,y,2,6,'#c9b080');}
+  // savupiippu: ulottuu katon sisään asti, joten katto peittää sen alaosan
+  R(g,59,12,8,20,'#a34a32');for(let yy=14;yy<32;yy+=3){R(g,59,yy,8,1,'#7e3423');R(g,yy%2?61:64,yy-2,1,2,'#7e3423');}
+  R(g,59,12,1,20,'#b85c40');R(g,58,10,10,3,'#5e5f63');R(g,58,10,10,1,'#7c7e83');
+  for(let i=0;i<22;i++){const hw=Math.min(34,6+i*1.4)|0;R(g,48-hw,18+i,hw*2,1,i%3===2?'#9c3524':'#c0472f');}
+  R(g,18,40,60,24,'#efe0b9');for(let yy=43;yy<62;yy+=4)R(g,18,yy,60,1,'#dccb9c');R(g,18,62,60,2,'#b9a477');
+  R(g,42,46,12,18,'#7a4a22');R(g,43,47,10,16,'#8f5a2c');R(g,51,55,1,2,'#f2c230');
+  for(const wx of [24,62]){R(g,wx-1,45,12,10,'#ffffff');R(g,wx,46,10,8,'#8fd0f0');R(g,wx+4,46,1,8,'#ffffff');R(g,wx,49,10,1,'#ffffff');R(g,wx-2,55,14,2,'#7a4a22');
+    for(let k=0;k<4;k++)R(g,wx-1+k*3,53,2,2,k%2?'#ff6b8a':'#ffd34d');}
+  for(let i=0;i<16;i++){const hw=Math.min(38,8+i*2)|0;R(g,268-hw,14+i,hw*2,1,i%3===2?'#4a3a33':'#5e4a40');}
+  R(g,234,30,68,36,'#b8352a');for(let xx=236;xx<302;xx+=4)R(g,xx,30,1,36,'#9c2b22');R(g,234,30,68,2,'#f4ede0');
+  R(g,262,33,12,8,'#f4ede0');R(g,263,34,10,6,'#3a2414');R(g,264,37,8,3,'#e8c14c');
+  R(g,254,44,28,22,'#f4ede0');R(g,256,46,24,20,'#9c2b22');
+  for(let t=0;t<20;t++){const dx=(t*22/20)|0;R(g,256+dx,46+t,2,1,'#f4ede0');R(g,278-dx,46+t,2,1,'#f4ede0');}
+  R(g,267,46,2,20,'#f4ede0');
+  return c;
+}
+const BG=buildBG();
+
+/* ---------- TILA ---------- */
+function freshState(level){return {owned:{},tasks:0,correct:0,answered:0,last:null,dup:0,won:false,chests:0,restarts:0,level:level||5,boss:'none',bossTries:0,doneSt:[],stone:false,unlocked78:false};}
+function loadState(){try{const s=JSON.parse(localStorage.getItem(SKEY));if(s&&s.owned)return Object.assign(freshState(),s);}catch(e){}return null;}
+function save(){try{localStorage.setItem(SKEY,JSON.stringify(state));}catch(e){}}
+let state=loadState()||freshState();
+const allAnimals=()=>ANIMALS.every(a=>state.owned[a.id]);
+if(allAnimals()&&state.boss!=='beaten')state.boss='awake';
+let pendingLevel=state.level;
+let started=false,modalType=null,quiz=null,chest=null,nearSt=null;
+const P={x:150,y:100,flip:false,walkT:0,moving:false,target:null,autoSt:null,stuck:0};
+let animals=[],parts=[];
+const keys=new Set();
+
+function randPt(region){
+  if(region==='pen')return {x:ri(232,298),y:ri(128,192)};
+  if(region==='field')return {x:ri(128,192),y:ri(160,194)};
+  if(region==='barnyard')return {x:ri(238,298),y:ri(72,104)};
+  const a=rand()*Math.PI*2,r=Math.sqrt(rand())*.62;return {x:POND.cx+Math.cos(a)*POND.rx*r,y:POND.cy+Math.sin(a)*POND.ry*r+4};
+}
+function spawnAnimal(id,celebrate){
+  const A=ANIM[id],p=randPt(A.region),t=randPt(A.region);
+  const a={id,x:p.x,y:p.y,tx:t.x,ty:t.y,wait:rand()*2,flip:rand()<.5,t:rand()*10,moving:false};
+  animals.push(a);
+  if(celebrate){for(let i=0;i<24;i++)parts.push({x:a.x,y:a.y-6,vx:(rand()-.5)*60,vy:(rand()-.8)*50,life:1,max:1,kind:'spark',color:pick(['#fff6a0','#ffffff','#ffd34d'])});
+    for(let i=0;i<4;i++)parts.push({x:a.x+(rand()-.5)*10,y:a.y-10,vx:(rand()-.5)*10,vy:-18-rand()*10,life:1.4,max:1.4,kind:'heart'});}
+  return a;
+}
+function rebuildAnimals(){animals=[];for(const a of ANIMALS)for(let i=0;i<(state.owned[a.id]||0);i++)spawnAnimal(a.id,false);if(state.golden)spawnAnimal('kulta',false);for(let i=0;i<(state.silver||0);i++)spawnAnimal('hopea',false);}
+
+/* ---------- HUD ---------- */
+const coll=$('#coll');
+ANIMALS.forEach(a=>{
+  const d=document.createElement('div');d.className='slot miss';
+  const s=SPR[a.id],c=document.createElement('canvas');c.width=s.w;c.height=s.h;c.getContext('2d').drawImage(s.c,0,0);c.style.width=Math.min(38,s.w*2.2)+'px';
+  const n=document.createElement('span');n.className='cnt';d.append(c,n);coll.append(d);a.slot=d;a.cnt=n;
+  d.onclick=()=>{if(state.owned[a.id]){initAudio();a.snd();}};
+});
+const silverSlot=(()=>{const d=document.createElement('div');d.className='slot';d.hidden=true;d.style.borderColor='#cfd4da';
+  const s=SPR.hopea,c=document.createElement('canvas');c.width=s.w;c.height=s.h;c.getContext('2d').drawImage(s.c,0,0);c.style.width=s.w*2.2+'px';
+  const n=document.createElement('span');n.className='cnt';d.append(c,n);d.onclick=()=>{initAudio();ANIM.hopea.snd();};coll.append(d);d.cnt=n;return d;})();
+const goldSlot=(()=>{const d=document.createElement('div');d.className='slot';d.hidden=true;d.style.borderColor='#f2c230';
+  const s=SPR.kulta,c=document.createElement('canvas');c.width=s.w;c.height=s.h;c.getContext('2d').drawImage(s.c,0,0);c.style.width=s.w*2.2+'px';d.append(c);
+  d.onclick=()=>{initAudio();ANIM.kulta.snd();};coll.append(d);return d;})();
+function updateHUD(){
+  silverSlot.hidden=!state.silver;silverSlot.cnt.textContent=state.silver>1?'×'+state.silver:'';silverSlot.title=L2(ANIM.hopea.name);
+  goldSlot.hidden=!state.golden;goldSlot.title=L2(ANIM.kulta.name);
+  ANIMALS.forEach(a=>{const n=state.owned[a.id]||0;a.slot.classList.toggle('miss',!n);a.cnt.textContent=n>1?'×'+n:'';a.slot.title=n?L2(a.name):L('??? – vielä löytämättä','??? – not found yet');});
+  $('#stTasks').textContent='📝 '+state.tasks;
+  $('#stAcc').textContent='✔ '+(state.answered?Math.round(state.correct/state.answered*100)+' %':'–');
+}
+function applyLang(){
+  document.documentElement.lang=settings.lang;
+  $('#bLang').textContent=settings.lang==='en'?'FI':'EN';
+  $('#bMusic').title=L('Musiikki päälle/pois','Music on/off');$('#bSfx').title=L('Äänet päälle/pois','Sounds on/off');$('#bHelp').title=L('Ohjeet','How to play');
+  $('#stTasks').title=L('Tehtyjä tehtäviä','Tasks done');$('#stAcc').title=L('Oikeat vastaukset','Correct answers');
+  $('#foot').textContent=L('Nuolet / WASD tai napautus = liiku · E = tee tehtävä · klikkaa eläimiä!','Arrows / WASD or tap = move · E = do a task · click the animals!');
+  updateHUD();nearSt=null;
+  if(modalType==='title')showTitle();else if(modalType==='help')showHelp();
+}
+let toastT=0;
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2800);}
+
+/* ---------- MODAALIT ---------- */
+const modal=$('#modal'),panel=$('#panel');
+function openModal(type,html){exitSure=false;modalType=type;panel.className='panel '+type;$('#toast').classList.remove('show');panel.innerHTML=html;modal.hidden=false;keys.clear();P.target=null;P.autoSt=null;$('#prompt').hidden=true;panel.scrollTop=0;
+  const xb=panel.querySelector('.xbtn');if(xb)xb.onclick=()=>{initAudio();exitTask();};
+  const f=panel.querySelector('.btn.big,.opt');if(f)setTimeout(()=>f.focus({preventScroll:true}),30);}
+// Poistu tehtävästä (✕-nappi tai Esc). Jos tehtävässä on jo edistystä, kysytään varmistus.
+let exitSure=false;
+const exitBtn=()=>`<button class="xbtn" title="${L('Poistu (Esc)','Leave (Esc)')}">✕ ${L('Poistu','Leave')}</button>`;
+function exitTask(){
+  let progress=false;
+  if(modalType==='quiz'&&quiz)progress=quiz.done>0||quiz.mistakes>0;
+  else if(modalType==='boss'&&fight){if(fight.phase!=='q')return;progress=fight.hp<BOSS_HP||fight.hearts<BOSS_HEARTS;}
+  else if(modalType==='dodge'&&dodge){if(dodge.phase!=='play')return;progress=dodge.t>2;}
+  else return;
+  const xb=panel.querySelector('.xbtn');
+  if(progress&&!exitSure){exitSure=true;sfx.deny();if(xb){xb.classList.add('sure');xb.textContent=L('✕ Poistu? Edistys menetetään','✕ Leave? Progress is lost');}
+    setTimeout(()=>{if(exitSure&&xb&&xb.isConnected){exitSure=false;xb.classList.remove('sure');xb.textContent='✕ '+L('Poistu','Leave');}},3000);return;}
+  const wasBoss=modalType==='boss';closeModal();sfx.ui();
+  toast(wasBoss?L('Poistuit taistelusta. Perunapomo odottaa pellolla.','You left the fight. The Potato Boss waits in the field.'):L('Poistuit tehtävästä. Voit palata milloin vain!','You left the task. Come back any time!'));
+}
+function closeModal(){modalType=null;modal.hidden=true;quiz=null;chest=null;fight=null;dodge=null;nearSt=null;setMusic('farm');}
+function bind(id,fn){const e=document.getElementById(id);if(e)e.onclick=()=>{initAudio();fn(e);};}
+
+function pickerHTML(){
+  return `<div class="pick">${L('Kieli','Language')}:
+    <button class="btn ${settings.lang==='fi'?'on':''}" id="pFi">Suomi</button><button class="btn ${settings.lang==='en'?'on':''}" id="pEn">English</button></div>
+  <div class="pick">${L('Tehtävien taso','Task level')}:
+    <button class="btn ${pendingLevel===5?'on':''}" id="p5">${L('5. luokka','Grade 5')}</button><button class="btn ${pendingLevel===6?'on':''}" id="p6">${L('6. luokka','Grade 6')}</button>${state.unlocked78?`<button class="btn ${pendingLevel===78?'on':''}" id="p78">🪨 ${L('7.–8. luokka','Grade 7–8')}</button>`:''}</div>`;
+}
+function bindPicker(){
+  bind('pFi',()=>{settings.lang='fi';saveSettings();applyLang();});
+  bind('pEn',()=>{settings.lang='en';saveSettings();applyLang();});
+  bind('p5',()=>{pendingLevel=5;if(started||hasProgress())state.level=5,save();showTitle();});
+  bind('p6',()=>{pendingLevel=6;if(started||hasProgress())state.level=6,save();showTitle();});
+  bind('p78',()=>{pendingLevel=78;state.level=78;save();showTitle();});
+}
+const hasProgress=()=>Object.keys(state.owned).length>0||state.tasks>0;
+function showTitle(){
+  const has=hasProgress();
+  openModal('title',`<div class="logo">FARMI<span>KOULU</span></div>
+  <p class="sub">${L('Tee koulutehtäviä, ansaitse arkkuja ja kerää kaikki farmin eläimet!','Do school tasks, earn chests and collect every farm animal!')}</p>
+  <canvas id="parade" width="160" height="26"></canvas>
+  ${pickerHTML()}
+  <div class="row">${has?`<button class="btn big" id="tCont">▶ ${L('Jatka peliä','Continue')}</button><button class="btn" id="tNew">${L('Uusi peli','New game')}</button>`:`<button class="btn big" id="tNew">▶ ${L('Aloita peli','Start game')}</button>`}
+  <button class="btn" id="tHelp">${L('Ohjeet','How to play')}</button></div>`);
+  bindPicker();
+  bind('tCont',()=>{started=true;closeModal();sfx.ui();});
+  bind('tNew',b=>{
+    if(has&&!b.dataset.sure){b.dataset.sure=1;b.textContent=L('Varmasti? Edistys nollataan','Sure? Progress will be reset');return;}
+    state=freshState(pendingLevel);state.unlocked78=pendingLevel===78;bossRise=0;rebuildAnimals();updateHUD();save();P.x=150;P.y=100;started=true;closeModal();sfx.ui();
+    setTimeout(()=>toast(L('Kävele ❗-merkin luo ja paina E!','Walk to a ❗ sign and press E!')),300);});
+  bind('tHelp',showHelp);
+}
+function showHelp(){
+  openModal('help',`<h2>${L('Näin pelaat','How to play')}</h2><ul class="help">${L(`
+  <li>🚶 Liiku <b>nuolinäppäimillä / WASD</b> tai <b>napauttamalla</b> maata.</li>
+  <li>❗ Mene tehtäväpisteelle ja paina <b>E</b> – tai napauta pistettä.</li>
+  <li>📚 Kaivo = matematiikka (kertotaulu, jako-, yhteen- ja vähennyslasku), Postilaatikko = äidinkieli, Liitutaulu = englanti, Omenapuu = ympäristöoppi, Tienviitta = historia ja maantieto.</li>
+  <li>🚪 Voit poistua tehtävästä milloin vain <b>✕ Poistu</b> -napista tai Esc-näppäimellä.</li>
+  <li>✅ Tehtävässä pitää saada <b>3 oikeaa vastausta</b>. Jokaisessa kysymyksessä on 4 vaihtoehtoa (näppäimet 1–4).</li>
+  <li>❤️ Sinulla on <b>3 yritystä</b>. Väärästä vastauksesta menetät yhden, ja kysymys vaihtuu uuteen. Jos kaikki 3 yritystä menevät, tehtävä alkaa alusta.</li>
+  <li>🎁 Jokaisessa arkussa on <b>1 eläin</b>. Ilman yhtään virhettä saat kultaisen arkun, josta tulee useammin uusi eläin.</li>
+  <li>🔁 Sama piste ei anna arkkua kahdesti peräkkäin – vaihtele oppiaineita!</li>
+  <li>🐾 Kerää <b>sorsa, possu, kana, lehmä, lammas ja peruna</b>. Tavallisissa tehtävissä ei ole aikarajaa.</li>
+  <li>👑 Kun kaikki eläimet on kerätty, pellolta nousee <b>Perunapomo</b>. Pomotaistelussa jokaisessa kysymyksessä on <b>20 sekunnin aikaraja</b>. Oikea vastaus tekee vahinkoa (nopea vastaus tekee enemmän), väärä vastaus tai loppunut aika vie sydämen. Voita pomo, niin voitat pelin!</li>
+  <li>🔁 Voiton jälkeen Perunapomo jää pellolle, ja voit haastaa sen <b>uusintaotteluun</b> milloin vain. Yritä rikkoa ennätyksesi!</li>
+  <li>🪨 Kun olet saanut arkun jokaiselta viideltä pisteeltä, farmin keskelle nousee <b>salaperäinen kivi</b>. Sitä klikkaamalla voit nostaa tehtävät <b>7.–8. luokan</b> tasolle.</li>
+  <li>🥈 Joka kerta kun voitat Perunapomon, ladosta tulee yksi <b>hopeaperuna</b>.</li>`,`
+  <li>🚶 Move with the <b>arrow keys / WASD</b> or <b>tap</b> the ground.</li>
+  <li>❗ Walk to a task point and press <b>E</b> – or tap it.</li>
+  <li>📚 Well = maths (times tables, division, addition, subtraction), Mailbox = Finnish language, Chalkboard = English, Apple tree = science, Signpost = history & geography.</li>
+  <li>🚪 You can leave a task any time with the <b>✕ Leave</b> button or Esc.</li>
+  <li>✅ Get <b>3 correct answers</b> to finish a task. Every question has 4 options (keys 1–4).</li>
+  <li>❤️ You have <b>3 tries</b>. A wrong answer costs one try and the question changes. If all 3 tries are used, the task starts over.</li>
+  <li>🎁 Every chest holds <b>1 animal</b>. With no mistakes you get a golden chest, which gives a new animal more often.</li>
+  <li>🔁 The same point won’t give a chest twice in a row – mix your subjects!</li>
+  <li>🐾 Collect the <b>duck, pig, chicken, cow, sheep and potato</b>. Normal tasks have no time limit.</li>
+  <li>👑 When you have every animal, the <b>Potato Boss</b> rises from the field. In the boss fight every question has a <b>20-second time limit</b>. A right answer deals damage (fast answers deal more); a wrong answer or running out of time costs a heart. Beat the boss to win the game!</li>
+  <li>🔁 After you win, the Potato Boss stays in the field and you can challenge it to a <b>rematch</b> any time. Try to beat your record!</li>
+  <li>🪨 Once you have earned a chest at all five points, a <b>mysterious stone</b> rises in the middle of the farm. Click it to raise the tasks to <b>grade 7–8</b>.</li>
+  <li>🥈 Every time you beat the Potato Boss, a <b>silver potato</b> comes out of the barn.</li>`)}</ul>
+  <div class="row"><button class="btn big" id="hBack">${L('Selvä!','Got it!')}</button></div>`);
+  bind('hBack',()=>{started?closeModal():showTitle();});
+}
+
+/* ---------- TEHTÄVÄT ---------- */
+const NEED=3,LIVES=3;
+function openStation(st){
+  if(modalType)return;
+  if(st.id==='boss')return showBossIntro();
+  if(st.id==='stone')return showStone();
+  if(state.last===st.id){toast(L('Tämä piste lepää. Tee välillä tehtävä toisella pisteellä!','This point is resting. Try another task point first!'));sfx.deny();return;}
+  initAudio();sfx.ui();
+  quiz={st,done:0,lives:LIVES,mistakes:0,q:null,answered:false,lastOk:false,seen:new Set(),slots:[]};
+  quiz.q=freshQ();
+  renderQuiz();
+}
+// Uusi kysymys tehtävään: ei toistoja saman tehtävän aikana, ja oikea vastaus on joka kerta eri kohdassa (1–4).
+function freshQ(o=quiz,stId=quiz.st.id){
+  let q;for(let n=0;n<15;n++){q=nextQ(stId);if(!o.seen.has(q.q))break;}
+  o.seen.add(q.q);
+  if(!o.slots.length)o.slots=shuffle([0,1,2,3]).filter(s=>s!==o.lastSlot);
+  const slot=o.slots.pop();o.lastSlot=slot;
+  const wrong=shuffle(q.opts.filter(o=>o!==q.correct));wrong.splice(slot,0,q.correct);q.opts=wrong;
+  return q;
+}
+function livesHTML(){let h='';for(let i=0;i<LIVES;i++)h+=`<span class="${i<quiz.lives?'':'lost'}">❤️</span>`;return h;}
+function dotsHTML(){let h='';for(let i=0;i<NEED;i++)h+=`<span class="dot ${i<quiz.done?'r':(i===quiz.done?'cur':'')}"></span>`;return h;}
+function renderQuiz(){
+  const q=quiz.q;
+  openModal('quiz',`${exitBtn()}<div class="qhead"><span>${quiz.st.icon} ${L2(quiz.st.subject)}</span>
+  <span class="dots" id="dots" title="${L('Oikeat vastaukset','Correct answers')}">${dotsHTML()}</span>
+  <span class="lives" id="lives" title="${L('Yritykset','Tries')}">${livesHTML()}</span></div>
+  <div class="qtext">${esc(q.q)}</div>
+  <div class="opts">${q.opts.map((o,i)=>`<button class="opt" data-i="${i}"><span class="k">${i+1}</span>${esc(o)}</button>`).join('')}</div>
+  <div class="qfoot"><div id="fb"></div><button class="btn big" id="qNext" hidden></button></div>`);
+  panel.querySelectorAll('.opt').forEach(b=>b.onclick=()=>answer(+b.dataset.i));
+  $('#qNext').onclick=nextQuestion;
+}
+function answer(i){
+  if(!quiz||quiz.answered)return;quiz.answered=true;
+  const q=quiz.q,ok=q.opts[i]===q.correct;quiz.lastOk=ok;
+  state.answered++;
+  if(ok){state.correct++;quiz.done++;}else{quiz.lives--;quiz.mistakes++;}
+  panel.querySelectorAll('.opt').forEach((b,j)=>{b.disabled=true;if(q.opts[j]===q.correct)b.classList.add('right');else if(j===i)b.classList.add('wrong');});
+  $('#fb').innerHTML=ok?`<span class="good">${pick(L(['Oikein!','Hienoa!','Mahtavaa!','Juuri niin!','Loistavaa!'],['Correct!','Great!','Awesome!','Exactly!','Brilliant!']))}</span>${q.ex?' '+esc(q.ex):''}`
+    :`<span class="bad">${L('Ei aivan.','Not quite.')}</span> ${L('Oikea vastaus','Right answer')}: <b>${esc(q.correct)}</b>${q.ex?'. '+esc(q.ex):''}`;
+  $('#dots').innerHTML=dotsHTML();$('#lives').innerHTML=livesHTML();
+  ok?sfx.ok():sfx.bad();
+  const n=$('#qNext');
+  n.textContent=ok?(quiz.done>=NEED?L('Valmis ▶','Done ▶'):L('Seuraava ▶','Next ▶')):(quiz.lives<=0?L('Jatka ▶','Continue ▶'):L('Uusi kysymys ▶','New question ▶'));
+  n.hidden=false;n.focus({preventScroll:true});
+  updateHUD();save();
+}
+function nextQuestion(){
+  if(!quiz||!quiz.answered)return;
+  if(quiz.done>=NEED)return finishQuiz();
+  if(quiz.lives<=0)return showRestart();
+  quiz.q=freshQ();quiz.answered=false;renderQuiz();
+}
+function showRestart(){
+  state.restarts++;save();sfx.deny();
+  openModal('result',`<div class="redo">🔄</div><h2>${L('Yritykset loppuivat','Out of tries')}</h2>
+  <p>${L('Kaikki 3 yritystä käytettiin. Tehtävä alkaa alusta uusilla kysymyksillä – sinä pystyt tähän!','All 3 tries were used. The task starts over with new questions – you can do it!')}</p>
+  <div class="row"><button class="btn big" id="rRe">${L('Aloita alusta','Start over')}</button><button class="btn" id="rBack">${L('Takaisin farmille','Back to the farm')}</button></div>`);
+  const st=quiz.st;
+  bind('rRe',()=>{modalType=null;quiz=null;openStation(st);});
+  bind('rBack',closeModal);
+}
+function finishQuiz(){
+  const st=quiz.st,gold=quiz.mistakes===0;state.tasks++;state.last=st.id;
+  state.doneSt=[...new Set([...(state.doneSt||[]),st.id])];
+  let stoneNow=false;if(!state.stone&&STATIONS.every(x=>state.doneSt.includes(x.id))){state.stone=true;stoneRise=0;stoneNow=true;}
+  openModal('result',`<h2>${L('Tehtävä suoritettu!','Task complete!')}</h2>${stoneNow?`<p class="fact">🪨 ${L('Olet tehnyt tehtävän jokaisella pisteellä! Farmin keskelle nousi <b>salaperäinen kivi</b>…','You have done a task at every point! A <b>mysterious stone</b> rose in the middle of the farm…')}</p>`:''}
+  <div class="dots" style="justify-content:center">${dotsHTML()}</div>
+  <p>${gold?L('Ei yhtään virhettä! Ansaitsit <b>kultaisen arkun</b>! ✨','No mistakes! You earned a <b>golden chest</b>! ✨')
+    :L(`Hyvä! Ansaitsit <b>puuarkun</b>! (virheitä: ${quiz.mistakes})`,`Well done! You earned a <b>wooden chest</b>! (mistakes: ${quiz.mistakes})`)}</p>
+  <div class="row"><button class="btn big" id="rGo">${L('Avaa arkku! 🗝️','Open the chest! 🗝️')}</button></div>`);
+  bind('rGo',()=>openChest(gold));sfx.pop();
+  updateHUD();save();
+}
+
+/* ---------- ARKUT ---------- */
+function rollAnimal(gold){
+  const ids=ANIMALS.map(a=>a.id),missing=ids.filter(i=>!state.owned[i]);
+  if(!missing.length)return pick(ids);
+  const pNew=state.dup>=2?1:(gold?.85:.6);
+  if(missing.length===ids.length||rand()<pNew){state.dup=0;return pick(missing);}
+  state.dup++;return pick(ids.filter(i=>state.owned[i]));
+}
+function openChest(gold){
+  const id=rollAnimal(gold),isNew=!state.owned[id];
+  state.owned[id]=(state.owned[id]||0)+1;state.chests++;save();
+  openModal('chest',`<h2>${gold?L('Kultainen arkku','Golden chest'):L('Puuarkku','Wooden chest')}</h2><canvas id="chestCv" width="64" height="60"></canvas>
+  <p id="chestTxt">${L('Napauta arkkua avataksesi sen!','Tap the chest to open it!')}</p><div class="row" id="chestRow"></div>`);
+  chest={gold,id,isNew,phase:'idle',t:0,tick:-1,voiced:false,revealed:false};
+  $('#chestCv').onclick=startChest;
+}
+function startChest(){if(chest&&chest.phase==='idle'){initAudio();chest.phase='shake';chest.t=0;}}
+function revealChest(){
+  const A=ANIM[chest.id],n=state.owned[chest.id],nm=L2(A.name);chest.revealed=true;
+  $('#chestTxt').innerHTML=chest.isNew?`<span class="new">${L('UUSI!','NEW!')}</span> ${L('Sait eläimen','You got')}: <b>${nm}</b>!`
+    :L(`Sait: <b>${nm}</b> – nyt sinulla on ${n} kpl. Uusi eläin voi tulla seuraavasta arkusta!`,`You got: <b>${nm}</b> – now you have ${n}. The next chest may hold a new animal!`);
+  $('#chestTxt').insertAdjacentHTML('afterend',`<div class="fact">💡 ${L2(A.fact)}</div>`);
+  $('#chestRow').innerHTML=`<button class="btn big" id="cGo">${L('Vie farmille ▶','To the farm ▶')}</button>`;
+  bind('cGo',closeChest);setTimeout(()=>{const b=$('#cGo');if(b)b.focus({preventScroll:true});},30);
+}
+function closeChest(){
+  const id=chest.id;closeModal();spawnAnimal(id,true);updateHUD();save();
+  if(state.boss==='none'&&allAnimals()){state.boss='awake';save();setTimeout(()=>{bossRise=0;showBossIntro(true);},900);}
+}
+function drawChest(dt){
+  const c=$('#chestCv');if(!c||!chest)return;const g=c.getContext('2d');g.imageSmoothingEnabled=false;
+  chest.t+=dt;
+  if(chest.phase==='shake'){const tk=Math.floor(chest.t*9);if(tk!==chest.tick){chest.tick=tk;sfx.tick();}if(chest.t>.9){chest.phase='open';chest.t=0;sfx.fanfare();}}
+  if(chest.phase==='open'&&!chest.voiced&&chest.t>.65){chest.voiced=true;ANIM[chest.id].snd();revealChest();}
+  g.clearRect(0,0,64,60);
+  const open=chest.phase==='open';
+  if(open){g.save();g.translate(32,40);g.rotate(chest.t*.7);for(let k=0;k<8;k++){g.fillStyle=k%2?'rgba(255,220,100,.55)':'rgba(255,255,255,.4)';g.beginPath();g.moveTo(0,0);g.arc(0,0,48,k*Math.PI/4,k*Math.PI/4+Math.PI/8);g.closePath();g.fill();}g.restore();}
+  const s=chest.gold?(open?SPR.chestGO:SPR.chestG):(open?SPR.chestWO:SPR.chestW);
+  let ox=0,oy=0;if(chest.phase==='idle')oy=Math.round(Math.sin(chest.t*4));if(chest.phase==='shake')ox=ri(-1,1);
+  g.drawImage(s.c,32-s.w+ox,58-s.h*2+oy,s.w*2,s.h*2);
+  if(open){
+    const a=SPR[chest.id],p=Math.min(1,chest.t/.7),e=1-(1-p)*(1-p),by=44-e*20;
+    g.drawImage(a.c,Math.round(32-a.w),Math.round(by-a.h*2),a.w*2,a.h*2);
+    for(let i=0;i<5;i++)R(g,ri(4,60),ri(2,40),1,1,pick(['#ffffff','#fff3b0']));
+  }else if(chest.phase==='idle'&&Math.floor(chest.t*3)%2){R(g,12,20,1,1,'#fff');R(g,52,26,1,1,'#fff');}
+}
+
+/* ---------- SALAPERÄINEN KIVI (7.–8. luokan taso) ---------- */
+const STONE={id:'stone',x:152,y:122,h:16};
+let stoneRise=1;
+const STONE_IMG=(()=>{const c=document.createElement('canvas');c.width=22;c.height=18;const g=c.getContext('2d');
+  fillCircle(g,11,11,8,'#6f7176');fillCircle(g,8,9,6,'#8d8f94');fillCircle(g,14,12,6,'#7c7e83');fillCircle(g,10,8,4,'#a3a5aa');
+  R(g,3,16,17,2,'#5a5c60');R(g,6,3,6,1,'#6fa84a');R(g,5,4,3,1,'#5f9a3f');R(g,13,5,3,1,'#6fa84a');R(g,16,13,1,2,'#5a5c60');R(g,5,12,2,1,'#5a5c60');return c;})();
+const levelName=lv=>lv===78?L('7.–8. luokka','grade 7–8'):L(`${lv}. luokka`,`grade ${lv}`);
+function showStone(){
+  initAudio();state.stoneSeen=true;save();tone({f:330,f2:660,d:.6,v:.2,type:'sine'});
+  const is78=state.level===78;
+  openModal('result',`<div class="redo">🪨✨</div><h2>${L('Salaperäinen kivi','The mysterious stone')}</h2>
+  ${is78?`<p>${L('Kivi hehkuu sinisenä. Tehtävät ovat nyt <b>7.–8. luokan</b> tasolla.','The stone glows blue. Tasks are now at <b>grade 7–8</b> level.')}</p>`
+  :`<p>${L('Kiveen on kaiverrettu: <i>”Joka on ratkaissut tehtävän jokaisella pisteellä, voi nostaa tehtävät 7.–8. luokan tasolle.”</i>','Carved into the stone: <i>“Whoever has solved a task at every point may raise the tasks to grade 7–8 level.”</i>')}</p>
+   <p style="font-size:.85em">${L('Kaikkien aineiden kysymykset vaikeutuvat: esim. negatiiviset luvut, sijamuodot, solubiologia ja maailmansodat.','Every subject gets harder: e.g. negative numbers, Finnish cases, cell biology and the world wars.')}</p>`}
+  <div class="row">${is78?`<button class="btn big" id="sKeep">${L('Pidä taso','Keep the level')}</button><button class="btn" id="sDown">⬇️ ${L('Palaa tasolle','Back to')} ${levelName(state.prevLevel||6)}</button>`
+  :`<button class="btn big" id="sUp">⬆️ ${L('Nosta tasoa','Raise the level')}</button><button class="btn" id="sNo">${L('Ei vielä','Not yet')}</button>`}</div>`);
+  bind('sUp',()=>{state.prevLevel=state.level;state.level=78;pendingLevel=78;state.unlocked78=true;save();closeModal();
+    [523,659,784,1047,1319].forEach((f,i)=>tone({f,d:.25,v:.15,t:i*.09,type:'triangle'}));
+    for(let i=0;i<40;i++)parts.push({x:STONE.x,y:STONE.y-8,vx:(rand()-.5)*80,vy:-rand()*70,life:1.4,max:1.4,kind:'spark',color:pick(['#8ff0ff','#ffffff','#d8fbff'])});
+    toast(L('⬆️ Tehtävät ovat nyt 7.–8. luokan tasolla!','⬆️ Tasks are now at grade 7–8 level!'));});
+  bind('sDown',()=>{state.level=state.prevLevel||6;pendingLevel=state.level;save();closeModal();toast(L(`Tehtävät palasivat tasolle: ${levelName(state.level)}`,`Tasks are back to ${levelName(state.level)}`));});
+  bind('sKeep',closeModal);bind('sNo',closeModal);
+}
+
+/* ---------- PERUNAPOMO ---------- */
+const BOSS={id:'boss',name:['Perunapomo','Potato Boss'],x:160,y:184,h:40};
+const BOSS_HP=100,BOSS_HEARTS=5,BOSS_TIME=20;
+let fight=null,bossRise=bossOnFarm()?1:0;
+function bossOnFarm(){return state.boss==='awake'||state.boss==='beaten';}
+const activeStations=()=>[...STATIONS,...(bossOnFarm()?[BOSS]:[]),...(state.stone?[STONE]:[])];
+function showBossIntro(first){
+  setMusic('boss');sfx.bossRoar();
+  fight={phase:'intro',t:0,hp:BOSS_HP,hearts:BOSS_HEARTS,anims:[],bossFlash:0,lunge:0,hurt:0};
+  openModal('bossintro',`<h2>${state.boss==='beaten'?L('Uusintaottelu!','Rematch!'):L('Perunapomo heräsi!','The Potato Boss awakens!')}</h2><canvas id="bossCv" width="160" height="56"></canvas>
+  <p>${first?L('Pellon alta kuuluu jyrinää… Valtava <b>Perunapomo</b> haluaa viedä kaikki eläimesi!','The field rumbles… The giant <b>Potato Boss</b> wants to take all your animals!'):(state.boss==='beaten'?L(`Perunapomo haluaa <b>uusintaottelun</b>! Pomovoittoja: ${state.bossWins||1} · paras tulos: ${state.bestHearts?state.bestHearts+' ❤️':'–'}`,`The Potato Boss wants a <b>rematch</b>! Boss wins: ${state.bossWins||1} · best: ${state.bestHearts?state.bestHearts+' ❤️':'–'}`):L('Perunapomo odottaa pellolla.','The Potato Boss is waiting in the field.'))}</p>
+  <p>${L('⏱️ 20 s / kysymys · ✅ oikein = vahinkoa (nopea = enemmän) · ❤️ väärin tai aika loppuu = −1 sydän (5 sydäntä)','⏱️ 20 s per question · ✅ right = damage (fast = more) · ❤️ wrong or time’s up = −1 heart (5 hearts)')}</p>
+  <div class="row"><button class="btn big" id="bGo">${L('Taistele! ⚔️','Fight! ⚔️')}</button><button class="btn" id="bLater">${L('Myöhemmin','Later')}</button></div>`);
+  bind('bGo',startFight);bind('bLater',closeModal);
+}
+function startFight(){
+  state.bossTries++;save();setMusic('boss');
+  fight={phase:'q',t:BOSS_TIME,hp:BOSS_HP,hearts:BOSS_HEARTS,anims:[],bossFlash:0,lunge:0,hurt:0,seen:new Set(),slots:[],answered:false,q:null,st:null,lastSec:99,end:0};
+  bossNewQ();
+}
+function bossNewQ(){
+  const st=pick(STATIONS);fight.st=st;fight.q=freshQ(fight,st.id);fight.t=BOSS_TIME;fight.answered=false;fight.lastSec=99;
+  const q=fight.q;
+  openModal('boss',`${exitBtn()}<canvas id="bossCv" width="160" height="56"></canvas>
+  <div class="bars"><span>👑 ${L('Pomo','Boss')}</span><div class="bar"><div id="hpBar" style="width:${fight.hp/BOSS_HP*100}%"></div></div>
+  <span>⏱️ <b id="tNum">${BOSS_TIME}</b> s</span><div class="bar"><div id="tBar" style="width:100%"></div></div></div>
+  <div class="qhead"><span>${st.icon} ${L2(st.subject)}</span><span class="lives" id="lives">${bossHeartsHTML()}</span></div>
+  <div class="qtext">${esc(q.q)}</div>
+  <div class="opts">${q.opts.map((o,i)=>`<button class="opt" data-i="${i}"><span class="k">${i+1}</span>${esc(o)}</button>`).join('')}</div>
+  <div class="qfoot"><div id="fb"></div><button class="btn big" id="qNext" hidden></button></div>`);
+  panel.querySelectorAll('.opt').forEach(b=>b.onclick=()=>bossAnswer(+b.dataset.i));
+  $('#qNext').onclick=bossNext;
+}
+function bossHeartsHTML(){let h='';for(let i=0;i<BOSS_HEARTS;i++)h+=`<span class="${i<fight.hearts?'':'lost'}">❤️</span>`;return h;}
+function bossAnswer(i){
+  if(!fight||fight.answered||fight.phase!=='q')return;fight.answered=true;
+  const q=fight.q,timeout=i<0,ok=!timeout&&q.opts[i]===q.correct;
+  state.answered++;
+  panel.querySelectorAll('.opt').forEach((b,j)=>{b.disabled=true;if(q.opts[j]===q.correct)b.classList.add('right');else if(j===i)b.classList.add('wrong');});
+  let msg;
+  if(ok){
+    state.correct++;const fast=fight.t>=BOSS_TIME-8,dmg=fast?15:10;
+    fight.anims.push({kind:'shot',t:0,dmg,fast});sfx.throw();
+    msg=`<span class="good">${fast?L('Nopea isku!','Quick hit!'):L('Osuma!','Hit!')}</span> −${dmg} ${L('pomolle','to the boss')}`;
+  }else{
+    fight.hearts--;fight.lunge=.5;sfx.bossHit();
+    const pn=panel;pn.classList.remove('shake');void pn.offsetWidth;pn.classList.add('shake');
+    msg=`<span class="bad">${timeout?L('Aika loppui!','Time’s up!'):L('Ei aivan.','Not quite.')}</span> ${L('Oikea vastaus','Right answer')}: <b>${esc(q.correct)}</b>`;
+    $('#lives').innerHTML=bossHeartsHTML();
+  }
+  $('#fb').innerHTML=msg;
+  const willWin=ok&&fight.hp-(fight.t>=BOSS_TIME-8?15:10)<=0, lost=fight.hearts<=0;
+  const n=$('#qNext');n.textContent=willWin?L('Viimeistele! ▶','Finish it! ▶'):lost?L('Jatka ▶','Continue ▶'):L('Seuraava ▶','Next ▶');
+  n.hidden=false;n.focus({preventScroll:true});
+  updateHUD();save();
+}
+function bossNext(){
+  if(!fight||!fight.answered)return;
+  if(fight.anims.some(a=>a.kind==='shot'))return;            // odota että isku osuu
+  if(fight.hp<=0){fight.phase='defeat';fight.end=0;panel.querySelectorAll('.opt,#qNext').forEach(b=>b.disabled=true);$('#fb').innerHTML=`<span class="good">${L('Perunapomo kaatuu!','The Potato Boss falls!')}</span>`;sfx.win();return;}
+  if(fight.hearts<=0)return bossLose();
+  bossNewQ();
+}
+function bossLose(){
+  setMusic('farm');
+  openModal('result',`<div class="redo">🥔💥</div><h2>${L('Perunapomo voitti tällä kertaa','The Potato Boss won this time')}</h2>
+  <p>${L('Sydämet loppuivat ja pomon voimat palautuivat. Harjoittele tehtäväpisteillä ja yritä uudelleen – sinä pystyt tähän!','You ran out of hearts and the boss healed. Practise at the task points and try again – you can do it!')}</p>
+  <div class="row"><button class="btn big" id="lRe">${L('Yritä uudelleen ⚔️','Try again ⚔️')}</button><button class="btn" id="lBack">${L('Takaisin farmille','Back to the farm')}</button></div>`);
+  bind('lRe',startFight);bind('lBack',closeModal);
+}
+function bossWin(){
+  const first=state.boss!=='beaten',hearts=fight.hearts;
+  state.boss='beaten';state.won=true;state.bossWins=(state.bossWins||0)+1;
+  const record=hearts>(state.bestHearts||0);if(record)state.bestHearts=hearts;
+  state.silver=(state.silver||0)+1;
+  lastBossResult={hearts,record,first};save();closeModal();silverFromBarn();updateHUD();
+  for(let i=0;i<40;i++)parts.push({x:BOSS.x,y:BOSS.y-20,vx:(rand()-.5)*90,vy:(rand()-.9)*70,life:1.3,max:1.3,kind:'spark',color:pick(['#fff6a0','#ffffff','#c9995a'])});
+  setTimeout(first?showWin:showRematchWin,600);
+}
+function updateFight(dt){
+  if(!fight)return;
+  fight.bossFlash=Math.max(0,fight.bossFlash-dt);fight.lunge=Math.max(0,fight.lunge-dt);fight.hurt=Math.max(0,fight.hurt-dt);
+  if(fight.phase==='q'&&!fight.answered){
+    fight.t-=dt;const sec=Math.ceil(Math.max(0,fight.t));
+    const tb=$('#tBar'),tn=$('#tNum');if(tb){tb.style.width=Math.max(0,fight.t/BOSS_TIME*100)+'%';tb.classList.toggle('low',fight.t<=5);}if(tn)tn.textContent=sec;
+    if(sec<=5&&sec!==fight.lastSec&&sec>0){fight.lastSec=sec;sfx.tick();}
+    if(fight.t<=0)bossAnswer(-1);
+  }
+  for(const a of fight.anims.slice()){a.t+=dt;if(a.kind==='shot'&&a.t>=.4&&!a.done){a.done=true;fight.hp=Math.max(0,fight.hp-a.dmg);fight.bossFlash=.25;sfx.bossHurt();
+    fight.anims.push({kind:'num',t:0,txt:'-'+a.dmg});const hb=$('#hpBar');if(hb)hb.style.width=fight.hp/BOSS_HP*100+'%';}}
+  fight.anims=fight.anims.filter(a=>a.kind==='shot'?!a.done:a.t<.9);
+  if(fight.phase==='defeat'){fight.end+=dt;if(fight.end>1.6){fight.phase='done';bossWin();return;}}
+  drawFight();
+}
+function drawFight(){
+  const c=$('#bossCv');if(!c)return;const g=c.getContext('2d');g.imageSmoothingEnabled=false;const tt=performance.now()/1000;
+  R(g,0,0,160,40,'#9fd3f2');R(g,0,6,160,1,'#b6dff5');R(g,20,10,18,4,'#ffffff');R(g,24,8,10,2,'#ffffff');R(g,110,6,22,4,'#ffffff');
+  R(g,0,40,160,16,'#74b84f');R(g,90,44,70,12,'#7a4e2a');for(let x=94;x<160;x+=8)R(g,x,46,1,2,'#4f9a3a');
+  const ps=SPR.player[Math.floor(tt*3)%2],px=30;
+  if(!(fight.lunge>0&&Math.floor(tt*20)%2)){g.fillStyle='rgba(0,0,0,.2)';g.fillRect(px-8,50,16,2);g.drawImage(ps.c,px-ps.w,50-ps.h*2,ps.w*2,ps.h*2);}
+  const b=SPR.boss;let bx=118-(fight.lunge>0?Math.sin((.5-fight.lunge)/.5*Math.PI)*40:0),scale=2,by=52;
+  if(fight.phase==='intro'){by=52+Math.max(0,(1-fight.t*1.2))*40;fight.t+=1/60;}
+  if(fight.phase==='defeat'||fight.phase==='done'){scale=Math.max(0,2*(1-fight.end/1.4));bx+=Math.sin(fight.end*40)*2;}
+  const bob=Math.round(Math.sin(tt*4)*1.5),w=b.w*scale,h=b.h*scale;
+  if(scale>0){g.fillStyle='rgba(0,0,0,.2)';g.fillRect(bx-w/2+2,52,w-4,2);
+    g.drawImage(fight.bossFlash>0?SPR.bossW.c:b.c,Math.round(bx-w/2),Math.round(by-h+bob),w,h);}
+  for(const a of fight.anims){
+    if(a.kind==='shot'){const p=Math.min(1,a.t/.4),x=px+8+(bx-px-20)*p,y=30-Math.sin(p*Math.PI)*16;g.drawImage(SPR.apple.c,Math.round(x),Math.round(y));}
+    else{g.globalAlpha=1-a.t/.9;g.font='8px "Press Start 2P",monospace';g.fillStyle='#d6332b';g.strokeStyle='#fff';g.lineWidth=2;g.strokeText(a.txt,bx+8,14-a.t*10);g.fillText(a.txt,bx+8,14-a.t*10);g.globalAlpha=1;}
+  }
+  if(fight.phase==='defeat')for(let i=0;i<6;i++)R(g,bx+ri(-18,18),by-ri(0,36),1,1,pick(['#fff','#ffd34d']));
+}
+
+/* ---------- VOITTO ---------- */
+let lastBossResult=null;
+// Jokaisesta tavallisen Perunapomon voitosta: yksi hopeaperuna kävelee ulos ladosta.
+function silverFromBarn(){
+  const a=spawnAnimal('hopea',false);a.x=268;a.y=67;const t=randPt('barnyard');a.tx=t.x;a.ty=Math.max(80,t.y);a.wait=.8;a.jump=.6;
+  for(let i=0;i<30;i++)parts.push({x:268+(rand()-.5)*20,y:58+(rand()-.5)*12,vx:(rand()-.5)*50,vy:-rand()*40,life:1.2,max:1.2,kind:'spark',color:pick(['#ffffff','#cfd4da','#e8f0ff'])});
+  setTimeout(()=>ANIM.hopea.snd(),700);
+}
+const silverLine=()=>`<p class="fact">🥈 ${L('Ladosta tuli <b>hopeaperuna</b>!','A <b>silver potato</b> came out of the barn!')} (${L('yhteensä','total')} ${state.silver})</p>`;
+function showRematchWin(){
+  sfx.win();
+  for(let i=0;i<80;i++)parts.push({x:rand()*W,y:-rand()*40,vx:(rand()-.5)*30,vy:20+rand()*40,life:4,max:4,kind:'confetti',color:pick(['#e8435a','#ffd34d','#6fcf4f','#4fa3e8','#b97ae8'])});
+  const r=lastBossResult||{hearts:0,record:false};
+  openModal('win',`<div class="logo small">${L('POMO KAATUI!','BOSS DEFEATED!')}</div>
+  <p>${L('Voitit Perunapomon taas!','You beat the Potato Boss again!')} ${r.record?`<span class="new">${L('UUSI ENNÄTYS!','NEW RECORD!')}</span>`:''}</p>${silverLine()}
+  <div class="stats" style="grid-template-columns:repeat(3,1fr)"><div>${L('Sydämiä jäljellä','Hearts left')}<b>${r.hearts} ❤️</b></div><div>${L('Paras tulos','Best')}<b>${state.bestHearts||0} ❤️</b></div><div>${L('Pomovoitot','Boss wins')}<b>${state.bossWins}</b></div></div>
+  <div class="row"><button class="btn big" id="wAgain">⚔️ ${L('Taistele uudelleen','Fight again')}</button><button class="btn" id="wCont">${L('Jatka farmilla','Keep playing')}</button></div>`);
+  bind('wAgain',startFight);bind('wCont',closeModal);
+}
+function showWin(){
+  sfx.win();
+  for(let i=0;i<120;i++)parts.push({x:rand()*W,y:-rand()*40,vx:(rand()-.5)*30,vy:20+rand()*40,life:4,max:4,kind:'confetti',color:pick(['#e8435a','#ffd34d','#6fcf4f','#4fa3e8','#b97ae8'])});
+    openModal('win',`<div class="logo small">${L('VOITIT!','YOU WON!')}</div><p>${L('Keräsit kaikki eläimet ja voitit Perunapomon! Farmi on pelastettu! 🎉','You collected every animal and beat the Potato Boss! The farm is saved! 🎉')}</p>${state.silver?silverLine():''}<canvas id="parade" width="160" height="26"></canvas>
+  <div class="stats"><div>${L('Tehtäviä','Tasks')}<b>${state.tasks}</b></div><div>${L('Oikein','Correct')}<b>${state.answered?Math.round(state.correct/state.answered*100):0} %</b></div><div>${L('Arkkuja','Chests')}<b>${state.chests}</b></div><div>${L('Sydämiä jäljellä','Hearts left')}<b>${lastBossResult?lastBossResult.hearts:state.bestHearts||0} ❤️</b></div></div>
+  <div class="row"><button class="btn big" id="wCont">${L('Jatka farmilla','Keep playing')}</button><button class="btn" id="wAgain">⚔️ ${L('Pomotaistelu uudelleen','Fight the boss again')}</button><button class="btn" id="wNew">${L('Uusi peli','New game')}</button></div>
+  <p style="font-size:.8em">${L('Perunapomo jää pellolle – voit haastaa sen uusintaotteluun milloin tahansa.','The Potato Boss stays in the field – challenge it to a rematch any time.')}</p>`);
+  bind('wCont',closeModal);bind('wAgain',startFight);
+  bind('wNew',()=>{state=freshState(state.level);bossRise=0;rebuildAnimals();updateHUD();save();P.x=150;P.y=100;closeModal();});
+}
+function drawParade(){
+  const c=$('#parade');if(!c)return;const g=c.getContext('2d');g.imageSmoothingEnabled=false;g.clearRect(0,0,160,26);
+  const t=performance.now()/1000;
+  ANIMALS.forEach((a,i)=>{const s=SPR[a.id],hop=Math.max(0,Math.sin(t*5+i*1.1))*4,x=8+i*25+12-s.w/2;
+    g.fillStyle='rgba(0,0,0,.18)';g.fillRect(x+1,24,s.w-2,2);g.drawImage(s.c,Math.round(x),Math.round(24-s.h-hop));});
+}
+
+/* ---------- SYÖTE ---------- */
+addEventListener('keydown',e=>{
+  if(e.target&&e.target.id==='cmdIn')return;
+  const k=e.key.toLowerCase();
+  if(modalType){
+    if(k==='escape'){if(['quiz','boss','dodge'].includes(modalType))exitTask();else if(['help','bossintro'].includes(modalType))(started?closeModal():showTitle());e.preventDefault();return;}
+    if(modalType==='dodge'&&['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(k)){keys.add(k);e.preventDefault();return;}
+    if(modalType==='quiz'&&quiz){
+      if(['1','2','3','4'].includes(k)&&!quiz.answered){answer(+k-1);e.preventDefault();}
+      else if(k==='enter'&&quiz.answered){nextQuestion();e.preventDefault();}
+    }else if(modalType==='boss'&&fight){
+      if(['1','2','3','4'].includes(k)&&!fight.answered&&fight.phase==='q'){bossAnswer(+k-1);e.preventDefault();}
+      else if(k==='enter'&&fight.answered&&fight.phase==='q'){bossNext();e.preventDefault();}
+    }else if(modalType==='chest'&&chest&&k==='enter'){
+      if(chest.phase==='idle'){startChest();e.preventDefault();}else if(chest.revealed){closeChest();e.preventDefault();}
+    }
+    return;
+  }
+  if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(k)){keys.add(k);e.preventDefault();initAudio();}
+  if((k==='e'||k===' '||k==='enter')&&nearSt){e.preventDefault();openStation(nearSt);}
+});
+addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+addEventListener('blur',()=>keys.clear());
+cv.addEventListener('pointerdown',e=>{
+  if(modalType)return;initAudio();
+  const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,y=(e.clientY-r.top)/r.height*H;
+  for(const a of animals){const s=SPR[a.id];if(Math.abs(x-a.x)<s.w/2+2&&y>a.y-s.h-3&&y<a.y+3){ANIM[a.id].snd();a.wait=1.2;a.moving=false;
+    parts.push({x:a.x,y:a.y-s.h-2,vx:0,vy:-16,life:1.2,max:1.2,kind:'heart'});return;}}
+  for(const st of activeStations()){if(Math.abs(x-st.x)<(st.id==='boss'?20:st.id==='stone'?12:15)&&y>st.y-st.h-2&&y<st.y+6){
+    if(Math.hypot(P.x-st.x,P.y-(st.y+7))<(st.id==='boss'?24:18)){openStation(st);return;}
+    P.target={x:st.x,y:st.y+7};P.autoSt=st;P.stuck=0;return;}}
+  P.target={x,y};P.autoSt=null;P.stuck=0;
+});
+// Musiikkinappi: tavallinen painallus = musiikki päälle/pois. 5 nopeaa painallusta (alle 2 s) = salainen komentopalkki.
+let musClicks=[],musStart=null;
+$('#bMusic').onclick=()=>{
+  const now=performance.now();musClicks=musClicks.filter(t=>now-t<2000);
+  if(!musClicks.length)musStart=settings.music;
+  musClicks.push(now);
+  if(musClicks.length>=5){musClicks=[];settings.music=musStart;saveSettings();initAudio();applyVolumes();openCmd();return;}
+  settings.music=!settings.music;saveSettings();initAudio();applyVolumes();
+};
+
+/* ---------- TIRPPA (salainen valikko) ---------- */
+const TIR={big:false,flee:false};
+const HEADS={player:{x:0,y:0,w:10,h:6},kana:{x:4,y:0,w:5,h:6},sorsa:{x:5,y:0,w:7,h:4},possu:{x:9,y:0,w:6,h:6},lehma:{x:11,y:0,w:6,h:7},lammas:{x:10,y:2,w:4,h:4},peruna:{x:0,y:0,w:10,h:8},kulta:{x:0,y:0,w:10,h:8}};
+function bigHead(s,key,flip,dx,dy){
+  const hr=HEADS[key];if(!hr)return;const hx=flip?s.w-hr.x-hr.w:hr.x,cx=dx+hx+hr.w/2,by=dy+hr.y+hr.h;
+  ctx.drawImage(flip?s.f:s.c,hx,hr.y,hr.w,hr.h,Math.round(cx-hr.w),Math.round(by-hr.h*2),hr.w*2,hr.h*2);
+}
+function clampRegion(region,x,y){
+  if(region==='pen')return {x:Math.max(228,Math.min(300,x)),y:Math.max(124,Math.min(194,y))};
+  if(region==='field')return {x:Math.max(126,Math.min(194,x)),y:Math.max(158,Math.min(196,y))};
+  if(region==='barnyard')return {x:Math.max(238,Math.min(298,x)),y:Math.max(72,Math.min(104,y))};
+  const dx=(x-POND.cx)/(POND.rx*.62),dy=(y-4-POND.cy)/(POND.ry*.62),d=Math.hypot(dx,dy);
+  return d<=1?{x,y}:{x:POND.cx+dx/d*POND.rx*.62,y:POND.cy+4+dy/d*POND.ry*.62};
+}
+let scareOn=false;
+function potatoScare(){
+  if(scareOn)return;scareOn=true;initAudio();
+  const d=document.createElement('div');d.id='scare';
+  const s=SPR.bossEvil,c=document.createElement('canvas');c.width=s.w;c.height=s.h;c.getContext('2d').drawImage(s.c,0,0);
+  const t=document.createElement('b');t.textContent=L('BUU!','BOO!');d.append(c,t);$('#stage').append(d);
+  noise({d:.7,v:.9,f:900,q:.5});tone({f:85,f2:45,d:1,v:.7,type:'sawtooth',vib:10,vibF:9});tone({f:1400,f2:300,d:.45,v:.28,type:'square'});
+  try{navigator.vibrate&&navigator.vibrate([120,60,200]);}catch(e){}
+  setTimeout(()=>{d.remove();scareOn=false;},1400);
+}
+function giveGolden(){
+  initAudio();
+  if(state.golden){ANIM.kulta.snd();toast(L('Sinulla on jo kultainen peruna! ✨','You already have the golden potato! ✨'));return;}
+  state.golden=true;save();spawnAnimal('kulta',true);ANIM.kulta.snd();updateHUD();toast(L('✨ Sait kultaisen perunan! Se asuu pellolla.','✨ You got the golden potato! It lives in the field.'));
+}
+function openTirppa(){const t=$('#tirppa');t.hidden=false;renderTirppa();}
+function renderTirppa(){
+  const t=$('#tirppa');if(t.hidden)return;
+  const tile=(k,ic,fi,en,st,on)=>`<button class="tt ${on?'on':''}" data-k="${k}"><span>${ic} ${L(fi,en)}</span><b>${st}</b></button>`;
+  const onoff=v=>v?L('PÄÄLLÄ','ON'):L('POIS','OFF');
+  t.innerHTML=`<div class="th">🐦 TIRPPA<button id="tX" title="${L('Sulje','Close')}">✕</button></div>
+  ${tile('big','🗿','1 Isot päät','1 Big heads',onoff(TIR.big),TIR.big)}
+  ${tile('scare','👻','2 Jumpscare','2 Jumpscare','!!!',false)}
+  ${tile('golden','✨','3 Kultainen peruna','3 Golden potato',state.golden?L('SAATU','GOT IT'):L('HAE','GET'),state.golden)}
+  ${tile('flee','🏃','4 Eläimet karkuun','4 Animals run away',onoff(TIR.flee),TIR.flee)}
+  ${tile('final','👑','5 Viimeinen pomo','5 Final boss',L('PELAA','PLAY'),false)}`;
+  $('#tX').onclick=()=>{t.hidden=true;};
+  t.querySelectorAll('.tt').forEach(b=>b.onclick=()=>{initAudio();sfx.ui();const k=b.dataset.k;
+    if(k==='big'){TIR.big=!TIR.big;toast(TIR.big?L('🗿 Isot päät päällä!','🗿 Big heads on!'):L('Päät normaaleiksi.','Heads back to normal.'));}
+    else if(k==='scare'){t.hidden=true;setTimeout(potatoScare,250);return;}
+    else if(k==='golden')giveGolden();
+    else if(k==='flee'){TIR.flee=!TIR.flee;toast(TIR.flee?L('🏃 Eläimet pakenevat sinua!','🏃 The animals run away from you!'):L('Eläimet rauhoittuivat.','The animals calmed down.'));}
+    else if(k==='final'){t.hidden=true;startDodge();}
+    renderTirppa();});
+}
+
+/* ---------- PERUNAPOMON VIIMEINEN MUOTO (väistelytaistelu) ---------- */
+let dodge=null;
+const DB={x:40,y:62,w:120,h:80},D_TIME=45,D_HP=20;
+const D_SAYS=[['Ranskalaissade!','French fry rain!'],['Perunat, vyöry!','Potatoes, roll!'],['Muusiaalto!','Mash wave!'],['Ranskalaismuuri!','Wall of fries!'],['KAIKKI KERRALLA!','EVERYTHING AT ONCE!']];
+function startDodge(){
+  closeCmd();if(modalType)closeModal();started=true;initAudio();setMusic('final');sfx.bossRoar();
+  dodge={t:0,hp:D_HP,inv:0,px:DB.x+DB.w/2,py:DB.y+DB.h-10,bul:[],spawn:0,spawn2:0,ring:0,wall:0,phase:'play',end:0,lastWave:-1,target:null};
+  openModal('dodge',`${exitBtn()}<h2>${L('Perunapomon viimeinen muoto','The Potato Boss: Final Form')}</h2>
+  <div class="bars"><span>💚 ${L('Sinä','You')}</span><div class="bar"><div id="dHp" style="width:100%;background:#6fcf4f"></div></div>
+  <span>⏱️ <b id="dT">${D_TIME}</b> s</span><div class="bar"><div id="dBar" style="width:100%;background:#4fa3e8"></div></div></div>
+  <canvas id="dodgeCv" width="200" height="150"></canvas>
+  <p id="dMsg" style="font-size:.85em;margin:.2em 0">${L('Väistä! Liiku nuolilla / WASD tai vedä sormella. Selviä 45 sekuntia.','Dodge! Move with arrows / WASD or drag. Survive 45 seconds.')}</p>`);
+  const c=$('#dodgeCv');
+  const setT=e=>{if(!dodge)return;const r=c.getBoundingClientRect();dodge.target={x:(e.clientX-r.left)/r.width*200,y:(e.clientY-r.top)/r.height*150};};
+  c.addEventListener('pointerdown',e=>{setT(e);try{c.setPointerCapture(e.pointerId);}catch(_){}});
+  c.addEventListener('pointermove',e=>{if(e.buttons)setT(e);});
+  c.addEventListener('pointerup',()=>{if(dodge)dodge.target=null;});
+}
+function dSpawn(k,x,y,vx,vy){const sz={fry:[2,7],pot:[6,5],mash:[3,3]}[k];dodge.bul.push({k,x,y,vx,vy,w:sz[0],h:sz[1]});}
+function dRing(n,speed){const off=(rand()-.5)*.3;for(let i=0;i<n;i++){const a=Math.PI*(.1+.8*i/(n-1))+off;dSpawn('mash',100,DB.y-4,Math.cos(a)*speed,Math.sin(a)*speed);}}
+function dWall(speed){const gap=DB.x+8+rand()*(DB.w-40);for(let x=DB.x;x<DB.x+DB.w;x+=7)if(x<gap||x>gap+24)dSpawn('fry',x,DB.y-8,0,speed);}
+function dPot(speed){const left=rand()<.5;dSpawn('pot',left?DB.x-6:DB.x+DB.w,DB.y+4+rand()*(DB.h-10),left?speed:-speed,0);}
+function updateDodge(dt){
+  const d=dodge;if(!d)return;
+  d.inv=Math.max(0,d.inv-dt);
+  if(d.phase==='play'){
+    d.t+=dt;const w=Math.min(4,Math.floor(d.t/9));
+    if(w!==d.lastWave){d.lastWave=w;const m=$('#dMsg');if(m)m.innerHTML=`👑 ”${L2(D_SAYS[w])}”`;if(w)sfx.bossRoar();}
+    d.spawn-=dt;d.spawn2-=dt;d.ring-=dt;d.wall-=dt;
+    if(w===0&&d.spawn<=0){d.spawn=.22;dSpawn('fry',DB.x+rand()*DB.w,DB.y-8,0,55+rand()*25);}
+    if(w===1){if(d.spawn<=0){d.spawn=.45;dPot(65);}if(d.spawn2<=0){d.spawn2=.7;dSpawn('fry',DB.x+rand()*DB.w,DB.y-8,0,55);}}
+    if(w===2){if(d.ring<=0){d.ring=1.1;dRing(11,48);}if(d.spawn2<=0){d.spawn2=.8;dSpawn('fry',DB.x+rand()*DB.w,DB.y-8,0,60);}}
+    if(w===3&&d.wall<=0){d.wall=1.3;dWall(44);}
+    if(w===4){if(d.spawn<=0){d.spawn=.32;dSpawn('fry',DB.x+rand()*DB.w,DB.y-8,0,65+rand()*25);}if(d.spawn2<=0){d.spawn2=.9;dPot(75);}if(d.ring<=0){d.ring=1.7;dRing(9,55);}}
+    // liike
+    let mx=0,my=0;
+    if(keys.has('arrowleft')||keys.has('a'))mx--;if(keys.has('arrowright')||keys.has('d'))mx++;
+    if(keys.has('arrowup')||keys.has('w'))my--;if(keys.has('arrowdown')||keys.has('s'))my++;
+    if(!mx&&!my&&d.target){const vx=d.target.x-d.px,vy=d.target.y-d.py,dd=Math.hypot(vx,vy);if(dd>1.5){mx=vx/dd;my=vy/dd;}}
+    const ml=Math.hypot(mx,my);if(ml){d.px+=mx/ml*72*dt;d.py+=my/ml*72*dt;}
+    d.px=Math.max(DB.x+3,Math.min(DB.x+DB.w-3,d.px));d.py=Math.max(DB.y+3,Math.min(DB.y+DB.h-3,d.py));
+    for(const b of d.bul){b.x+=b.vx*dt;b.y+=b.vy*dt;
+      if(d.inv<=0&&b.y+b.h>DB.y&&d.px+2>b.x&&d.px-2<b.x+b.w&&d.py+2>b.y&&d.py-2<b.y+b.h){
+        d.hp-=3;d.inv=1;b.dead=true;sfx.bossHit();const pn=panel;pn.classList.remove('shake');void pn.offsetWidth;pn.classList.add('shake');}}
+    d.bul=d.bul.filter(b=>!b.dead&&b.y<DB.y+DB.h+10&&b.x>DB.x-12&&b.x<DB.x+DB.w+12);
+    if(d.hp<=0){d.hp=0;d.phase='lose';setTimeout(dodgeLose,700);}
+    else if(d.t>=D_TIME){d.phase='win';d.bul=[];sfx.win();}
+    const hp=$('#dHp'),tb=$('#dBar'),tn=$('#dT');
+    if(hp)hp.style.width=d.hp/D_HP*100+'%';if(tb)tb.style.width=Math.max(0,(D_TIME-d.t)/D_TIME*100)+'%';if(tn)tn.textContent=Math.max(0,Math.ceil(D_TIME-d.t));
+  }else if(d.phase==='win'){d.end+=dt;if(d.end>2.2){d.phase='done';dodgeWin();return;}}
+  drawDodge();
+}
+function drawDodge(){
+  const c=$('#dodgeCv');if(!c||!dodge)return;const g=c.getContext('2d'),d=dodge,tt=performance.now()/1000;g.imageSmoothingEnabled=false;
+  R(g,0,0,200,150,'#120a06');
+  for(let i=0;i<24;i++){const x=(i*53+tt*6*(i%3+1))%200,y=(i*37)%58;R(g,x,y,1,1,i%4?'#5a3a2a':'#c9995a');}
+  const b=SPR.bossEvil,bob=Math.round(Math.sin(tt*3)*2);let sc=2;
+  if(d.phase==='win'||d.phase==='done')sc=Math.max(0,2*(1-d.end/1.8));
+  if(sc>0){g.save();g.shadowColor='#ff3030';g.shadowBlur=6+Math.sin(tt*6)*3;g.globalAlpha=d.phase==='win'?Math.max(0,1-d.end/1.8):1;
+    g.drawImage(b.c,Math.round(100-b.w*sc/2),Math.round(4+bob+(2-sc)*b.h/2),b.w*sc,b.h*sc);g.restore();}
+  if(d.phase==='win')for(let i=0;i<8;i++)R(g,100+ri(-20,20),10+ri(0,36),1,1,pick(['#fff','#ffd34d']));
+  R(g,DB.x-2,DB.y-2,DB.w+4,DB.h+4,'#ffffff');R(g,DB.x,DB.y,DB.w,DB.h,'#000000');
+  g.save();g.beginPath();g.rect(DB.x,DB.y,DB.w,DB.h);g.clip();
+  for(const q of d.bul){
+    if(q.k==='fry'){R(g,q.x,q.y,q.w,q.h,'#f2c230');R(g,q.x,q.y,q.w,1,'#fff3b0');}
+    else if(q.k==='pot'){R(g,q.x+1,q.y,q.w-2,q.h,'#c9995a');R(g,q.x,q.y+1,q.w,q.h-2,'#c9995a');R(g,q.x+2,q.y+1,1,1,'#a4763f');R(g,q.x+4,q.y+3,1,1,'#a4763f');}
+    else R(g,q.x,q.y,q.w,q.h,'#f6efe0');}
+  if(!(d.inv>0&&Math.floor(tt*16)%2)){const s=SPR.sprout;g.drawImage(s.c,Math.round(d.px-s.w/2),Math.round(d.py-s.h/2));}
+  g.restore();
+}
+function dodgeLose(){
+  if(modalType!=='dodge')return;setMusic('farm');
+  openModal('result',`<div class="redo">🍟💥</div><h2>${L('Viimeinen muoto voitti tällä kertaa','The Final Form won this time')}</h2>
+  <p>${L(`Selvisit ${Math.floor(dodge?dodge.t:0)} sekuntia. Yritä uudelleen – opit väistöt nopeasti!`,`You survived ${Math.floor(dodge?dodge.t:0)} seconds. Try again – you’ll learn the patterns fast!`)}</p>
+  <div class="row"><button class="btn big" id="dRe">${L('Yritä uudelleen','Try again')}</button><button class="btn" id="dBack">${L('Takaisin farmille','Back to the farm')}</button></div>`);
+  bind('dRe',startDodge);bind('dBack',closeModal);
+}
+function dodgeWin(){
+  state.finalWins=(state.finalWins||0)+1;save();setMusic('farm');
+  for(let i=0;i<120;i++)parts.push({x:rand()*W,y:-rand()*40,vx:(rand()-.5)*30,vy:20+rand()*40,life:4,max:4,kind:'confetti',color:pick(['#e8435a','#ffd34d','#6fcf4f','#4fa3e8','#b97ae8'])});
+  openModal('result',`<div class="redo">🏆</div><h2>${L('Selvisit!','You survived!')}</h2>
+  <p>${L('Perunapomon viimeinen muoto väsyi ja kierähti nukkumaan. Olet todellinen farmisankari!','The Potato Boss’s final form got tired and rolled off to sleep. You are a true farm hero!')}</p>
+  <p>${L('Voitot viimeisestä muodosta','Final form wins')}: <b>${state.finalWins}</b></p>
+  <div class="row"><button class="btn big" id="dRe">${L('Pelaa uudelleen','Play again')}</button><button class="btn" id="dBack">${L('Takaisin farmille','Back to the farm')}</button></div>`);
+  bind('dRe',startDodge);bind('dBack',closeModal);
+}
+
+/* ---------- KOMENTOPALKKI ---------- */
+let SPEED=1;const cmdHist=[];let cmdPos=0;
+const ALIAS={sorsa:'sorsa',duck:'sorsa',possu:'possu',sika:'possu',pig:'possu',kana:'kana',chicken:'kana',lehmä:'lehma',lehma:'lehma',cow:'lehma',lammas:'lammas',sheep:'lammas',peruna:'peruna',potato:'peruna'};
+function cmdLog(t,cls){const d=document.createElement('div');if(cls)d.className=cls;d.textContent=t;const l=$('#cmdLog');l.append(d);while(l.children.length>40)l.firstChild.remove();l.scrollTop=l.scrollHeight;}
+function openCmd(){const c=$('#cmd');keys.clear();if(c.hidden){c.hidden=false;if(!$('#cmdLog').children.length)cmdLog(L('Komentopalkki avattu. Kirjoita "apua" nähdäksesi komennot.','Command bar open. Type "help" to see the commands.'));}sfx.pop();setTimeout(()=>$('#cmdIn').focus(),20);}
+function closeCmd(){$('#cmd').hidden=true;$('#cmdIn').blur();}
+$('#cmdX').onclick=closeCmd;
+$('#cmdIn').addEventListener('keydown',e=>{
+  e.stopPropagation();
+  if(e.key==='Escape'){closeCmd();return;}
+  if(e.key==='ArrowUp'&&cmdHist.length){cmdPos=Math.max(0,cmdPos-1);e.target.value=cmdHist[cmdPos];e.preventDefault();return;}
+  if(e.key==='ArrowDown'&&cmdHist.length){cmdPos=Math.min(cmdHist.length,cmdPos+1);e.target.value=cmdHist[cmdPos]||'';e.preventDefault();return;}
+  if(e.key==='Enter'){const v=e.target.value.trim();e.target.value='';if(!v)return;cmdHist.push(v);cmdPos=cmdHist.length;cmdLog('> '+v,'me');try{runCmd(v);}catch(err){cmdLog(String(err),'err');}}
+});
+function checkBossWake(){if(state.boss==='none'&&allAnimals()){state.boss='awake';bossRise=0;save();cmdLog(L('👑 Perunapomo heräsi pellolla!','👑 The Potato Boss rose in the field!'));}}
+function runCmd(raw){
+  const [c,...args]=raw.toLowerCase().split(/\s+/),a=args[0];
+  const ok=m=>cmdLog(m),err=m=>cmdLog(m,'err');
+  switch(c){
+  case 'apua':case 'help':case '?':
+    ok(L(`Komennot:
+  eläimet          – kaikki eläimet heti
+  anna <eläin>     – yksi eläin (sorsa, possu, kana, lehmä, lammas, peruna)
+  arkku / kultaarkku – avaa arkku
+  pomo             – aloita pomotaistelu
+  voita            – voita käynnissä oleva pomotaistelu
+  sydämet          – täydet sydämet pomotaistelussa
+  aika <s>         – lisää aikaa nykyiseen pomokysymykseen
+  lepo             – kaikki tehtäväpisteet taas käytössä
+  taso 5 / 6 / 78  – tehtävien taso
+  kieli fi / kieli en
+  nopeus <1–4>     – kävelynopeus
+  tila             – näytä pelin tila
+  nollaa           – aloita koko peli alusta
+  kivi             – tuo 7.–8. luokan kivi heti
+  tyhjennä / sulje`,`Commands:
+  animals          – get every animal now
+  give <animal>    – one animal (duck, pig, chicken, cow, sheep, potato)
+  chest / goldchest – open a chest
+  boss             – start the boss fight
+  win              – win the current boss fight
+  hearts           – full hearts in the boss fight
+  time <s>         – add time to the current boss question
+  rest             – all task points usable again
+  level 5 / 6 / 78 – task level
+  lang fi / lang en
+  speed <1–4>      – walking speed
+  status           – show game status
+  reset            – start the whole game over
+  stone            – bring the grade 7–8 stone now
+  clear / close`));break;
+  case 'eläimet':case 'elaimet':case 'animals':{
+    let n=0;for(const A of ANIMALS)if(!state.owned[A.id]){state.owned[A.id]=1;spawnAnimal(A.id,true);n++;}
+    updateHUD();save();ok(n?L(`Sait ${n} uutta eläintä!`,`You got ${n} new animals!`):L('Sinulla on jo kaikki eläimet.','You already have every animal.'));checkBossWake();break;}
+  case 'anna':case 'give':{
+    const id=ALIAS[a];if(!id)return err(L('Tuntematon eläin. Vaihtoehdot: sorsa, possu, kana, lehmä, lammas, peruna','Unknown animal. Options: duck, pig, chicken, cow, sheep, potato'));
+    state.owned[id]=(state.owned[id]||0)+1;spawnAnimal(id,true);ANIM[id].snd();updateHUD();save();ok(L(`+1 ${L2(ANIM[id].name)}`,`+1 ${L2(ANIM[id].name)}`));checkBossWake();break;}
+  case 'arkku':case 'chest':case 'kultaarkku':case 'goldchest':
+    if(modalType&&modalType!=='title')return err(L('Sulje ensin avoin ikkuna.','Close the open window first.'));
+    started=true;openChest(c==='kultaarkku'||c==='goldchest');ok(L('Arkku ilmestyi!','A chest appeared!'));break;
+  case 'pomo':case 'boss':
+    if(fight&&modalType==='boss')return err(L('Taistelu on jo käynnissä.','A fight is already running.'));
+    if(state.boss==='none')state.boss='awake';bossRise=1;started=true;save();startFight();ok(L('⚔️ Pomotaistelu alkaa!','⚔️ Boss fight begins!'));break;
+  case 'voita':case 'win':
+    if(!fight||modalType!=='boss'||fight.phase!=='q')return err(L('Pomotaistelu ei ole käynnissä.','No boss fight is running.'));
+    fight.hp=0;fight.anims=[];fight.answered=true;{const hb=$('#hpBar');if(hb)hb.style.width='0%';}bossNext();ok(L('Perunapomo kaatuu!','The Potato Boss falls!'));break;
+  case 'sydämet':case 'sydamet':case 'hearts':
+    if(!fight||modalType!=='boss')return err(L('Pomotaistelu ei ole käynnissä.','No boss fight is running.'));
+    fight.hearts=BOSS_HEARTS;{const lv=$('#lives');if(lv)lv.innerHTML=bossHeartsHTML();}ok('❤️❤️❤️❤️❤️');break;
+  case 'aika':case 'time':{
+    const n=Math.max(1,Math.min(600,parseInt(a)||20));
+    if(!fight||modalType!=='boss'||fight.answered)return err(L('Ei pomokysymystä käynnissä.','No boss question running.'));
+    fight.t+=n;ok(L(`+${n} s`,`+${n} s`));break;}
+  case 'lepo':case 'rest':state.last=null;nearSt=null;save();ok(L('Kaikki tehtäväpisteet ovat taas käytössä.','All task points are usable again.'));break;
+  case 'taso':case 'level':
+    {const lv=a==='5'?5:a==='6'?6:['7','8','78','7-8','7–8'].includes(a)?78:0;
+    if(!lv)return err(L('Käytä: taso 5, taso 6 tai taso 78','Use: level 5, level 6 or level 78'));
+    if(lv===78){state.prevLevel=state.level===78?state.prevLevel:state.level;state.unlocked78=true;}
+    state.level=lv;pendingLevel=lv;save();ok(L(`Tehtävien taso: ${levelName(lv)}`,`Task level: ${levelName(lv)}`));}break;
+  case 'kieli':case 'lang':
+    if(a!=='fi'&&a!=='en')return err(L('Käytä: kieli fi tai kieli en','Use: lang fi or lang en'));
+    if(['quiz','boss','chest','result'].includes(modalType))return err(L('Vaihda kieli tehtävän jälkeen.','Change the language after the task.'));
+    settings.lang=a;saveSettings();applyLang();ok(a==='fi'?'Kieli: suomi':'Language: English');break;
+  case 'nopeus':case 'speed':{
+    const n=parseFloat(a);if(!(n>=1&&n<=4))return err(L('Käytä: nopeus 1–4','Use: speed 1–4'));SPEED=n;ok(L(`Kävelynopeus ×${n}`,`Walking speed ×${n}`));break;}
+  case 'tila':case 'status':{
+    const have=ANIMALS.filter(A=>state.owned[A.id]).map(A=>L2(A.name)).join(', ')||'–';
+    ok(L(`Eläimet: ${have}\nTehtäviä: ${state.tasks} · oikein ${state.correct}/${state.answered} · arkkuja ${state.chests}\nTaso: ${levelName(state.level)} · pisteitä tehty ${(state.doneSt||[]).length}/5 · pomo: ${{none:'nukkuu',awake:'hereillä',beaten:'voitettu'}[state.boss]} · pomovoitot: ${state.bossWins||0} · hopeaperunat: ${state.silver||0}`,
+      `Animals: ${have}\nTasks: ${state.tasks} · correct ${state.correct}/${state.answered} · chests ${state.chests}\nLevel: ${levelName(state.level)} · points done ${(state.doneSt||[]).length}/5 · boss: ${state.boss} · boss wins: ${state.bossWins||0} · silver potatoes: ${state.silver||0}`));break;}
+  case 'nollaa':case 'reset':
+    state=freshState(state.level);bossRise=0;rebuildAnimals();updateHUD();save();P.x=150;P.y=100;if(modalType)closeModal();started=true;ok(L('Peli aloitettiin alusta.','The game was reset.'));break;
+  case 'tyhjennä':case 'tyhjenna':case 'clear':$('#cmdLog').innerHTML='';break;
+  case 'sulje':case 'close':case 'exit':closeCmd();break;
+  case 'kivi':case 'stone':state.doneSt=STATIONS.map(x=>x.id);if(!state.stone){state.stone=true;stoneRise=0;}save();ok(L('🪨 Kivi ilmestyi farmin keskelle!','🪨 The stone appeared in the middle of the farm!'));break;
+  case 'tirppa':openTirppa();ok(L('🐦 Tirppa-valikko avattu ruudun reunaan!','🐦 Tirppa menu opened at the edge of the screen!'));break;
+  default:err(L(`Tuntematon komento "${c}". Kirjoita "apua".`,`Unknown command "${c}". Type "help".`));
+  }
+}
+$('#bSfx').onclick=()=>{settings.sfx=!settings.sfx;saveSettings();initAudio();applyVolumes();};
+$('#bLang').onclick=()=>{if(['quiz','chest','result','boss','bossintro'].includes(modalType)){toast(L('Vaihda kieli tehtävän jälkeen.','Change the language after the task.'));return;}
+  settings.lang=settings.lang==='en'?'fi':'en';saveSettings();applyLang();};
+$('#bHelp').onclick=()=>{if(['quiz','chest','result','boss','bossintro'].includes(modalType))return;initAudio();showHelp();};
+
+/* ---------- PÄIVITYS ---------- */
+function blocked(x,y){
+  if(x<6||x>314||y<18||y>205)return true;
+  for(const s of SOLIDS)if(x>s.x&&x<s.x+s.w&&y>s.y&&y<s.y+s.h)return true;
+  const dx=(x-POND.cx)/(POND.rx-2),dy=(y-POND.cy)/(POND.ry-2);return dx*dx+dy*dy<1;
+}
+function update(dt){
+  if(!modalType){
+    let dx=0,dy=0;
+    if(keys.has('arrowleft')||keys.has('a'))dx--;if(keys.has('arrowright')||keys.has('d'))dx++;
+    if(keys.has('arrowup')||keys.has('w'))dy--;if(keys.has('arrowdown')||keys.has('s'))dy++;
+    if(dx||dy){P.target=null;P.autoSt=null;}
+    else if(P.target){const vx=P.target.x-P.x,vy=P.target.y-P.y,d=Math.hypot(vx,vy);
+      if(d<1.5){P.target=null;if(P.autoSt){const s=P.autoSt;P.autoSt=null;openStation(s);}}else{dx=vx/d;dy=vy/d;}}
+    const len=Math.hypot(dx,dy);
+    if(len&&!modalType){
+      dx/=len;dy/=len;const sp=64*SPEED*dt,nx=P.x+dx*sp,ny=P.y+dy*sp;let moved=false;
+      if(!blocked(nx,P.y)){P.x=nx;moved=moved||Math.abs(dx)>.05;}
+      if(!blocked(P.x,ny)){P.y=ny;moved=moved||Math.abs(dy)>.05;}
+      if(Math.abs(dx)>.1)P.flip=dx<0;P.walkT+=dt;P.moving=true;
+      if(!moved&&P.target){P.stuck+=dt;if(P.stuck>.35){const s=P.autoSt;P.target=null;P.autoSt=null;if(s&&Math.hypot(P.x-s.x,P.y-(s.y+7))<26)openStation(s);}}else P.stuck=0;
+    }else P.moving=false;
+    let best=null,bd=18;for(const st of activeStations()){const d=Math.hypot(P.x-st.x,P.y-(st.y+7))-(st.id==='boss'?8:0);if(d<bd){bd=d;best=st;}}
+    if(best!==nearSt){nearSt=best;renderPrompt();}
+    // Salainen pikseli lammikon vieressä alareunassa: päälle astuminen = perunajumpscare.
+    const sd=Math.hypot(P.x-SECRET_PX.x,P.y-SECRET_PX.y);
+    if(sd<4&&SECRET_PX.armed){SECRET_PX.armed=false;keys.clear();P.target=null;potatoScare();}
+    else if(sd>9)SECRET_PX.armed=true;
+  }else P.moving=false;
+  for(const a of animals){
+    a.t+=dt;if(a.jump>0)a.jump=Math.max(0,a.jump-dt);if(a.fleeing>0)a.fleeing-=dt;
+    if(TIR.flee&&!modalType){const fx=a.x-P.x,fy=a.y-P.y,fd=Math.hypot(fx,fy)||1;
+      if(fd<44){const c=clampRegion(ANIM[a.id].region,a.x+fx/fd*26,a.y+fy/fd*26);a.tx=c.x;a.ty=c.y;a.wait=0;a.fleeing=.7;}}
+    if(a.wait>0){a.wait-=dt;a.moving=false;continue;}
+    const vx=a.tx-a.x,vy=a.ty-a.y,d=Math.hypot(vx,vy);
+    if(d<1){a.wait=.8+rand()*2.8;const p=randPt(ANIM[a.id].region);a.tx=p.x;a.ty=p.y;a.moving=false;}
+    else{const sp=Math.min(ANIM[a.id].speed*(a.fleeing>0?5:1)*dt,d);a.x+=vx/d*sp;a.y+=vy/d*sp;if(Math.abs(vx)>.3)a.flip=vx<0;a.moving=true;}
+  }
+  for(const p of parts){p.x+=p.vx*dt;p.y+=p.vy*dt;if(p.kind==='confetti'){p.vx+=Math.sin(p.y*.1)*2*dt*10;}else if(p.kind==='spark')p.vy+=60*dt;p.life-=dt;}
+  parts=parts.filter(p=>p.life>0&&p.y<H+5);
+}
+function renderPrompt(){
+  const pr=$('#prompt');
+  if(!nearSt||modalType){pr.hidden=true;return;}
+  const st=nearSt;pr.style.left=(st.x/W*100)+'%';
+  if(st.id==='stone'){pr.innerHTML=`<span>🪨 ${L('Salaperäinen kivi','Mysterious stone')}</span><button>${L('Tutki','Inspect')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
+  else if(st.id==='boss'){pr.innerHTML=`<span>👑 ${L2(st.name)}</span><button>${state.boss==='beaten'?L('Uusintaottelu!','Rematch!'):L('Taistele!','Fight!')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
+  else if(state.last===st.id)pr.innerHTML=`<span>${L2(st.name)} ${L('lepää 💤 – kokeile toista pistettä','is resting 💤 – try another point')}</span>`;
+  else{pr.innerHTML=`<span>${st.icon} ${L2(st.subject)}</span><button>${L('Tee tehtävä','Do the task')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
+  pr.hidden=false;
+  // Vinkki heti kohteen yläpuolelle. Jos se ei mahdu (kaivo, liitutaulu), se tulee heti pelaajan jalkojen alle.
+  const hL=pr.offsetHeight/$('#stage').clientHeight*H,above=st.y-st.h+2;
+  if(above-hL<1){pr.style.top=((st.y+8)/H*100)+'%';pr.style.transform='translate(-50%,0)';}
+  else{pr.style.top=(above/H*100)+'%';pr.style.transform='';}
+}
+addEventListener('resize',()=>{if(nearSt)renderPrompt();});
+
+const SECRET_PX={x:104,y:199,armed:true};
+
+/* ---------- PIIRTO ---------- */
+function shadow(x,y,w){ctx.fillStyle='rgba(0,0,0,.22)';ctx.fillRect(Math.round(x-w/2+1),Math.round(y-1),w-2,2);}
+function draw(){
+  ctx.drawImage(BG,0,0);
+  const tt=performance.now()/1000;
+  for(let i=0;i<4;i++){const k=(tt*.35+i/4)%1,sy=9-k*26,sx=63+Math.sin(k*6+i)*3+k*6,sz=2+Math.round(k*3);
+    ctx.globalAlpha=.75*(1-k);R(ctx,sx-sz/2,sy-sz/2,sz,sz,'#e8e8e8');}ctx.globalAlpha=1;
+  for(let i=0;i<6;i++){const a=tt*.4+i*1.7;R(ctx,POND.cx+Math.cos(a*1.3+i)*POND.rx*.55,POND.cy+Math.sin(a+i*2)*POND.ry*.5,2,1,'#bfe6ff');}
+  const ents=[];
+  for(const st of STATIONS)ents.push({y:st.y,d:()=>{shadow(st.x,st.y+1,st.kind==='tree'?14:12);ctx.drawImage(st.img,st.x-20,st.y-42);}});
+  for(const a of animals)ents.push({y:a.y,d:()=>{
+    const s=SPR[a.id],img=a.flip?s.f:s.c,x=Math.round(a.x-s.w/2),jy=a.jump>0?Math.round(Math.sin(a.jump/.6*Math.PI)*14):0;
+    if(a.fleeing>0&&TIR.flee){R(ctx,a.x+s.w/2,a.y-s.h-4-jy,1,3,'#9fd3f2');R(ctx,a.x+s.w/2,a.y-s.h-6-jy,1,1,'#ffffff');}
+    if(ANIM[a.id].region==='pond'){const y=Math.round(a.y);const b=Math.round(Math.sin(a.t*3))-jy;ctx.drawImage(img,0,0,s.w,s.h-3,x,y-s.h+3+b,s.w,s.h-3);R(ctx,x-1,y+b,s.w+2,1,'#bfe6ff');if(TIR.big)bigHead(s,a.id,a.flip,x,y-s.h+3+b);return;}
+    const hop=a.moving?((a.id==='peruna'||a.id==='kulta')?Math.round(Math.abs(Math.sin(a.t*10))*2):(Math.floor(a.t*6)%2)):0,dy=Math.round(a.y-s.h-hop)-jy;
+    shadow(a.x,a.y,s.w);ctx.drawImage(img,x,dy);if(TIR.big)bigHead(s,a.id,a.flip,x,dy);
+    if(a.id==='kulta'&&Math.floor(a.t*4)%3===0)R(ctx,x+ri(0,s.w),dy+ri(0,s.h),1,1,'#fffbe0');}});
+  if(state.stone){stoneRise=Math.min(1,stoneRise+1/50);const im=STONE_IMG,hgt=Math.round(im.height*stoneRise);
+    ents.push({y:STONE.y,d:()=>{shadow(STONE.x,STONE.y,16);ctx.drawImage(im,0,0,im.width,hgt,STONE.x-im.width/2,STONE.y-hgt+1,im.width,hgt);
+      if(stoneRise>=1){const gl=.55+Math.sin(tt*3)*.45;ctx.globalAlpha=gl;R(ctx,STONE.x,STONE.y-12,1,6,'#8ff0ff');R(ctx,STONE.x-1,STONE.y-11,3,1,'#8ff0ff');R(ctx,STONE.x-2,STONE.y-10,5,1,'#8ff0ff');ctx.globalAlpha=1;
+        if(Math.floor(tt*5)%4===0)R(ctx,STONE.x+ri(-7,7),STONE.y-ri(2,14),1,1,'#d8fbff');}}});
+    if(stoneRise<1&&Math.floor(tt*20)%2)R(ctx,STONE.x+ri(-10,10),STONE.y-ri(0,4),2,1,'#8a6a3a');}
+  if(bossOnFarm()){bossRise=Math.min(1,bossRise+1/60);const s=SPR.boss,bob=Math.round(Math.sin(tt*3)*1.5),hgt=Math.round(s.h*2*bossRise);
+    ents.push({y:BOSS.y,d:()=>{shadow(BOSS.x,BOSS.y,s.w*2);ctx.drawImage(s.c,0,0,s.w,hgt/2,BOSS.x-s.w,BOSS.y-hgt+bob,s.w*2,hgt);}});}
+  ents.push({y:P.y,d:()=>{const fr=P.moving?(Math.floor(P.walkT*8)%2?1:2):0,s=SPR.player[fr],px=Math.round(P.x-s.w/2),py=Math.round(P.y-s.h);shadow(P.x,P.y,s.w);ctx.drawImage(P.flip?s.f:s.c,px,py);
+    if(TIR.big)bigHead(s,'player',P.flip,px,py);}});
+  R(ctx,SECRET_PX.x-1,SECRET_PX.y-1,3,3,'#64a344');
+  ents.sort((a,b)=>a.y-b.y).forEach(e=>e.d());
+  if(started)for(const st of STATIONS){if(st===nearSt&&!modalType)continue;if(state.last===st.id){const z=Math.floor(tt*2)%2;R(ctx,st.x+6,st.y-st.h-6-z*2,3,1,'#ffffff');R(ctx,st.x+7,st.y-st.h-5-z*2,1,1,'#ffffff');R(ctx,st.x+6,st.y-st.h-4-z*2,3,1,'#ffffff');continue;}
+    const y=Math.round(st.y-st.h-14+Math.sin(tt*4+st.x)*1.5);R(ctx,st.x-3,y-1,7,11,'#3a2414');R(ctx,st.x-2,y,5,9,'#fff6d5');R(ctx,st.x-1,y+1,3,4,'#d6332b');R(ctx,st.x-1,y+6,3,2,'#d6332b');}
+  if(state.stone&&!state.stoneSeen&&stoneRise>=1){const y=Math.round(STONE.y-STONE.h-14+Math.sin(tt*5)*2);R(ctx,STONE.x-3,y-1,7,11,'#3a2414');R(ctx,STONE.x-2,y,5,9,'#8ff0ff');R(ctx,STONE.x-1,y+1,3,4,'#1b4a6a');R(ctx,STONE.x-1,y+6,3,2,'#1b4a6a');}
+  if(bossOnFarm()&&started&&bossRise>=1){const y=Math.round(BOSS.y-BOSS.h-16+Math.sin(tt*5)*2);R(ctx,BOSS.x-3,y-1,7,11,'#3a2414');R(ctx,BOSS.x-2,y,5,9,'#ffd34d');R(ctx,BOSS.x-1,y+1,3,4,'#d6332b');R(ctx,BOSS.x-1,y+6,3,2,'#d6332b');}
+  if(P.target&&!modalType){const b=Math.floor(tt*6)%2;R(ctx,P.target.x-2-b,P.target.y,2,1,'#fff6d5');R(ctx,P.target.x+1+b,P.target.y,2,1,'#fff6d5');}
+  for(const p of parts){const al=Math.min(1,p.life/p.max*1.5);ctx.globalAlpha=al;
+    if(p.kind==='heart')ctx.drawImage(SPR.heart.c,Math.round(p.x-2),Math.round(p.y));
+    else if(p.kind==='confetti')R(ctx,p.x,p.y,2,1,p.color);else R(ctx,p.x,p.y,1,1,p.color);ctx.globalAlpha=1;}
+}
+let last=performance.now();
+function loop(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+  update(dt);draw();
+  if(modalType==='chest')drawChest(dt);
+  if(modalType==='boss'||modalType==='bossintro')updateFight(dt);
+  if(modalType==='dodge')updateDodge(dt);
+  if(modalType==='title'||modalType==='win')drawParade();
+  requestAnimationFrame(loop);
+}
+addEventListener('pagehide',()=>{if(started)save();});
+rebuildAnimals();applyVolumes();applyLang();showTitle();requestAnimationFrame(loop);
+</script>
+</body>
+</html>
