@@ -1757,10 +1757,10 @@ function drawDodge(){
 }
 function dodgeLose(){
   if(modalType!=='dodge')return;setMusic('farm');const mode=dodge?dodge.mode:'final';
-  if(mode==='robot'&&dodge&&dodge.forced&&robotOn()){const pu=rPun(state.robot.pun)||R_PUN[0];state.robot=null;state.robotLosses=(state.robotLosses||0)+1;applyPunish(pu.id);
+  if(mode==='robot'&&dodge&&dodge.forced&&robotOn()){const pus=rList(state.robot.pun,rPun);state.robot=null;state.robotLosses=(state.robotLosses||0)+1;pus.forEach(x=>applyPunish(x.id));
     openModal('result',`<div class="redo">🤖💥</div><h2>${L('Perunaattori 2000 voitti!','Perunaattori 2000 won!')}</h2>
     <p>${L(`Selvisit ${Math.floor(dodge.t)} / 90 sekuntia.`,`You survived ${Math.floor(dodge.t)} / 90 seconds.`)}</p>
-    <p class="fact">💀 ${L('Rangaistus','Penalty')}: <b>${pu.e} ${L2(pu.d)}</b></p>
+    <p class="fact">💀 ${L('Rangaistus','Penalty')}:<br><b>${rText(pus)}</b></p>
     <div class="row"><button class="btn big" id="dBack">${L('Takaisin farmille','Back to the farm')}</button></div>`);bind('dBack',closeModal);return;}
   if(mode==='robot'){openModal('result',`<div class="redo">🤖💥</div><h2>${L('Perunaattori 2000 voitti tällä kertaa','Perunaattori 2000 won this time')}</h2>
     <p>${L(`Selvisit ${Math.floor(dodge?dodge.t:0)} / 90 sekuntia. Robotti jää farmille odottamaan – yritä uudelleen!`,`You survived ${Math.floor(dodge?dodge.t:0)} / 90 seconds. The robot waits on the farm – try again!`)}</p>
@@ -1797,6 +1797,9 @@ const R_REW=[
  {id:'horse',e:'🐴',n:['Hevonen','Horse'],d:['Hevonen juoksee ulos ladosta','A horse runs out of the barn']},
  {id:'crown',e:'👑',n:['Kruunu','Crown'],d:['Saat pysyvän kruunun päähäsi','You get a permanent crown on your head']}];
 const rPun=id=>R_PUN.find(x=>x.id===id),rRew=id=>R_REW.find(x=>x.id===id);
+// pun/rew voivat olla useita (taulukko); vanhat tallennukset ovat yksittäisiä merkkijonoja
+const rList=(v,f)=>(Array.isArray(v)?v:v?[v]:[]).map(f).filter(Boolean);
+const rText=arr=>arr.length?arr.map(x=>`${x.e} ${L2(x.d)}`).join('<br>'):L('ei mitään','nothing');
 // Pakotettu taistelu: ylläpitäjä kutsui robotin toisen pelaajan peliin. Pelaajan omalla laitteella sitä ei voi ohittaa.
 function robotForced(){return !!(robotOn()&&state.robot.forced&&!ADMIN);}
 function fxOn(k){return !!(state.fx&&state.fx[k]&&state.fx[k]>Date.now());}
@@ -1838,16 +1841,17 @@ function showRobotIntro(){
   openModal('bossintro',`<h2>🤖 PERUNAATTORI 2000</h2><canvas id="robotCv" width="60" height="44" style="width:min(30%,170px);image-rendering:pixelated;display:block;margin:0 auto"></canvas>
   <p>${L('Ylläpitäjä kutsui farmille superrobotin! Se on kolme kertaa vaikeampi kuin Perunapomon viimeinen muoto.','The admin summoned a super robot to the farm! It is three times harder than the Potato Boss’s final form.')}</p>
   ${robotForced()?`<p class="fact" style="text-align:left">🔒 <b>${L('leetu1234 määräsi tämän taistelun – sitä ei voi ohittaa!','leetu1234 ordered this fight – it can’t be skipped!')}</b><br>
-   🏆 ${L('Jos voitat','If you win')}: <b>${rRew(state.robot.rew).e} ${L2(rRew(state.robot.rew).d)}</b><br>
-   💀 ${L('Jos häviät','If you lose')}: <b>${rPun(state.robot.pun).e} ${L2(rPun(state.robot.pun).d)}</b></p>`:''}
+   🏆 ${L('Jos voitat','If you win')}:<br><b>${rText(rList(state.robot.rew,rRew))}</b><br>
+   💀 ${L('Jos häviät','If you lose')}:<br><b>${rText(rList(state.robot.pun,rPun))}</b></p>`:''}
   <p style="font-size:.85em">${L('⏱️ Selviä 90 sekuntia · 🔴 varo lasereita (vilkkuva viiva = laser tulossa) · 🎯 ohjautuvat perunat seuraavat sinua','⏱️ Survive 90 seconds · 🔴 watch out for lasers (blinking line = laser coming) · 🎯 homing potatoes follow you')}</p>
   <div class="row"><button class="btn big" id="rbGo">${L('Taistele! ⚔️','Fight! ⚔️')}</button>${robotForced()?'':`<button class="btn" id="rbLater">${L('Myöhemmin','Later')}</button>`}</div>`);
   const c=$('#robotCv').getContext('2d');c.imageSmoothingEnabled=false;c.drawImage(SPR.robot.c,12,3,36,38);
   bind('rbGo',()=>startDodge('robot'));bind('rbLater',closeModal);
 }
 function robotWin(){
-  state.robotWins=(state.robotWins||0)+1;const rw=dodge&&dodge.forced&&state.robot&&rRew(state.robot.rew);state.robot=null;
-  let reward;if(rw){const had=state.golden&&rw.id==='golden';applyReward(rw.id);reward=rw.e+' '+(had?L('3 hopeaperunaa','3 silver potatoes'):L2(rw.n));}
+  state.robotWins=(state.robotWins||0)+1;const rws=dodge&&dodge.forced&&state.robot?rList(state.robot.rew,rRew):null;state.robot=null;
+  let reward;if(rws){reward=rws.length?rws.map(rw=>{const had=rw.id==='golden'&&state.golden,hh=rw.id==='horse'&&state.horse;applyReward(rw.id);
+      return rw.e+' '+(had?L('3 hopeaperunaa','3 silver potatoes'):hh?L('2 hopeaperunaa (hevonen oli jo)','2 silver potatoes (you had the horse)'):L2(rw.n));}).join(' · '):L('ei palkintoa','no reward');}
   else if(!state.golden){state.golden=true;reward=L('✨ kultainen peruna','✨ the golden potato');}else{state.silver=(state.silver||0)+3;reward=L('🥈 3 hopeaperunaa','🥈 3 silver potatoes');}
   rebuildAnimals();save();updateHUD();setMusic('farm');
   for(let i=0;i<160;i++)parts.push({x:rand()*W,y:-rand()*40,vx:(rand()-.5)*30,vy:20+rand()*40,life:4,max:4,kind:'confetti',color:pick(['#e8435a','#ffd34d','#6fcf4f','#4fa3e8','#b97ae8','#9aa4ae'])});
@@ -2386,14 +2390,17 @@ async function admRenderUsers(){
 }
 // Ylläpitäjä valitsee rangaistuksen ja palkinnon ennen kuin robotti lähetetään toisen pelaajan peliin.
 function admRobotPicker(who,done){
-  const body=$('#admBody');let pun=R_PUN[0].id,rew=R_REW[0].id;
-  const list=(arr,k,cur)=>arr.map(x=>`<label class="rpick"><input type="radio" name="${k}" value="${x.id}" ${x.id===cur?'checked':''}> ${x.e} <b>${L2(x.n)}</b><br><small>${L2(x.d)}</small></label>`).join('');
+  const body=$('#admBody'),pun=[R_PUN[0].id],rew=[R_REW[0].id];
+  const list=(arr,k,cur)=>arr.map(x=>`<label class="rpick"><input type="checkbox" name="${k}" value="${x.id}" ${cur.includes(x.id)?'checked':''}> ${x.e} <b>${L2(x.n)}</b><br><small>${L2(x.d)}</small></label>`).join('');
   body.innerHTML=`<h3 style="margin:.2em 0">🤖 ${L('Lähetä Perunaattori 2000 pelaajalle','Send Perunaattori 2000 to')} ${nameHTML(who.name,who.id)}</h3>
-   <p class="lbNote">🔒 ${L('Pelaaja ei voi ohittaa taistelua. Valitse, mitä tapahtuu:','The player can’t skip the fight. Choose what happens:')}</p>
+   <p class="lbNote">🔒 ${L('Pelaaja ei voi ohittaa taistelua. Rastita yksi tai useampi – kaikki valitut toteutuvat:','The player can’t skip the fight. Tick one or more – all ticked ones happen:')}</p>
    <div class="rcols"><div><p><b>💀 ${L('Jos hän häviää','If they lose')}</b></p>${list(R_PUN,'rpun',pun)}</div><div><p><b>🏆 ${L('Jos hän voittaa','If they win')}</b></p>${list(R_REW,'rrew',rew)}</div></div>
    <div class="row"><button class="btn big" id="rpGo">🤖 ${L('Lähetä!','Send!')}</button><button class="btn" id="rpNo">${L('Peruuta','Cancel')}</button></div>`;
   bind('rpNo',()=>done(null));
-  bind('rpGo',()=>done({pun:body.querySelector('[name=rpun]:checked').value,rew:body.querySelector('[name=rrew]:checked').value}));
+  const vals=k=>[...body.querySelectorAll(`[name=${k}]:checked`)].map(i=>i.value);
+  const upd=()=>{const g=$('#rpGo');if(g)g.textContent=`🤖 ${L('Lähetä!','Send!')} (💀${vals('rpun').length} · 🏆${vals('rrew').length})`;};
+  body.querySelectorAll('.rpick input').forEach(i=>i.onchange=upd);upd();
+  bind('rpGo',()=>done({pun:vals('rpun'),rew:vals('rrew')}));
 }
 async function admAction(id,a,btn,tr){
   try{
