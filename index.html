@@ -385,11 +385,11 @@ const STEP=.19;
 const FARM_TRACK={mel:MEL,bass:BASS,step:STEP};
 // Viisi valittavaa farmimusiikkia (asetuksista). kick/snare = askeleet 16 askeleen jaksossa.
 const FARM_TRACKS=[
- {id:'synth',n:['Sorsasyntikka','Duck Synthwave'],e:'🦆',mel:'F4 - G#4 - C5 - D#5 - C5 - G#4 - A#4 - C5 - C#5 - C5 - A#4 - G#4 - G4 - G#4 - A#4 - - - F5 - D#5 - C5 - G#4 - A#4 - C5 - C#5 - D#5 - F5 - G5 - G#5 - G5 - F5 - - - C5 - - -'.split(' '),bass:['F2','D#2','C#2','C2','F2','C#2','D#2','C2'],step:.13,kick:[0,4,8,12],snare:[4,12],wave:'sawtooth',filt:1800,hat:.07,off:true,lv:.13},
- {id:'tekno',n:['Traktoriteknoa','Tractor Techno'],e:'⚙️',mel:'A4 C5 E5 A5 E5 C5 A4 C5 G4 B4 D5 G5 D5 B4 G4 B4 F4 A4 C5 F5 C5 A4 F4 A4 E4 G#4 B4 E5 B4 G#4 E4 G#4 A4 C5 E5 A5 B5 A5 E5 C5 G4 B4 D5 G5 A5 G5 D5 B4 F4 A4 C5 F5 G5 F5 C5 A4 E5 - E5 - G#5 - B5 -'.split(' '),bass:['A2','G2','F2','E2','A2','G2','F2','E2'],step:.115,kick:[0,4,8,12],snare:[4,12],wave:'sawtooth',filt:2600,hat:.09,off:true},
- {id:'rock',n:['Perunarock','Potato Rock'],e:'🎸',mel:'E4 - E4 G4 A4 - G4 E4 D4 - D4 E4 G4 - E4 D4 E4 - E4 G4 A4 - B4 - D5 - B4 A4 G4 - E4 - G4 - G4 A4 B4 - A4 G4 A4 - A4 B4 D5 - B4 A4 B4 - D5 - E5 - D5 B4 A4 G4 E4 D4 E4 - - -'.split(' '),bass:['E2','D2','E2','D2','G2','A2','B1','E2'],step:.14,kick:[0,3,8,10],snare:[4,12],wave:'square',hat:.08,dist:true},
- {id:'beat',n:['Lehmäbeat','Cow Beat'],e:'🐄',mel:'C5 - D#5 - G4 - - G4 A#4 - G4 - F4 - D#4 - C5 - D#5 - G5 - F5 D#5 D5 - A#4 - G4 - - - G#4 - C5 - D#5 - C5 G#4 A#4 - D5 - F5 - D5 A#4 G5 - F5 - D#5 - D5 - C5 - - - C5 - - -'.split(' '),bass:['C2','C2','G#1','G#1','A#1','A#1','G1','G1'],step:.16,kick:[0,6,10],snare:[4,12],wave:'triangle',hat:.06,lv:.16},
- {id:'disko',n:['Kanadisko','Chicken Disco'],e:'🐔',mel:'F#5 - F#5 E5 D5 - A4 - B4 - D5 - E5 - F#5 - G5 - F#5 E5 D5 - B4 - A4 - B4 D5 E5 - - - F#5 - F#5 E5 D5 - A4 - B4 - D5 - E5 - F#5 A5 B5 - A5 F#5 E5 - D5 - E5 - D5 - D5 - - -'.split(' '),bass:['D2','B1','G1','A1','D2','B1','G1','A1'],step:.12,kick:[0,4,8,12],snare:[4,12],wave:'square',hat:.1,off:true,oct:true}];
+ {id:'synth',bs:'pump',n:['Sorsasyntikka','Duck Synthwave'],e:'🦆',mel:'F4 - G#4 - C5 - D#5 - C5 - G#4 - A#4 - C5 - C#5 - C5 - A#4 - G#4 - G4 - G#4 - A#4 - - - F5 - D#5 - C5 - G#4 - A#4 - C5 - C#5 - D#5 - F5 - G5 - G#5 - G5 - F5 - - - C5 - - -'.split(' '),bass:['F2','D#2','C#2','C2','F2','C#2','D#2','C2'],step:.13,kick:[0,4,8,12],snare:[4,12],wave:'sawtooth',filt:1800,hat:.07,off:true,lv:.13},
+ {id:'tekno',bs:'offbeat',n:['Traktoriteknoa','Tractor Techno'],e:'⚙️',mel:'A4 C5 E5 A5 E5 C5 A4 C5 G4 B4 D5 G5 D5 B4 G4 B4 F4 A4 C5 F5 C5 A4 F4 A4 E4 G#4 B4 E5 B4 G#4 E4 G#4 A4 C5 E5 A5 B5 A5 E5 C5 G4 B4 D5 G5 A5 G5 D5 B4 F4 A4 C5 F5 G5 F5 C5 A4 E5 - E5 - G#5 - B5 -'.split(' '),bass:['A2','G2','F2','E2','A2','G2','F2','E2'],step:.115,kick:[0,4,8,12],snare:[4,12],wave:'sawtooth',filt:2600,hat:.09,off:true},
+ {id:'rock',bs:'rock',n:['Perunarock','Potato Rock'],e:'🎸',mel:'E4 - E4 G4 A4 - G4 E4 D4 - D4 E4 G4 - E4 D4 E4 - E4 G4 A4 - B4 - D5 - B4 A4 G4 - E4 - G4 - G4 A4 B4 - A4 G4 A4 - A4 B4 D5 - B4 A4 B4 - D5 - E5 - D5 B4 A4 G4 E4 D4 E4 - - -'.split(' '),bass:['E2','D2','E2','D2','G2','A2','B1','E2'],step:.14,kick:[0,3,8,10],snare:[4,12],wave:'square',hat:.08,dist:true},
+ {id:'beat',bs:'sub',hat16:true,n:['Lehmäbeat','Cow Beat'],e:'🐄',mel:'C5 - D#5 - G4 - - G4 A#4 - G4 - F4 - D#4 - C5 - D#5 - G5 - F5 D#5 D5 - A#4 - G4 - - - G#4 - C5 - D#5 - C5 G#4 A#4 - D5 - F5 - D5 A#4 G5 - F5 - D#5 - D5 - C5 - - - C5 - - -'.split(' '),bass:['C2','C2','G#1','G#1','A#1','A#1','G1','G1'],step:.16,kick:[0,6,10],snare:[4,12],wave:'triangle',hat:.06,lv:.16},
+ {id:'disko',bs:'octave',n:['Kanadisko','Chicken Disco'],e:'🐔',mel:'F#5 - F#5 E5 D5 - A4 - B4 - D5 - E5 - F#5 - G5 - F#5 E5 D5 - B4 - A4 - B4 D5 E5 - - - F#5 - F#5 E5 D5 - A4 - B4 - D5 - E5 - F#5 A5 B5 - A5 F#5 E5 - D5 - E5 - D5 - D5 - - -'.split(' '),bass:['D2','B1','G1','A1','D2','B1','G1','A1'],step:.12,kick:[0,4,8,12],snare:[4,12],wave:'square',hat:.1,off:true}];
 const farmTrack=()=>settings.track==null?FARM_TRACK:FARM_TRACKS[Math.max(0,Math.min(FARM_TRACKS.length-1,settings.track|0))];
 function pickTrack(i){const ch=settings.track!==i;settings.track=i;settings.music=true;saveSettings();initAudio();applyVolumes();if(musicMode==='farm'&&ch){musStep=0;cutMusic();}}
 const BOSS_TRACK={step:.15,bass:['E2','A2','E2','B1','G2','C2','G2','B1'],
@@ -415,7 +415,16 @@ function schedMusic(){
       if(T.snare.includes(j))noise({at:musNext,d:.12,v:.22,f:1800,dest:musBus});
       if(T.off&&j%4===2)noise({at:musNext,d:.07,v:T.hat*1.4,f:9000,dest:musBus});
       if(T.oct&&i%2===1)tone({f:nf(T.bass[Math.floor(i/8)])*2,at:musNext,d:T.step*.6,v:.12,type:'square',filt:{type:'lowpass',f:900},dest:musBus});}
-    if(i%2===0){const root=nf(T.bass[Math.floor(i/8)]);const beat=(i%8)/2;tone({f:beat%2?root*1.5:root,at:musNext,d:T.step*1.7,v:.3,type:'triangle',dest:musBus});}
+    if(T.bs){// valittavien biisien oma basso – ei alkuperäisen farmibiisin komppia
+      const root=nf(T.bass[Math.floor(i/8)]),j=i%16,B=(f,d,v,type,lp)=>tone({f,at:musNext,d,v,type,filt:lp?{type:'lowpass',f:lp}:null,dest:musBus});
+      if(T.bs==='pump')B(root,T.step*.9,i%2?.3:.18,'sawtooth',500);
+      else if(T.bs==='offbeat'){if(j%4===2)B(root,T.step*1.6,.4,'sawtooth',420);if(j%4===0)B(root/2,T.step*.6,.25,'sine');}
+      else if(T.bs==='rock'){if(i%2===0)B(root,T.step*1.5,.28,'square',380);}
+      else if(T.bs==='sub'){if(i%8===0)tone({f:root*1.02,f2:root,at:musNext,d:T.step*7,v:.45,type:'sine',dest:musBus});if(j===14)B(root*1.5,T.step*1.6,.25,'sine');}
+      else if(T.bs==='octave')B(i%2?root*2:root,T.step*.85,.3,'square',700);
+      if(T.hat16)noise({at:musNext,d:.025,v:T.hat*(i%2?.6:1),f:8000,dest:musBus});
+      else if(i%2)noise({at:musNext,d:.03,v:T.hat||.06,f:7000,dest:musBus});}
+    else if(i%2===0){const root=nf(T.bass[Math.floor(i/8)]);const beat=(i%8)/2;tone({f:beat%2?root*1.5:root,at:musNext,d:T.step*1.7,v:.3,type:'triangle',dest:musBus});}
     else noise({at:musNext,d:.03,v:musicMode!=='farm'?.1:(T.hat||.06),f:7000,dest:musBus});
     if(musicMode!=='farm'&&i%(musicMode==='final'?2:4)===0)noise({at:musNext,d:.08,v:.22,f:150,dest:musBus});
     musStep++;musNext+=T.step;
