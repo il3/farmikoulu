@@ -108,6 +108,9 @@ body{display:flex;align-items:center;justify-content:center;min-height:100vh;pad
 #tBar.low{background:#e9654f}
 .panel.boss{max-width:700px}
 .panel.win{font-size:clamp(14px,2.75cqw,24px)}
+.panel.title{font-size:clamp(14px,2.75cqw,24px)}
+.panel.title .logo{margin:.15em 0 .1em}
+.panel.title .row{margin:.35em 0 .1em}
 .panel.win .row{margin:.3em 0 .1em}
 .panel{position:relative}
 .panel.quiz,.panel.boss,.panel.dodge{padding-top:2em}
@@ -119,7 +122,7 @@ body{display:flex;align-items:center;justify-content:center;min-height:100vh;pad
 .panel.boss .qtext{min-height:1.2em;margin:.2em 0 .4em}
 .shake{animation:shake .35s}
 @keyframes shake{20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
-@media (max-width:560px){.opts{grid-template-columns:1fr}#hud{font-size:18px}.slot{width:38px;height:34px}}
+@media (max-width:560px){.opts{grid-template-columns:1fr}#hud{font-size:18px;gap:4px 8px}#coll{flex-basis:100%;gap:3px}.slot{width:36px;height:32px}.slot canvas{max-width:30px}#stats{flex:1}.ib{width:31px;height:30px;font-size:16px}#bLang{font-size:8px}}
 </style>
 </head>
 <body>
@@ -128,6 +131,7 @@ body{display:flex;align-items:center;justify-content:center;min-height:100vh;pad
     <div id="coll"></div>
     <div id="stats"><span id="stTasks" title="Tehtyjä tehtäviä">📝 0</span><span id="stAcc" title="Oikeat vastaukset">✔ –</span></div>
     <div id="btns">
+      <button class="ib" id="bMenu" title="Aloitusvalikko">🏠</button>
       <button class="ib" id="bMusic" title="Musiikki päälle/pois">♪</button>
       <button class="ib" id="bSfx" title="Äänet päälle/pois">🔊</button>
       <button class="ib" id="bLang" title="Kieli / Language">EN</button>
@@ -1011,7 +1015,7 @@ function updateHUD(){
 function applyLang(){
   document.documentElement.lang=settings.lang;
   $('#bLang').textContent=settings.lang==='en'?'FI':'EN';
-  $('#bMusic').title=L('Musiikki päälle/pois','Music on/off');$('#bSfx').title=L('Äänet päälle/pois','Sounds on/off');$('#bHelp').title=L('Ohjeet','How to play');
+  $('#bMusic').title=L('Musiikki päälle/pois','Music on/off');$('#bSfx').title=L('Äänet päälle/pois','Sounds on/off');$('#bHelp').title=L('Ohjeet','How to play');$('#bMenu').title=L('Aloitusvalikko (Esc)','Main menu (Esc)');
   $('#stTasks').title=L('Tehtyjä tehtäviä','Tasks done');$('#stAcc').title=L('Oikeat vastaukset','Correct answers');
   $('#foot').textContent=L('Nuolet / WASD tai napautus = liiku · E = tee tehtävä · klikkaa eläimiä!','Arrows / WASD or tap = move · E = do a task · click the animals!');
   updateHUD();nearSt=null;
@@ -1080,6 +1084,7 @@ function showHelp(){
   <li>🚶 Liiku <b>nuolinäppäimillä / WASD</b> tai <b>napauttamalla</b> maata.</li>
   <li>❗ Mene tehtäväpisteelle ja paina <b>E</b> – tai napauta pistettä.</li>
   <li>📚 Kaivo = matematiikka (kertotaulu, jako-, yhteen- ja vähennyslasku), Postilaatikko = äidinkieli, Liitutaulu = englanti, Omenapuu = ympäristöoppi, Tienviitta = historia ja maantieto.</li>
+  <li>🏠 Aloitusvalikkoon pääset milloin vain yläpalkin 🏠-napista tai Esc-näppäimellä.</li>
   <li>🚪 Voit poistua tehtävästä milloin vain <b>✕ Poistu</b> -napista tai Esc-näppäimellä.</li>
   <li>✅ Tehtävässä pitää saada <b>3 oikeaa vastausta</b>. Jokaisessa kysymyksessä on 4 vaihtoehtoa (näppäimet 1–4).</li>
   <li>❤️ Sinulla on <b>3 yritystä</b>. Väärästä vastauksesta menetät yhden, ja kysymys vaihtuu uuteen. Jos kaikki 3 yritystä menevät, tehtävä alkaa alusta.</li>
@@ -1094,6 +1099,7 @@ function showHelp(){
   <li>🚶 Move with the <b>arrow keys / WASD</b> or <b>tap</b> the ground.</li>
   <li>❗ Walk to a task point and press <b>E</b> – or tap it.</li>
   <li>📚 Well = maths (times tables, division, addition, subtraction), Mailbox = Finnish language, Chalkboard = English, Apple tree = science, Signpost = history & geography.</li>
+  <li>🏠 Go to the main menu any time with the 🏠 button at the top or Esc.</li>
   <li>🚪 You can leave a task any time with the <b>✕ Leave</b> button or Esc.</li>
   <li>✅ Get <b>3 correct answers</b> to finish a task. Every question has 4 options (keys 1–4).</li>
   <li>❤️ You have <b>3 tries</b>. A wrong answer costs one try and the question changes. If all 3 tries are used, the task starts over.</li>
@@ -1425,7 +1431,7 @@ addEventListener('keydown',e=>{
   if(e.target&&e.target.id==='cmdIn')return;
   const k=e.key.toLowerCase();
   if(modalType){
-    if(k==='escape'){if(['quiz','boss','dodge'].includes(modalType))exitTask();else if(['help','bossintro'].includes(modalType))(started?closeModal():showTitle());e.preventDefault();return;}
+    if(k==='escape'){if(modalType==='title'&&started){closeModal();e.preventDefault();return;}if(['quiz','boss','dodge'].includes(modalType))exitTask();else if(['help','bossintro'].includes(modalType))(started?closeModal():showTitle());e.preventDefault();return;}
     if(modalType==='dodge'&&['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(k)){keys.add(k);e.preventDefault();return;}
     if(modalType==='quiz'&&quiz){
       if(['1','2','3','4'].includes(k)&&!quiz.answered){answer(+k-1);e.preventDefault();}
@@ -1438,6 +1444,7 @@ addEventListener('keydown',e=>{
     }
     return;
   }
+  if(k==='escape'){goMenu();e.preventDefault();return;}
   if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(k)){keys.add(k);e.preventDefault();initAudio();}
   if((k==='e'||k===' '||k==='enter')&&nearSt){e.preventDefault();openStation(nearSt);}
 });
@@ -1706,6 +1713,17 @@ function runCmd(raw){
 $('#bSfx').onclick=()=>{settings.sfx=!settings.sfx;saveSettings();initAudio();applyVolumes();};
 $('#bLang').onclick=()=>{if(['quiz','chest','result','boss','bossintro'].includes(modalType)){toast(L('Vaihda kieli tehtävän jälkeen.','Change the language after the task.'));return;}
   settings.lang=settings.lang==='en'?'fi':'en';saveSettings();applyLang();};
+// Aloitusvalikkoon milloin vain (🏠-nappi tai Esc farmilla). Kesken tehtävän kysytään varmistus.
+let menuSure=0;
+function goMenu(){
+  if(modalType==='title')return;
+  if(modalType==='chest'){toast(L('Avaa arkku ensin! 🎁','Open the chest first! 🎁'));return;}
+  const busy=(modalType==='quiz'&&quiz&&(quiz.done||quiz.mistakes))||(modalType==='boss'&&fight&&fight.phase==='q')||(modalType==='dodge'&&dodge&&dodge.phase==='play');
+  if(busy&&performance.now()-menuSure>3000){menuSure=performance.now();sfx.deny();
+    toast(L('Paina 🏠 uudelleen: tehtävän edistys menetetään.','Press 🏠 again: task progress will be lost.'));return;}
+  menuSure=0;initAudio();if(modalType)closeModal();closeCmd();$('#tirppa').hidden=true;save();sfx.ui();showTitle();
+}
+$('#bMenu').onclick=goMenu;
 $('#bHelp').onclick=()=>{if(['quiz','chest','result','boss','bossintro'].includes(modalType))return;initAudio();showHelp();};
 
 /* ---------- PÄIVITYS ---------- */
