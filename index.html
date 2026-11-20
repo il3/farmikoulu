@@ -112,6 +112,17 @@ body.phone #bossCv,body.phone #dodgeCv{width:min(100%,460px)}
 .pick .btn{padding:.05em .6em}
 .pick .btn.on{background:#9be07a}
 .redo{font-size:2em;margin:.1em 0}
+.nameIn{font:inherit;font-size:1em;width:11em;max-width:60%;padding:.05em .4em;border:3px solid var(--wood2);background:#fff8e1;color:var(--ink)}
+.nameIn:focus{outline:3px dashed var(--red);outline-offset:1px}
+.lbTabs{display:flex;gap:.4em;justify-content:center;margin:.2em 0 .4em}
+.lbTabs .btn.on{background:#9be07a}
+.lb{width:100%;border-collapse:collapse;font-size:.8em;text-align:left}
+.lbTabs .btn{font-size:.85em}
+.lb th{border-bottom:3px solid var(--wood2);padding:.1em .3em;font-weight:normal;opacity:.8}
+.lb td{padding:.1em .3em;border-bottom:1px dashed var(--wood)}
+.lb tr.me td{background:#ffe9a8}
+.lb td.r{text-align:right;white-space:nowrap}
+.lbNote{font-size:.8em;opacity:.8}
 .credit{font-size:.8em;opacity:.75;margin:.4em 0 0}
 #cmd{position:absolute;left:0;right:0;bottom:0;z-index:20;background:rgba(10,14,8,.92);border-top:3px solid #6fcf4f;color:#9dff7a;font-size:clamp(15px,2.6cqw,22px);padding:.2em .5em;font-family:'VT323',monospace}
 #cmdLog{max-height:7.5em;overflow:auto;white-space:pre-wrap;line-height:1.1}
@@ -163,7 +174,7 @@ body.phone #bossCv,body.phone #dodgeCv{width:min(100%,460px)}
 <div id="game">
   <div id="hud">
     <div id="coll"></div>
-    <div id="stats"><span id="stTasks" title="Tehtyjä tehtäviä">📝 0</span><span id="stAcc" title="Oikeat vastaukset">✔ –</span></div>
+    <div id="stats"><span id="stTasks" title="Tehtyjä tehtäviä">📝 0</span><span id="stAcc" title="Oikeat vastaukset">✔ –</span><span id="stTime" title="Peliaika">⏱️ 0:00</span></div>
     <div id="btns">
       <button class="ib" id="bMenu" title="Aloitusvalikko">🏠</button>
       <button class="ib" id="bMusic" title="Musiikki päälle/pois">♪</button>
@@ -248,7 +259,7 @@ SPR.apple=makeSprite(["..g.",".rr.","rrrr","rrrr",".rr."],{g:'#3f9a3f',r:'#d6332
 /* ---------- ÄÄNET ---------- */
 let AC=null,master,musicGain,sfxGain,NB=null,musTimer=null,musStep=0,musNext=0;
 const SKEY='farmikoulu-v1',OKEY='farmikoulu-asetukset';
-let settings={music:true,sfx:true,lang:'fi',device:null};
+let settings={music:true,sfx:true,lang:'fi',device:null,name:''};
 try{const s=JSON.parse(localStorage.getItem(OKEY));if(s)settings=Object.assign(settings,s);}catch(e){}
 function saveSettings(){try{localStorage.setItem(OKEY,JSON.stringify(settings));}catch(e){}}
 function initAudio(){
@@ -991,7 +1002,7 @@ function buildBG2(){
 const BG2=buildBG2();
 
 /* ---------- TILA ---------- */
-function freshState(level){return {owned:{},tasks:0,correct:0,answered:0,last:null,dup:0,won:false,chests:0,restarts:0,level:level||5,boss:'none',bossTries:0,doneSt:[],stone:false,unlocked78:false,farm:1,farm2:false,crops:{},dup2:0,farm2Done:false};}
+function freshState(level){return {owned:{},tasks:0,correct:0,answered:0,last:null,dup:0,won:false,chests:0,restarts:0,level:level||5,boss:'none',bossTries:0,doneSt:[],stone:false,unlocked78:false,farm:1,farm2:false,crops:{},dup2:0,farm2Done:false,name:'',time:0,cheated:false};}
 function loadState(){try{const s=JSON.parse(localStorage.getItem(SKEY));if(s&&s.owned)return Object.assign(freshState(),s);}catch(e){}return null;}
 function save(){try{localStorage.setItem(SKEY,JSON.stringify(state));}catch(e){}}
 let state=loadState()||freshState();
@@ -1050,6 +1061,7 @@ function updateHUD(){
   goldSlot.hidden=!state.golden||f2;goldSlot.title=L2(ANIM.kulta.name);
   ANIMALS.forEach(a=>{const n=state.owned[a.id]||0;a.slot.classList.toggle('miss',!n);a.cnt.textContent=n>1?'×'+n:'';a.slot.title=n?L2(a.name):L('??? – vielä löytämättä','??? – not found yet');});
   $('#stTasks').textContent='📝 '+state.tasks;
+  updateTimeHUD();
   $('#stAcc').textContent='✔ '+(state.answered?Math.round(state.correct/state.answered*100)+' %':'–');
 }
 function applyLang(){
@@ -1091,6 +1103,7 @@ function bind(id,fn){const e=document.getElementById(id);if(e)e.onclick=()=>{ini
 function pickerHTML(){
   return `<div class="pick">${L('Kieli','Language')}:
     <button class="btn ${settings.lang==='fi'?'on':''}" id="pFi">Suomi</button><button class="btn ${settings.lang==='en'?'on':''}" id="pEn">English</button></div>
+  <div class="pick">👤 ${L('Pelaajanimi','Player name')}: <input class="nameIn" id="pName" maxlength="16" autocomplete="off" spellcheck="false" placeholder="${L('Kirjoita nimi','Type a name')}" value="${esc(settings.name||state.name||'')}"></div>
   <div class="pick">${L('Laite','Device')}:
     <button class="btn ${!isPhone()?'on':''}" id="pPc">💻 ${L('Tietokone','Computer')}</button><button class="btn ${isPhone()?'on':''}" id="pPhone">📱 ${L('Puhelin','Phone')}</button></div>
   <div class="pick">${L('Tehtävien taso','Task level')}:
@@ -1114,13 +1127,17 @@ function showTitle(){
   <canvas id="parade" width="160" height="26"></canvas>
   ${pickerHTML()}
   <div class="row">${has?`<button class="btn big" id="tCont">▶ ${L('Jatka peliä','Continue')}</button><button class="btn" id="tNew">${L('Uusi peli','New game')}</button>`:`<button class="btn big" id="tNew">▶ ${L('Aloita peli','Start game')}</button>`}
-  <button class="btn" id="tHelp">${L('Ohjeet','How to play')}</button></div>
+  <button class="btn" id="tHelp">${L('Ohjeet','How to play')}</button><button class="btn" id="tBoard">🏆 ${L('Tulostaulu','Leaderboard')}</button></div>
   <p class="credit">${L('Tekijä','Made by')}: <b>leetu1234</b></p>`);
   bindPicker();
-  bind('tCont',()=>{started=true;closeModal();sfx.ui();});
+  const ni=$('#pName');ni.addEventListener('input',()=>{settings.name=cleanName(ni.value);saveSettings();});
+  ni.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();($('#tCont')||$('#tNew')).click();}});
+  bind('tBoard',()=>showBoard(showTitle));
+  bind('tCont',()=>{const nm=cleanName(ni.value);if(nm){state.name=nm;save();}else if(!state.name){needName();return;}started=true;closeModal();sfx.ui();});
   bind('tNew',b=>{
+    const nm=cleanName(ni.value);if(!nm){needName();return;}
     if(has&&!b.dataset.sure){b.dataset.sure=1;b.textContent=L('Varmasti? Edistys nollataan','Sure? Progress will be reset');return;}
-    state=freshState(pendingLevel);state.unlocked78=pendingLevel===78;bossRise=0;rebuildAnimals();updateHUD();save();P.x=150;P.y=100;started=true;closeModal();sfx.ui();
+    state=freshState(pendingLevel);state.name=nm;settings.name=nm;saveSettings();state.unlocked78=pendingLevel===78;bossRise=0;rebuildAnimals();updateHUD();save();P.x=150;P.y=100;started=true;closeModal();sfx.ui();
     setTimeout(()=>toast(isPhone()?L('Kävele ❗-merkin luo ja paina ✋!','Walk to a ❗ sign and press ✋!'):L('Kävele ❗-merkin luo ja paina E!','Walk to a ❗ sign and press E!')),300);});
   bind('tHelp',showHelp);
 }
@@ -1129,6 +1146,7 @@ function showHelp(){
   <li>🚶 Liiku <b>nuolinäppäimillä / WASD</b> tai <b>napauttamalla</b> maata. Puhelimella käytä <b>ristiohjainta</b> ja tee tehtävä <b>✋</b>-napista. Laitteen voi valita aloitusvalikosta.</li>
   <li>❗ Mene tehtäväpisteelle ja paina <b>E</b> – tai napauta pistettä.</li>
   <li>📚 Kaivo = matematiikka (kertotaulu, jako-, yhteen- ja vähennyslasku), Postilaatikko = äidinkieli, Liitutaulu = englanti, Omenapuu = ympäristöoppi, Tienviitta = historia ja maantieto.</li>
+  <li>🏆 Kirjoita alussa <b>pelaajanimi</b>. Kun voitat Perunapomon ensimmäisen kerran, aikasi tallentuu <b>tulostauluun</b>. Komentopalkin apukomennoilla pelattu peli ei pääse tulostauluun.</li>
   <li>🏠 Aloitusvalikkoon pääset milloin vain yläpalkin 🏠-napista tai Esc-näppäimellä.</li>
   <li>🚪 Voit poistua tehtävästä milloin vain <b>✕ Poistu</b> -napista tai Esc-näppäimellä.</li>
   <li>✅ Tehtävässä pitää saada <b>3 oikeaa vastausta</b>. Jokaisessa kysymyksessä on 4 vaihtoehtoa (näppäimet 1–4).</li>
@@ -1144,6 +1162,7 @@ function showHelp(){
   <li>🚶 Move with the <b>arrow keys / WASD</b> or <b>tap</b> the ground. On a phone, use the <b>D-pad</b> and the <b>✋</b> button. Choose your device in the main menu.</li>
   <li>❗ Walk to a task point and press <b>E</b> – or tap it.</li>
   <li>📚 Well = maths (times tables, division, addition, subtraction), Mailbox = Finnish language, Chalkboard = English, Apple tree = science, Signpost = history & geography.</li>
+  <li>🏆 Type a <b>player name</b> at the start. When you beat the Potato Boss for the first time, your time goes on the <b>leaderboard</b>. Games that used command-bar helpers don’t go on the leaderboard.</li>
   <li>🏠 Go to the main menu any time with the 🏠 button at the top or Esc.</li>
   <li>🚪 You can leave a task any time with the <b>✕ Leave</b> button or Esc.</li>
   <li>✅ Get <b>3 correct answers</b> to finish a task. Every question has 4 options (keys 1–4).</li>
@@ -1398,6 +1417,7 @@ function bossWin(){
   const record=hearts>(state.bestHearts||0);if(record)state.bestHearts=hearts;
   state.silver=(state.silver||0)+1;
   lastBossResult={hearts,record,first};save();closeModal();silverFromBarn();updateHUD();
+  if(first)lastRun=submitScore();
   for(let i=0;i<40;i++)parts.push({x:BOSS.x,y:BOSS.y-20,vx:(rand()-.5)*90,vy:(rand()-.9)*70,life:1.3,max:1.3,kind:'spark',color:pick(['#fff6a0','#ffffff','#c9995a'])});
   setTimeout(first?showWin:showRematchWin,600);
 }
@@ -1457,10 +1477,12 @@ function showRematchWin(){
 function showWin(){
   sfx.win();
   for(let i=0;i<120;i++)parts.push({x:rand()*W,y:-rand()*40,vx:(rand()-.5)*30,vy:20+rand()*40,life:4,max:4,kind:'confetti',color:pick(['#e8435a','#ffd34d','#6fcf4f','#4fa3e8','#b97ae8'])});
-    openModal('win',`<div class="logo small">${L('VOITIT!','YOU WON!')}</div><p>${L('Keräsit kaikki eläimet ja voitit Perunapomon! Farmi on pelastettu! 🎉','You collected every animal and beat the Potato Boss! The farm is saved! 🎉')}</p>${state.silver?silverLine():''}<canvas id="parade" width="160" height="26"></canvas>
+    openModal('win',`<div class="logo small">${L('VOITIT!','YOU WON!')}</div><p>${L('Keräsit kaikki eläimet ja voitit Perunapomon! Farmi on pelastettu! 🎉','You collected every animal and beat the Potato Boss! The farm is saved! 🎉')}</p><p class="fact" id="lbLine">⏱️ ${L('Aikasi','Your time')}: <b>${fmtClock(state.time||0)}</b> · ${state.cheated?L('huijauskomentoja käytetty, ei tulostaululle','cheat commands used, not on the leaderboard'):L('tallennetaan tulostauluun…','saving to the leaderboard…')}</p>${state.silver?silverLine():''}
   <div class="stats"><div>${L('Tehtäviä','Tasks')}<b>${state.tasks}</b></div><div>${L('Oikein','Correct')}<b>${state.answered?Math.round(state.correct/state.answered*100):0} %</b></div><div>${L('Arkkuja','Chests')}<b>${state.chests}</b></div><div>${L('Sydämiä jäljellä','Hearts left')}<b>${lastBossResult?lastBossResult.hearts:state.bestHearts||0} ❤️</b></div></div>
   <div class="row"><button class="btn big" id="wFarm">🚜 ${L('Seuraavalle farmille','To the next farm')}</button></div>
-  <div class="row" style="font-size:.85em"><button class="btn" id="wCont">${L('Jatka farmilla','Keep playing')}</button><button class="btn" id="wAgain">⚔️ ${L('Pomo uudelleen','Boss again')}</button><button class="btn" id="wNew">${L('Uusi peli','New game')}</button></div>`);
+  <div class="row" style="font-size:.85em"><button class="btn" id="wCont">${L('Jatka farmilla','Keep playing')}</button><button class="btn" id="wAgain">⚔️ ${L('Pomo uudelleen','Boss again')}</button><button class="btn" id="wNew">${L('Uusi peli','New game')}</button><button class="btn" id="wBoard">🏆 ${L('Tulostaulu','Leaderboard')}</button></div>`);
+  bind('wBoard',()=>showBoard(null));
+  if(lastRun)lastRun.then(r=>{const el=$('#lbLine');if(!el||!r)return;el.innerHTML=`⏱️ ${L('Aikasi','Your time')}: <b>${fmtClock(r.time)}</b> · ${L('sijoitus','rank')} <b>#${r.rank}</b> ${r.shared?L('tulostaululla','on the leaderboard'):L('tällä laitteella','on this device')}${r.best?' 🏅':''}`;});
   bind('wCont',closeModal);bind('wAgain',startFight);bind('wFarm',()=>{closeModal();goFarm(2);});
   bind('wNew',()=>{state=freshState(state.level);bossRise=0;rebuildAnimals();updateHUD();save();P.x=150;P.y=100;closeModal();});
 }
@@ -1473,10 +1495,10 @@ function drawParade(){
 
 /* ---------- SYÖTE ---------- */
 addEventListener('keydown',e=>{
-  if(e.target&&e.target.id==='cmdIn')return;
+  if(e.target&&(e.target.id==='cmdIn'||e.target.id==='pName'))return;
   const k=e.key.toLowerCase();
   if(modalType){
-    if(k==='escape'){if(modalType==='title'&&started){closeModal();e.preventDefault();return;}if(['quiz','boss','dodge'].includes(modalType))exitTask();else if(['help','bossintro'].includes(modalType))(started?closeModal():showTitle());e.preventDefault();return;}
+    if(k==='escape'){if(modalType==='title'&&started){closeModal();e.preventDefault();return;}if(['quiz','boss','dodge'].includes(modalType))exitTask();else if(['help','bossintro','board'].includes(modalType))(started?closeModal():showTitle());e.preventDefault();return;}
     if(modalType==='dodge'&&['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(k)){keys.add(k);e.preventDefault();return;}
     if(modalType==='quiz'&&quiz){
       if(['1','2','3','4'].includes(k)&&!quiz.answered){answer(+k-1);e.preventDefault();}
@@ -1671,6 +1693,8 @@ function checkBossWake(){if(state.boss==='none'&&allAnimals()){state.boss='awake
 function runCmd(raw){
   const [c,...args]=raw.toLowerCase().split(/\s+/),a=args[0];
   const ok=m=>cmdLog(m),err=m=>cmdLog(m,'err');
+  if(['eläimet','elaimet','animals','anna','give','arkku','chest','kultaarkku','goldchest','pomo','boss','voita','win','sydämet','sydamet','hearts','aika','time','lepo','rest','nopeus','speed','kivi','stone'].includes(c)&&!state.won&&!state.cheated){
+    state.cheated=true;save();cmdLog(L('⚠️ Huijauskomento: tämän pelin aikaa ei tallenneta tulostauluun.','⚠️ Cheat command: this game’s time won’t go on the leaderboard.'),'err');}
   switch(c){
   case 'apua':case 'help':case '?':
     ok(L(`Komennot:
@@ -1780,6 +1804,7 @@ function blocked(x,y){
   const dx=(x-POND.cx)/(POND.rx-2),dy=(y-POND.cy)/(POND.ry-2);return dx*dx+dy*dy<1;
 }
 function update(dt){
+  if(started&&!state.won&&!['title','help','board'].includes(modalType)){state.time=(state.time||0)+dt;}
   if(!modalType){
     let dx=0,dy=0;
     if(keys.has('arrowleft')||keys.has('a'))dx--;if(keys.has('arrowright')||keys.has('d'))dx++;
@@ -1834,6 +1859,62 @@ function renderPrompt(){
 addEventListener('resize',()=>{if(nearSt)renderPrompt();});
 
 const SECRET_PX={x:104,y:199,armed:true};
+/* ---------- PELAAJANIMI JA TULOSTAULU ---------- */
+const cleanName=v=>String(v||'').replace(/[<>"&]/g,'').replace(/\s+/g,' ').trim().slice(0,16);
+const fmtClock=t=>{t=Math.floor(t);const h=Math.floor(t/3600),m=Math.floor(t%3600/60),sec=t%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(sec).padStart(2,'0');};
+function updateTimeHUD(){const el=$('#stTime');if(el){el.textContent='⏱️ '+fmtClock(state.time||0);el.title=L('Peliaika (tulostaulua varten)','Play time (for the leaderboard)');}}
+setInterval(()=>{if(started)updateTimeHUD();},1000);
+function needName(){const ni=$('#pName');toast(L('Kirjoita ensin pelaajanimi! 👤','Type a player name first! 👤'));sfx.deny();if(ni){ni.focus();ni.classList.remove('shake');void ni.offsetWidth;ni.classList.add('shake');}}
+const LKEY='farmikoulu-tulokset';
+function localScores(){try{const a=JSON.parse(localStorage.getItem(LKEY));return Array.isArray(a)?a:[];}catch(e){return [];}}
+let lastRun=null,SDB=null,ME=null;
+// Yhteinen tulostaulu toimii Claude-julkaisussa (db). Muualla (esim. GitHub Pages) käytetään laitteen omaa tulostaulua.
+const dbReady=(async()=>{try{if(!(window.claude&&claude.use))return null;const [d,u]=await Promise.all([claude.use('db'),claude.use('user')]);
+  if(!d||!u)return null;const id=await u.id();if(!id)return null;SDB=d;ME=id;return d;}catch(e){return null;}})();
+async function submitScore(){
+  if(state.cheated)return null;
+  const rec={name:state.name||'?',time:Math.round(state.time||0),level:state.level,date:new Date().toISOString().slice(0,10)};
+  const loc=localScores();loc.push(rec);loc.sort((a,b)=>a.time-b.time);try{localStorage.setItem(LKEY,JSON.stringify(loc.slice(0,50)));}catch(e){}
+  let res={time:rec.time,rank:loc.indexOf(rec)+1,shared:false,best:loc[0]===rec};
+  try{const d=await Promise.race([dbReady,new Promise(r=>setTimeout(()=>r(null),10000))]);
+    if(d){const ref=d.doc('scores/'+ME),old=await ref.get();
+      if(!old.exists||!(old.data().time<=rec.time))await ref.set(rec);
+      const all=await d.collection('scores').orderBy('time').limit(200).get();
+      const idx=all.docs.findIndex(x=>x.id===ME);if(idx>=0)res={time:rec.time,rank:idx+1,shared:true,best:idx===0};}}catch(e){}
+  return res;
+}
+let boardTab='shared';
+const shortLevel=lv=>lv===78?'7–8':lv===34?'3–4':String(lv);
+const shortDate=d=>{const m=String(d||'').match(/^(\d{4})-(\d\d)-(\d\d)/);return m?(settings.lang==='en'?`${+m[3]}/${+m[2]}/${m[1].slice(2)}`:`${+m[3]}.${+m[2]}.${m[1].slice(2)}`):'';};
+function showBoard(back){
+  const backFn=back||closeModal;
+  openModal('board',`<h2>🏆 ${L('Tulostaulu – nopeimmat suoritukset','Leaderboard – fastest runs')}</h2>
+  <p class="lbNote">${L('Aika pelin alusta siihen, kun Perunapomo kaatuu ensimmäisen kerran.','Time from the start of the game until the Potato Boss falls for the first time.')}</p>
+  <div class="lbTabs"><button class="btn" id="lbS">🌍 ${L('Kaikki pelaajat','All players')}</button><button class="btn" id="lbL">📱 ${L('Tämä laite','This device')}</button></div>
+  <div id="lbBody"><p>${L('Ladataan…','Loading…')}</p></div>
+  <div class="row"><button class="btn big" id="lbBack">${L('Takaisin','Back')}</button></div>`);
+  bind('lbBack',backFn);bind('lbS',()=>{boardTab='shared';fillBoard();});bind('lbL',()=>{boardTab='local';fillBoard();});
+  fillBoard();
+}
+function boardTable(rows,meId){
+  if(!rows.length)return `<p>${L('Ei vielä tuloksia. Ole ensimmäinen!','No results yet. Be the first!')}</p>`;
+  return `<table class="lb"><tr><th>#</th><th>${L('Nimi','Name')}</th><th class="r">${L('Aika','Time')}</th><th>${L('Lk','Gr.')}</th><th>${L('Päivä','Date')}</th></tr>`+
+    rows.map((r,i)=>`<tr class="${r._me?'me':''}"><td>${i<3?['🥇','🥈','🥉'][i]:i+1}</td><td>${esc(cleanName(r.name)||'?')}</td><td class="r">${fmtClock(+r.time||0)}</td><td>${esc(shortLevel(+r.level||5))}</td><td>${esc(shortDate(r.date))}</td></tr>`).join('')+'</table>';
+}
+async function fillBoard(){
+  const body=$('#lbBody');if(!body)return;
+  $('#lbS').classList.toggle('on',boardTab==='shared');$('#lbL').classList.toggle('on',boardTab==='local');
+  if(boardTab==='local'){body.innerHTML=boardTable(localScores().slice(0,20));return;}
+  body.innerHTML=`<p>${L('Ladataan…','Loading…')}</p>`;
+  const d=await Promise.race([dbReady,new Promise(r=>setTimeout(()=>r(null),10000))]);
+  if(!$('#lbBody')||boardTab!=='shared')return;
+  if(!d){boardTab='local';fillBoard();$('#lbBody').insertAdjacentHTML('afterbegin',`<p class="lbNote">${L('Yhteinen tulostaulu ei ole käytettävissä tässä versiossa, joten näet tämän laitteen tulokset.','The shared leaderboard isn’t available in this version, so you see this device’s results.')}</p>`);return;}
+  try{const all=await Promise.race([d.collection('scores').orderBy('time').limit(20).get(),new Promise((_,j)=>setTimeout(()=>j(new Error('timeout')),10000))]);
+    if(!$('#lbBody')||boardTab!=='shared')return;
+    body.innerHTML=boardTable(all.docs.map(x=>({...x.data(),_me:x.id===ME})));
+  }catch(e){if($('#lbBody'))body.innerHTML=`<p class="lbNote">${L('Tulostaulua ei saatu ladattua juuri nyt.','Couldn’t load the leaderboard right now.')}</p>`;}
+}
+
 /* ---------- PUHELINTUKI ---------- */
 function applyDevice(){
   const ph=isPhone();document.body.classList.toggle('phone',ph);
