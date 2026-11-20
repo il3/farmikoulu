@@ -122,6 +122,9 @@ body.phone #bossCv,body.phone #dodgeCv{width:min(100%,460px)}
 .lb td{padding:.1em .3em;border-bottom:1px dashed var(--wood)}
 .lb tr.me td{background:#ffe9a8}
 .lb td.r{text-align:right;white-space:nowrap}
+.lb .medal{font-size:1.15em;filter:drop-shadow(1px 1px 0 rgba(0,0,0,.35))}
+.lb tr.m1 td{background:#fff1b8}.lb tr.m2 td{background:#eef0f3}.lb tr.m3 td{background:#f7e2cf}
+.lb tr.me td{box-shadow:inset 0 -2px 0 var(--gold)}
 .lbNote{font-size:.8em;opacity:.8}
 .pinIn{width:8.5em}
 .bad{color:#a8321f}
@@ -2302,10 +2305,16 @@ function showBoard(back){
   bind('lbBack',backFn);bind('lbS',()=>{boardTab='shared';fillBoard();});bind('lbL',()=>{boardTab='local';fillBoard();});
   fillBoard();
 }
+// Kulta, hopea ja pronssi kolmelle parhaalle pelaajalle (kunkin pelaajan paras tulos).
+function medalRows(rows){
+  const seen=new Set();let n=0;
+  return rows.map(r=>{const key=r.acc||cleanName(r.name).toLowerCase();let m=0;
+    if(n<3&&!seen.has(key)){seen.add(key);n++;m=n;}return {...r,_medal:m};});
+}
 function boardTable(rows,meId){
   if(!rows.length)return `<p>${L('Ei vielä tuloksia. Ole ensimmäinen!','No results yet. Be the first!')}</p>`;
   return `<table class="lb"><tr><th>#</th><th>${L('Nimi','Name')}</th><th class="r">${L('Aika','Time')}</th><th>${L('Lk','Gr.')}</th><th>${L('Päivä','Date')}</th></tr>`+
-    rows.map((r,i)=>`<tr class="${r._me?'me':''}"><td>${i<3?['🥇','🥈','🥉'][i]:i+1}</td><td>${esc(cleanName(r.name)||'?')}</td><td class="r">${fmtClock(+r.time||0)}</td><td>${esc(shortLevel(+r.level||5))}</td><td>${esc(shortDate(r.date))}</td></tr>`).join('')+'</table>';
+    medalRows(rows).map((r,i)=>`<tr class="${r._me?'me':''}${r._medal?' m'+r._medal:''}"><td>${i+1}</td><td>${esc(cleanName(r.name)||'?')}${r._medal?` <span class="medal" title="${[L('Kulta','Gold'),L('Hopea','Silver'),L('Pronssi','Bronze')][r._medal-1]}">${['🥇','🥈','🥉'][r._medal-1]}</span>`:''}</td><td class="r">${fmtClock(+r.time||0)}</td><td>${esc(shortLevel(+r.level||5))}</td><td>${esc(shortDate(r.date))}</td></tr>`).join('')+'</table>';
 }
 async function fillBoard(){
   const body=$('#lbBody');if(!body)return;
