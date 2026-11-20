@@ -1903,14 +1903,25 @@ const lset=o=>{try{localStorage.setItem(LACC,JSON.stringify(o));}catch(e){}};
 const LOCALDB={doc:p=>{const id=p.split('/')[1];return {get:async()=>{const v=lget()[id];return {id,exists:!!v,data:()=>v};},set:async v=>{const all=lget();all[id]=JSON.parse(JSON.stringify(v));lset(all);}};},
   collection:()=>({limit:()=>({get:async()=>{const all=lget();return {docs:Object.keys(all).map(id=>({id,exists:true,data:()=>all[id]}))};}})})};
 let ACCDB=null;
-const ACCS=Promise.race([dbReady,new Promise(r=>setTimeout(()=>r(null),10000))]).then(d=>{ACCDB=d||LOCALDB;return ACCDB;});
-const cloudMode=()=>!!SDB&&ACCDB===SDB;
+// Supabase: yhteinen tietokanta muille versioille (esim. GitHub Pages). Julkinen avain on tarkoitettu selaimeen;
+// varsinainen suojaus (PIN-tarkistus, lukitus) on tietokannan funktioissa, ks. supabase-asennus.sql.
+const SUPA_URL='https://ebvrosdwdaguiddvlkqh.supabase.co',SUPA_KEY='';
+let SUPA=false;
+async function rpc(fn,args){
+  const h={'apikey':SUPA_KEY,'Content-Type':'application/json'};if(!SUPA_KEY.startsWith('sb_'))h.Authorization='Bearer '+SUPA_KEY;
+  const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),12000);
+  try{const r=await fetch(SUPA_URL+'/rest/v1/rpc/'+fn,{method:'POST',headers:h,body:JSON.stringify(args),signal:ctl.signal});
+    if(!r.ok)throw new Error('rpc '+fn+' '+r.status);return await r.json();}finally{clearTimeout(tm);}
+}
+const ACCS=Promise.race([dbReady,new Promise(r=>setTimeout(()=>r(null),10000))]).then(d=>{if(!d&&SUPA_KEY)SUPA=true;ACCDB=d||LOCALDB;return ACCDB;});
+const cloudMode=()=>(!!SDB&&ACCDB===SDB)||SUPA;
+const hasSave=sv=>sv&&typeof sv==='object'&&Object.keys(sv).length>0;
 /* ---------- KÄYTTÄJÄ: NIMI + PIN (yhteinen tallennus, toimii Claude-julkaisussa) ----------
    PIN suojaa vain vahingoilta: tallennus on jaettu kaikkien pelaajien kesken, eikä se ole oikea tietoturvajärjestelmä. */
 let ACC=null,ADMIN=null,cloudTimer=0,cloudBusy=false,cloudDirty=false;
 // Ylläpitäjä: käyttäjä leetu1234. PIN-koodia ei ole koodissa selväkielisenä, vain sen tiiviste.
 const ADMIN_ID='leetu1234',ADMIN_SALT='admin-v1',ADMIN_HASH='d2d3c49bb6022d67e1b1d8012442544eca41656c2f9ba383a5f3d3443c80ce84';
-const isAdmin=()=>!!ADMIN||(ACC&&ACC.id===ADMIN_ID&&ACC.hash===ADMIN_HASH);
+const isAdmin=()=>!!ADMIN||!!(ACC&&(ACC.admin||(ACC.id===ADMIN_ID&&ACC.hash===ADMIN_HASH)));
 const accId=n=>cleanName(n).toLowerCase().replace(/[åä]/g,'a').replace(/ö/g,'o').replace(/[^a-z0-9_-]+/g,'_').replace(/^_+|_+$/g,'').slice(0,24);
 async function pinHash(id,pin,salt){
   const enc=new TextEncoder(),key=await crypto.subtle.importKey('raw',enc.encode(pin),'PBKDF2',false,['deriveBits']);
@@ -1930,6 +1941,16 @@ async function login(name,pin){
     const nm=cleanName(name),id=accId(nm);
     if(!id)return {ok:false,msg:L('Kirjoita ensin pelaajanimi.','Type a player name first.')};
     if(!/^\d{4,6}$/.test(pin||''))return {ok:false,msg:L('PIN-koodissa pitää olla 4–6 numeroa.','The PIN must be 4–6 digits.')};
+    if(SUPA){
+      const r=await rpc('fk_login',{p_id:id,p_name:nm,p_pin:pin});
+      if(!r||!r.ok)return {ok:false,msg:r&&r.err==='locked'?L('Liian monta väärää yritystä. Odota 5 minuuttia.','Too many wrong tries. Wait 5 minutes.'):L('Väärä PIN-koodi tälle nimelle.','Wrong PIN for this name.')};
+      ADMIN=null;settings.admin=null;
+      if(r.created){if(state.owner&&state.owner!==id)applySave(freshState(state.level));}
+      else if(hasSave(r.save))applySave(r.save);else if(state.owner&&state.owner!==id)applySave(freshState(state.level));
+      ACC={id,name:cleanName(r.name)||nm,token:r.token,admin:!!r.admin};state.name=ACC.name;state.owner=id;
+      settings.account={id,name:ACC.name,token:r.token,admin:!!r.admin,mode:'supa'};settings.name=ACC.name;saveSettings();save();
+      return {ok:true,msg:r.created?L(`☁️ Käyttäjä ${ACC.name} luotu!`,`☁️ User ${ACC.name} created!`):r.admin?L('👑 Tervetuloa, ylläpitäjä leetu1234!','👑 Welcome, admin leetu1234!'):L(`☁️ Tervetuloa takaisin, ${ACC.name}! Edistys ladattu.`,`☁️ Welcome back, ${ACC.name}! Progress loaded.`)};
+    }
     const ref=d.doc('accounts/'+id),snap=await ref.get();
     if(id===ADMIN_ID){
       const h=await pinHash(id,pin,ADMIN_SALT);
@@ -1968,12 +1989,25 @@ async function flushCloud(){
   clearTimeout(cloudTimer);cloudTimer=0;
   if(!ACC||!ACCDB||!cloudDirty)return;if(cloudBusy){cloudTimer=setTimeout(flushCloud,1000);return;}
   cloudBusy=true;cloudDirty=false;
-  try{await ACCDB.doc('accounts/'+ACC.id).set({name:ACC.name,pinHash:ACC.hash,salt:ACC.salt,save:packState(),updated:Date.now()});}catch(e){cloudDirty=true;}
+  try{if(SUPA){const r=await rpc('fk_save',{p_id:ACC.id,p_token:ACC.token,p_save:packState()});if(!r||!r.ok)throw new Error('save');}
+    else await ACCDB.doc('accounts/'+ACC.id).set({name:ACC.name,pinHash:ACC.hash,salt:ACC.salt,save:packState(),updated:Date.now()});}catch(e){cloudDirty=true;}
   cloudBusy=false;
 }
 // Automaattinen kirjautuminen samalla laitteella ja uudemman tallennuksen valinta.
 ACCS.then(async d=>{
   const acc=settings.account;
+  if(SUPA){
+    if(acc&&acc.mode==='supa'&&acc.token){try{
+      const r=await rpc('fk_resume',{p_id:acc.id,p_token:acc.token});
+      if(r&&r.ok){
+        ACC={id:acc.id,name:cleanName(r.name)||acc.name,token:acc.token,admin:!!r.admin};
+        if(settings.admin&&settings.admin.mode==='supa'&&settings.admin.token)ADMIN={...settings.admin};
+        if(hasSave(r.save)&&(r.save.updated||r.updated||0)>(state.updated||0)){applySave(r.save);toast(L('☁️ Edistys ladattu pilvestä.','☁️ Progress loaded from the cloud.'));}
+        else{state.name=ACC.name;save();}
+      }else{settings.account=null;settings.admin=null;saveSettings();}
+    }catch(e){}}
+    if(modalType==='title')showTitle();return;
+  }
   if(acc&&acc.id){try{
     const snap=await d.doc('accounts/'+acc.id).get();
     if(settings.admin&&settings.admin.hash===ADMIN_HASH)ADMIN={...settings.admin};
@@ -1988,6 +2022,19 @@ ACCS.then(async d=>{
 // ---- Ylläpitäjän käyttäjänvaihto ----
 async function switchToAccount(id){
   const d=ACCDB;if(!d||!isAdmin())return;
+  if(SUPA){try{
+    await flushCloud();
+    const adm=ADMIN||ACC;let r;
+    if(id===ADMIN_ID&&ADMIN){r=await rpc('fk_resume',{p_id:ADMIN.id,p_token:ADMIN.token});if(r&&r.ok)r.token=ADMIN.token;}
+    else r=await rpc('fk_admin_open',{p_admin_token:adm.token,p_id:id});
+    if(!r||!r.ok){toast(L('Vaihto epäonnistui.','Switch failed.'));return;}
+    if(id===ADMIN_ID){ACC={...adm};ADMIN=null;}
+    else{if(!ADMIN)ADMIN={...ACC};ACC={id,name:cleanName(r.name)||id,token:r.token,admin:false};}
+    applySave(hasSave(r.save)?r.save:Object.assign(freshState(),{name:ACC.name}));state.name=ACC.name;state.owner=id;
+    settings.account={id,name:ACC.name,token:ACC.token,admin:!!ACC.admin,mode:'supa'};settings.admin=ADMIN?{...ADMIN,mode:'supa'}:null;saveSettings();
+    sfx.ok();closeModal();started=true;updateHUD();
+    toast(id===ADMIN_ID?L('👑 Palasit omaan peliisi.','👑 Back in your own game.'):L(`👑 Olet nyt pelaajan ${ACC.name} pelissä. Muutokset tallentuvat hänen peliinsä.`,`👑 You are now in ${ACC.name}’s game. Changes are saved to their game.`));
+  }catch(e){toast(L('Vaihto epäonnistui.','Switch failed.'));}return;}
   try{
     await flushCloud();
     const snap=await d.doc('accounts/'+id).get();if(!snap.exists){toast(L('Käyttäjää ei löytynyt.','User not found.'));return;}
@@ -2010,13 +2057,16 @@ async function showAdmin(){
   <div class="row"><button class="btn big" id="adBack">${L('Takaisin','Back')}</button></div>`);
   bind('adBack',showTitle);
   try{
-    const all=await Promise.race([ACCDB.collection('accounts').limit(500).get(),new Promise((_,j)=>setTimeout(()=>j(new Error('t')),10000))]);
+    let rows;
+    if(SUPA){const r=await rpc('fk_admin_list',{p_admin_token:(ADMIN||ACC).token});if(!r||!r.ok)throw new Error('list');
+      rows=(r.users||[]).map(u=>({id:u.id,name:u.name,updated:u.updated,save:{owned:u.owned||{},boss:u.boss}}));}
+    else{const all=await Promise.race([ACCDB.collection('accounts').limit(500).get(),new Promise((_,j)=>setTimeout(()=>j(new Error('t')),10000))]);
+      rows=all.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>(b.updated||0)-(a.updated||0));}
     const body=$('#lbBody');if(!body)return;
-    const rows=all.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>(b.updated||0)-(a.updated||0));
     if(!rows.length){body.innerHTML=`<p>${L('Ei vielä käyttäjiä.','No users yet.')}</p>`;return;}
     body.innerHTML=`<table class="lb"><tr><th>${L('Käyttäjä','User')}</th><th>${L('Eläimet','Animals')}</th><th>${L('Pomo','Boss')}</th><th>${L('Päivitetty','Updated')}</th><th></th></tr>`+
       rows.map(r=>{const sv=r.save||{},n=ANIMALS.filter(a=>(sv.owned||{})[a.id]).length,cur=ACC&&ACC.id===r.id;
-        return `<tr class="${cur?'me':''}"><td>${r.id===ADMIN_ID?'👑 ':''}${esc(cleanName(r.name)||r.id)}</td><td>${n}/6</td><td>${sv.boss==='beaten'?'✅':'–'}</td><td>${esc(shortDate(new Date(r.updated||0).toISOString()))}</td>
+        return `<tr class="${cur?'me':''}"><td>${r.id===ADMIN_ID?'👑 ':''}${esc(cleanName(r.name)||r.id)}</td><td>${n}/6</td><td>${sv.boss==='beaten'?'✅':'–'}</td><td>${r.updated?esc(shortDate(new Date(r.updated).toISOString())):'–'}</td>
         <td>${cur?L('nyt','now'):`<button class="btn" data-sw="${esc(r.id)}" style="font-size:.85em;padding:0 .5em">${L('Vaihda','Switch')}</button>`}</td></tr>`;}).join('')+'</table>';
     body.querySelectorAll('[data-sw]').forEach(b=>b.onclick=()=>{initAudio();switchToAccount(b.dataset.sw);});
   }catch(e){const body=$('#lbBody');if(body)body.innerHTML=`<p class="lbNote">${L('Käyttäjälistaa ei saatu ladattua.','Couldn’t load the user list.')}</p>`;}
@@ -2027,6 +2077,8 @@ async function submitScore(){
   const loc=localScores();loc.push(rec);loc.sort((a,b)=>a.time-b.time);try{localStorage.setItem(LKEY,JSON.stringify(loc.slice(0,200)));}catch(e){}
   let res={time:rec.time,rank:loc.indexOf(rec)+1,shared:false,best:loc[0]===rec};
   // Jokainen läpipeluu omana rivinään, joten kaikkien pelaajien parhaat suoritukset näkyvät.
+  if(SUPA&&ACC){try{const r=await rpc('fk_submit_score',{p_id:ACC.id,p_token:ACC.token,p_time:rec.time,p_level:rec.level});
+    if(r&&r.ok)res={time:rec.time,rank:r.rank,shared:true,best:r.rank===1};}catch(e){}return res;}
   try{const d=await Promise.race([dbReady,new Promise(r=>setTimeout(()=>r(null),10000))]);
     if(d){const rid=(acc||'p')+'-'+Date.now().toString(36);await d.doc('scores/'+rid).set(rec);
       const all=await d.collection('scores').orderBy('time').limit(1000).get();
@@ -2058,6 +2110,9 @@ async function fillBoard(){
   body.innerHTML=`<p>${L('Ladataan…','Loading…')}</p>`;
   const d=await Promise.race([dbReady,new Promise(r=>setTimeout(()=>r(null),10000))]);
   if(!$('#lbBody')||boardTab!=='shared')return;
+  if(!d&&SUPA){try{const rows=await rpc('fk_top',{p_limit:100});if(!$('#lbBody')||boardTab!=='shared')return;
+      body.innerHTML=boardTable((rows||[]).map(v=>({...v,_me:!!(ACC&&v.acc===ACC.id)})));}
+    catch(e){if($('#lbBody'))body.innerHTML=`<p class="lbNote">${L('Tulostaulua ei saatu ladattua juuri nyt.','Couldn’t load the leaderboard right now.')}</p>`;}return;}
   if(!d){boardTab='local';fillBoard();$('#lbBody').insertAdjacentHTML('afterbegin',`<p class="lbNote">${L('Yhteinen tulostaulu ei ole käytettävissä tässä versiossa, joten näet tämän laitteen tulokset.','The shared leaderboard isn’t available in this version, so you see this device’s results.')}</p>`);return;}
   try{const all=await Promise.race([d.collection('scores').orderBy('time').limit(100).get(),new Promise((_,j)=>setTimeout(()=>j(new Error('timeout')),10000))]);
     if(!$('#lbBody')||boardTab!=='shared')return;
