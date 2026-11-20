@@ -160,7 +160,7 @@ body.phone #admBody{--ms:min(30px,calc((100vw - 70px)/9))}
 .nameIn{font:inherit;font-size:1em;width:11em;max-width:60%;padding:.05em .4em;border:3px solid var(--wood2);background:#fff8e1;color:var(--ink)}
 .nameIn:focus{outline:3px dashed var(--red);outline-offset:1px}
 .lbTabs{display:flex;gap:.4em;justify-content:center;margin:.2em 0 .4em}
-.lbTabs .btn.on{background:#9be07a}
+.lbTabs .btn.on{background:#9be07a}.lbLv{margin-top:.2em;flex-wrap:wrap}.panel .lbLv .btn{font-size:.72em;padding:.05em .45em;white-space:nowrap}
 .lb{width:100%;border-collapse:collapse;font-size:.8em;text-align:left}
 .lbTabs .btn{font-size:.85em}
 .lb th{border-bottom:3px solid var(--wood2);padding:.1em .3em;font-weight:normal;opacity:.8}
@@ -407,7 +407,7 @@ const MEL=("G4 G4 B4 D5 E5 D5 B4 G4 A4 A4 C5 E5 D5 C5 B4 A4 G4 G4 B4 D5 G5 E5 D5
 const BASS=['G2','A2','G2','D2','D2','C2','G2','D2'];
 const STEP=.19;
 const FARM_TRACK={mel:MEL,bass:BASS,step:STEP};
-const GAME_VERSION='v56 · 20.11.2026';
+const GAME_VERSION='v57 · 20.11.2026';
 const farmTrack=()=>FARM_TRACK;
 const BOSS_TRACK={step:.15,bass:['E2','A2','E2','B1','G2','C2','G2','B1'],
   mel:("E4 E4 G4 E4 B4 A4 G4 F#4 E4 E4 G4 E4 C5 B4 A4 B4 E4 E4 G4 E4 B4 A4 G4 F#4 G4 F#4 E4 D4 E4 - E4 - "+
@@ -1826,7 +1826,7 @@ function showWin(){
   <div class="row" style="font-size:.85em"><button class="btn" id="wCont">${L('Jatka farmilla','Keep playing')}</button><button class="btn" id="wAgain">⚔️ ${L('Pomo uudelleen','Boss again')}</button><button class="btn" id="wNew">${L('Uusi peli','New game')}</button><button class="btn" id="wBoard">🏆 ${L('Tulostaulu','Leaderboard')}</button></div>`);
   bind('wBoard',()=>showBoard(null));
   if(lastSr){const r=lastSr,el=$('#lbLine');if(el)el.insertAdjacentHTML('afterend',`<p class="fact">⚡ Speedrun: <b>${fmtMs(r.t)}</b>${r.cheated?` · ${L('apukomennot käytössä – ei ennätystä','cheats used – no PB')}`:r.newPB?` · <b class="good">🏅 ${L('UUSI ENNÄTYS!','NEW PB!')}</b>${r.pb!=null?` (${fmtDiff(r.t-r.pb)})`:''}`:` · PB ${fmtMs(r.pb)} (${fmtDiff(r.t-r.pb)})`}</p>`);}
-  if(lastRun)lastRun.then(r=>{const el=$('#lbLine');if(!el||!r)return;el.innerHTML=`⏱️ ${L('Aikasi','Your time')}: <b>${fmtClock(r.time)}</b> · ${L('sijoitus','rank')} <b>#${r.rank}</b> ${r.shared?L('tulostaululla','on the leaderboard'):L('tällä laitteella','on this device')}${r.best?' 🏅':''}`;});
+  if(lastRun)lastRun.then(r=>{const el=$('#lbLine');if(!el||!r)return;el.innerHTML=`⏱️ ${L('Aikasi','Your time')}: <b>${fmtClock(r.time)}</b> · ${L('sijoitus','rank')} <b>#${r.rank}</b> ${r.shared?L(`tulostaululla (${levelName(state.level)})`,`on the ${levelName(state.level)} leaderboard`):L('tällä laitteella','on this device')}${r.best?' 🏅':''}`;});
   bind('wCont',closeModal);bind('wAgain',startFight);bind('wFarm',()=>{closeModal();goFarm(2);});
   bind('wNew',()=>{{const ks=state.slots;state=freshState(state.level);if(ks)state.slots=ks;}state.sr=!!settings.speedrun;state.srSplits={};srFlash=[];bossRise=0;rebuildAnimals();updateHUD();save();P.x=150;P.y=100;closeModal();});
 }
@@ -3171,17 +3171,22 @@ async function submitScore(){
   if(state.cheated)return null;
   const acc=ACC?ACC.id:'',rec={name:state.name||'?',time:Math.round(state.time||0),level:state.level,date:new Date().toISOString().slice(0,10),acc};if(state.sr)rec.sr=true;
   const loc=localScores();loc.push(rec);loc.sort((a,b)=>a.time-b.time);try{localStorage.setItem(LKEY,JSON.stringify(loc.slice(0,200)));}catch(e){}
-  let res={time:rec.time,rank:loc.indexOf(rec)+1,shared:false,best:loc[0]===rec};
+  const sameLv=x=>(+x.level||5)===rec.level,ll=loc.filter(sameLv);
+  let res={time:rec.time,rank:ll.indexOf(rec)+1,shared:false,best:ll[0]===rec};
   // Jokainen läpipeluu omana rivinään, joten kaikkien pelaajien parhaat suoritukset näkyvät.
   if(SUPA&&ACC){try{const r=await rpc('fk_submit_score',{p_id:ACC.id,p_token:ACC.token,p_time:rec.time,p_level:rec.level});
-    if(r&&r.ok)res={time:rec.time,rank:r.rank,shared:true,best:r.rank===1};}catch(e){}return res;}
+    if(r&&r.ok){let rank=r.rank;try{const top=await rpc('fk_top',{p_limit:200});if(Array.isArray(top))rank=top.filter(x=>sameLv(x)&&x.time<rec.time).length+1;}catch(e){}
+      res={time:rec.time,rank,shared:true,best:rank===1};}}catch(e){}return res;}
   try{const d=await Promise.race([dbReady,new Promise(r=>setTimeout(()=>r(null),10000))]);
     if(d){const rid=(acc||'p')+'-'+Date.now().toString(36);await d.doc('scores/'+rid).set(rec);
       const all=await d.collection('scores').orderBy('time').limit(1000).get();
-      const idx=all.docs.findIndex(x=>x.id===rid);if(idx>=0)res={time:rec.time,rank:idx+1,shared:true,best:idx===0};}}catch(e){}
+      const idx=all.docs.filter(x=>sameLv(x.data())).findIndex(x=>x.id===rid);if(idx>=0)res={time:rec.time,rank:idx+1,shared:true,best:idx===0};}}catch(e){}
   return res;
 }
-let boardTab='shared';
+let boardTab='shared',boardLv=null;
+// Jokaisella luokkatasolla on oma tulostaulunsa
+const BOARD_LVS=[34,5,6,78];
+const lvRows=rows=>rows.filter(r=>(+r.level||5)===boardLv).sort((a,b)=>(+a.time||0)-(+b.time||0));
 const shortLevel=lv=>lv===78?'7–8':lv===34?'3–4':String(lv);
 const shortDate=d=>{const m=String(d||'').match(/^(\d{4})-(\d\d)-(\d\d)/);return m?(settings.lang==='en'?`${+m[3]}/${+m[2]}/${m[1].slice(2)}`:`${+m[3]}.${+m[2]}.${m[1].slice(2)}`):'';};
 function showBoard(back){
@@ -3189,8 +3194,11 @@ function showBoard(back){
   openModal('board',`<h2>🏆 ${L('Tulostaulu – kaikki parhaat suoritukset','Leaderboard – all the best runs')}</h2>
   <p class="lbNote">${L('Aika pelin alusta siihen, kun Perunapomo kaatuu ensimmäisen kerran.','Time from the start of the game until the Potato Boss falls for the first time.')}</p>
   <div class="lbTabs"><button class="btn" id="lbS">🌍 ${L('Kaikki pelaajat','All players')}</button><button class="btn" id="lbL">📱 ${L('Tämä laite','This device')}</button></div>
+  <div class="lbTabs lbLv">${BOARD_LVS.map(lv=>`<button class="btn" data-lv="${lv}" title="${esc(levelName(lv))}">📚 ${shortLevel(lv)}. ${L('lk','gr.')}</button>`).join('')}</div>
   <div id="lbBody"><p>${L('Ladataan…','Loading…')}</p></div>
   <div class="row"><button class="btn big" id="lbBack">${L('Takaisin','Back')}</button></div>`);
+  if(!BOARD_LVS.includes(boardLv))boardLv=BOARD_LVS.includes(state.level)?state.level:5;
+  panel.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>{initAudio();sfx.ui();boardLv=+b.dataset.lv;fillBoard();});
   bind('lbBack',backFn);bind('lbS',()=>{boardTab='shared';fillBoard();});bind('lbL',()=>{boardTab='local';fillBoard();});
   fillBoard();
 }
@@ -3201,24 +3209,25 @@ function medalRows(rows){
     if(n<3&&!seen.has(key)){seen.add(key);n++;m=n;}return {...r,_medal:m};});
 }
 function boardTable(rows,meId){
-  if(!rows.length)return `<p>${L('Ei vielä tuloksia. Ole ensimmäinen!','No results yet. Be the first!')}</p>`;
+  if(!rows.length)return `<p>${L(`Tasolla ${levelName(boardLv||5)} ei vielä tuloksia. Ole ensimmäinen!`,`No results yet for ${levelName(boardLv||5)}. Be the first!`)}</p>`;
   return `<table class="lb"><tr><th>#</th><th>${L('Nimi','Name')}</th><th class="r">${L('Aika','Time')}</th><th>${L('Lk','Gr.')}</th><th>${L('Päivä','Date')}</th></tr>`+
     medalRows(rows).map((r,i)=>`<tr class="${r._me?'me':''}${r._medal?' m'+r._medal:''}"><td>${i+1}</td><td>${nameHTML(r.name,r.acc)}${r.sr?' <span title="Speedrun">⚡</span>':''}${r._medal?` <span class="medal" title="${[L('Kulta','Gold'),L('Hopea','Silver'),L('Pronssi','Bronze')][r._medal-1]}">${['🥇','🥈','🥉'][r._medal-1]}</span>`:''}</td><td class="r">${fmtClock(+r.time||0)}</td><td>${esc(shortLevel(+r.level||5))}</td><td>${esc(shortDate(r.date))}</td></tr>`).join('')+'</table>';
 }
 async function fillBoard(){
   const body=$('#lbBody');if(!body)return;
   $('#lbS').classList.toggle('on',boardTab==='shared');$('#lbL').classList.toggle('on',boardTab==='local');
-  if(boardTab==='local'){body.innerHTML=boardTable(localScores().slice(0,100).map(v=>({...v,_me:!!(ACC&&v.acc===ACC.id)})));return;}
+  panel.querySelectorAll('[data-lv]').forEach(b=>b.classList.toggle('on',+b.dataset.lv===boardLv));
+  if(boardTab==='local'){body.innerHTML=boardTable(lvRows(localScores()).slice(0,100).map(v=>({...v,_me:!!(ACC&&v.acc===ACC.id)})));return;}
   body.innerHTML=`<p>${L('Ladataan…','Loading…')}</p>`;
   const d=await Promise.race([dbReady,new Promise(r=>setTimeout(()=>r(null),10000))]);
   if(!$('#lbBody')||boardTab!=='shared')return;
-  if(!d&&SUPA){try{const rows=await rpc('fk_top',{p_limit:100});if(!$('#lbBody')||boardTab!=='shared')return;
-      body.innerHTML=boardTable((rows||[]).map(v=>({...v,_me:!!(ACC&&v.acc===ACC.id)})));}
+  if(!d&&SUPA){try{const rows=await rpc('fk_top',{p_limit:200});if(!$('#lbBody')||boardTab!=='shared')return;
+      body.innerHTML=boardTable(lvRows(rows||[]).slice(0,100).map(v=>({...v,_me:!!(ACC&&v.acc===ACC.id)})));}
     catch(e){if($('#lbBody'))body.innerHTML=`<p class="lbNote">${L('Tulostaulua ei saatu ladattua juuri nyt.','Couldn’t load the leaderboard right now.')}</p>`;}return;}
   if(!d){boardTab='local';fillBoard();$('#lbBody').insertAdjacentHTML('afterbegin',`<p class="lbNote">${L('Yhteinen tulostaulu ei ole käytettävissä tässä versiossa, joten näet tämän laitteen tulokset.','The shared leaderboard isn’t available in this version, so you see this device’s results.')}</p>`);return;}
-  try{const all=await Promise.race([d.collection('scores').orderBy('time').limit(100).get(),new Promise((_,j)=>setTimeout(()=>j(new Error('timeout')),10000))]);
+  try{const all=await Promise.race([d.collection('scores').orderBy('time').limit(1000).get(),new Promise((_,j)=>setTimeout(()=>j(new Error('timeout')),10000))]);
     if(!$('#lbBody')||boardTab!=='shared')return;
-    body.innerHTML=boardTable(all.docs.map(x=>{const v=x.data();return {...v,_me:ACC?v.acc===ACC.id:(!v.acc&&x.id===ME)};}));
+    body.innerHTML=boardTable(lvRows(all.docs.map(x=>{const v=x.data();return {...v,_me:ACC?v.acc===ACC.id:(!v.acc&&x.id===ME)};})).slice(0,100));
   }catch(e){if($('#lbBody'))body.innerHTML=`<p class="lbNote">${L('Tulostaulua ei saatu ladattua juuri nyt.','Couldn’t load the leaderboard right now.')}</p>`;}
 }
 
