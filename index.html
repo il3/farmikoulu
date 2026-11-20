@@ -70,6 +70,40 @@ body{display:flex;align-items:center;justify-content:center;min-height:100vh;pad
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.4em;margin:.4em 0}
 .stats div{background:#fff8e1;border:3px solid var(--wood2);padding:.1em}
 .stats b{display:block;font-size:1.3em}
+#touch{display:none}
+body.phone{align-items:flex-start;padding:6px;overscroll-behavior:none}
+body.phone #game{width:min(960px,calc(100vw - 12px),calc((100dvh - 270px) * 320 / 208));position:relative}
+body.phone #touch{display:flex;justify-content:space-between;align-items:center;padding:6px 14px;user-select:none;-webkit-user-select:none;touch-action:none}
+#dpad{position:relative;width:138px;height:138px;border-radius:50%;background:rgba(43,29,14,.6);border:3px solid var(--wood2);touch-action:none;flex:none}
+#dpad .ar{position:absolute;color:#fff3d0;font-size:20px;line-height:1;pointer-events:none}
+#dpad .u{top:6px;left:50%;transform:translateX(-50%)}#dpad .d{bottom:6px;left:50%;transform:translateX(-50%)}
+#dpad .l{left:8px;top:50%;transform:translateY(-50%)}#dpad .r{right:8px;top:50%;transform:translateY(-50%)}
+#dpad .knob{position:absolute;width:52px;height:52px;border-radius:50%;background:var(--gold);border:3px solid var(--wood2);left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 3px 0 var(--wood2)}
+#actBtn{width:88px;height:88px;border-radius:50%;background:var(--gold);border:4px solid var(--wood2);box-shadow:0 5px 0 var(--wood2);font-size:36px;touch-action:manipulation;flex:none;cursor:pointer}
+#actBtn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--wood2)}
+body.phone button,body.phone .opt{touch-action:manipulation}
+body.phone>#modal{position:fixed;z-index:50;padding:10px}
+body.phone .panel{font-size:clamp(16px,4.4vw,24px)!important;max-height:100%}
+body.phone .opts{grid-template-columns:1fr}
+body.phone .opt{padding:.45em .6em}
+body.phone #bossCv,body.phone #dodgeCv{width:min(100%,460px)}
+@media (orientation:landscape){
+  body.phone{padding:3px}
+  body.phone #game{width:min(960px,calc(100vw - 12px),calc((100dvh - 62px) * 320 / 208));gap:3px}
+  body.phone #hud{padding:2px 6px;gap:6px;font-size:16px;border-width:3px}
+  body.phone #coll{gap:3px;flex-basis:auto}body.phone #stats{display:none}
+  body.phone .slot{width:30px;height:27px;border-width:2px}body.phone .slot canvas{max-width:26px}
+  body.phone .ib{width:28px;height:27px;font-size:14px;box-shadow:0 2px 0 var(--wood2)}
+  body.phone #stage{border-width:3px}
+  body.phone .panel{font-size:clamp(13px,4.4vh,20px)!important;padding:.4em .8em}
+  body.phone .opts{grid-template-columns:1fr 1fr}
+  body.phone .panel h2{margin:.2em 0 .3em}
+  body.phone #touch{position:absolute;left:0;right:0;bottom:4px;pointer-events:none;padding:0 6px}
+  body.phone #touch>*{pointer-events:auto;opacity:.7}
+  body.phone #dpad{width:112px;height:112px}body.phone #dpad .knob{width:42px;height:42px}
+  body.phone #actBtn{width:72px;height:72px;font-size:30px}
+  body.phone #foot{display:none}
+}
 #foot{color:#e8f5d0;text-align:center;font-size:20px;text-shadow:1px 1px 0 #000}
 #bLang{font-family:'Press Start 2P',monospace;font-size:10px}
 .lives{letter-spacing:2px;white-space:nowrap}
@@ -147,6 +181,10 @@ body{display:flex;align-items:center;justify-content:center;min-height:100vh;pad
     <div id="tirppa" hidden></div>
     <div id="modal" class="overlay" hidden><div class="panel" id="panel"></div></div>
   </div>
+  <div id="touch" aria-hidden="true">
+    <div id="dpad"><span class="ar u">▲</span><span class="ar l">◀</span><span class="ar r">▶</span><span class="ar d">▼</span><div class="knob"></div></div>
+    <button id="actBtn">✋</button>
+  </div>
   <div id="foot">Nuolet / WASD tai napautus = liiku · E = tee tehtävä · klikkaa eläimiä!</div>
 </div>
 
@@ -210,7 +248,7 @@ SPR.apple=makeSprite(["..g.",".rr.","rrrr","rrrr",".rr."],{g:'#3f9a3f',r:'#d6332
 /* ---------- ÄÄNET ---------- */
 let AC=null,master,musicGain,sfxGain,NB=null,musTimer=null,musStep=0,musNext=0;
 const SKEY='farmikoulu-v1',OKEY='farmikoulu-asetukset';
-let settings={music:true,sfx:true,lang:'fi'};
+let settings={music:true,sfx:true,lang:'fi',device:null};
 try{const s=JSON.parse(localStorage.getItem(OKEY));if(s)settings=Object.assign(settings,s);}catch(e){}
 function saveSettings(){try{localStorage.setItem(OKEY,JSON.stringify(settings));}catch(e){}}
 function initAudio(){
@@ -288,6 +326,8 @@ const sfx={
 
 /* ---------- KIELI ---------- */
 const L=(fi,en)=>settings.lang==='en'?en:fi;
+const autoPhone=()=>(window.matchMedia&&matchMedia('(pointer:coarse)').matches)||Math.min(screen.width,screen.height)<600;
+const isPhone=()=>(settings.device||(autoPhone()?'phone':'pc'))==='phone';
 const L2=a=>Array.isArray(a)?a[settings.lang==='en'?1:0]:a;
 
 /* ---------- ELÄIMET ---------- */
@@ -1017,7 +1057,8 @@ function applyLang(){
   $('#bLang').textContent=settings.lang==='en'?'FI':'EN';
   $('#bMusic').title=L('Musiikki päälle/pois','Music on/off');$('#bSfx').title=L('Äänet päälle/pois','Sounds on/off');$('#bHelp').title=L('Ohjeet','How to play');$('#bMenu').title=L('Aloitusvalikko (Esc)','Main menu (Esc)');
   $('#stTasks').title=L('Tehtyjä tehtäviä','Tasks done');$('#stAcc').title=L('Oikeat vastaukset','Correct answers');
-  $('#foot').textContent=L('Nuolet / WASD tai napautus = liiku · E = tee tehtävä · klikkaa eläimiä!','Arrows / WASD or tap = move · E = do a task · click the animals!');
+  $('#foot').textContent=isPhone()?L('Ristiohjain tai napautus = liiku · ✋ = tee tehtävä · napauta eläimiä!','D-pad or tap = move · ✋ = do a task · tap the animals!')
+    :L('Nuolet / WASD tai napautus = liiku · E = tee tehtävä · klikkaa eläimiä!','Arrows / WASD or tap = move · E = do a task · click the animals!');
   updateHUD();nearSt=null;
   if(modalType==='title')showTitle();else if(modalType==='help')showHelp();
 }
@@ -1050,10 +1091,14 @@ function bind(id,fn){const e=document.getElementById(id);if(e)e.onclick=()=>{ini
 function pickerHTML(){
   return `<div class="pick">${L('Kieli','Language')}:
     <button class="btn ${settings.lang==='fi'?'on':''}" id="pFi">Suomi</button><button class="btn ${settings.lang==='en'?'on':''}" id="pEn">English</button></div>
+  <div class="pick">${L('Laite','Device')}:
+    <button class="btn ${!isPhone()?'on':''}" id="pPc">💻 ${L('Tietokone','Computer')}</button><button class="btn ${isPhone()?'on':''}" id="pPhone">📱 ${L('Puhelin','Phone')}</button></div>
   <div class="pick">${L('Tehtävien taso','Task level')}:
     <button class="btn ${pendingLevel===34?'on':''}" id="p34">${L('3.–4. luokka','Grade 3–4')}</button><button class="btn ${pendingLevel===5?'on':''}" id="p5">${L('5. luokka','Grade 5')}</button><button class="btn ${pendingLevel===6?'on':''}" id="p6">${L('6. luokka','Grade 6')}</button>${state.unlocked78?`<button class="btn ${pendingLevel===78?'on':''}" id="p78">🪨 ${L('7.–8. luokka','Grade 7–8')}</button>`:''}</div>`;
 }
 function bindPicker(){
+  bind('pPc',()=>{settings.device='pc';saveSettings();applyDevice();showTitle();});
+  bind('pPhone',()=>{settings.device='phone';saveSettings();applyDevice();showTitle();});
   bind('pFi',()=>{settings.lang='fi';saveSettings();applyLang();});
   bind('pEn',()=>{settings.lang='en';saveSettings();applyLang();});
   bind('p34',()=>{pendingLevel=34;if(started||hasProgress())state.level=34,save();showTitle();});
@@ -1076,12 +1121,12 @@ function showTitle(){
   bind('tNew',b=>{
     if(has&&!b.dataset.sure){b.dataset.sure=1;b.textContent=L('Varmasti? Edistys nollataan','Sure? Progress will be reset');return;}
     state=freshState(pendingLevel);state.unlocked78=pendingLevel===78;bossRise=0;rebuildAnimals();updateHUD();save();P.x=150;P.y=100;started=true;closeModal();sfx.ui();
-    setTimeout(()=>toast(L('Kävele ❗-merkin luo ja paina E!','Walk to a ❗ sign and press E!')),300);});
+    setTimeout(()=>toast(isPhone()?L('Kävele ❗-merkin luo ja paina ✋!','Walk to a ❗ sign and press ✋!'):L('Kävele ❗-merkin luo ja paina E!','Walk to a ❗ sign and press E!')),300);});
   bind('tHelp',showHelp);
 }
 function showHelp(){
   openModal('help',`<h2>${L('Näin pelaat','How to play')}</h2><ul class="help">${L(`
-  <li>🚶 Liiku <b>nuolinäppäimillä / WASD</b> tai <b>napauttamalla</b> maata.</li>
+  <li>🚶 Liiku <b>nuolinäppäimillä / WASD</b> tai <b>napauttamalla</b> maata. Puhelimella käytä <b>ristiohjainta</b> ja tee tehtävä <b>✋</b>-napista. Laitteen voi valita aloitusvalikosta.</li>
   <li>❗ Mene tehtäväpisteelle ja paina <b>E</b> – tai napauta pistettä.</li>
   <li>📚 Kaivo = matematiikka (kertotaulu, jako-, yhteen- ja vähennyslasku), Postilaatikko = äidinkieli, Liitutaulu = englanti, Omenapuu = ympäristöoppi, Tienviitta = historia ja maantieto.</li>
   <li>🏠 Aloitusvalikkoon pääset milloin vain yläpalkin 🏠-napista tai Esc-näppäimellä.</li>
@@ -1096,7 +1141,7 @@ function showHelp(){
   <li>🪨 Kun olet saanut arkun jokaiselta viideltä pisteeltä, farmin keskelle nousee <b>salaperäinen kivi</b>. Sitä klikkaamalla voit nostaa tehtävät <b>7.–8. luokan</b> tasolle.</li>
   <li>🚜 Perunapomon voitettuasi pääset <b>seuraavalle farmille</b>, jossa on iso lato ja paljon peltoa. Siellä arkuista tulee kasveja: kasvata kaikki kuusi peltoa täyteen! Farmia vaihdetaan yläpalkin 🚜-napista.</li>
   <li>🥈 Joka kerta kun voitat Perunapomon, ladosta tulee yksi <b>hopeaperuna</b>.</li>`,`
-  <li>🚶 Move with the <b>arrow keys / WASD</b> or <b>tap</b> the ground.</li>
+  <li>🚶 Move with the <b>arrow keys / WASD</b> or <b>tap</b> the ground. On a phone, use the <b>D-pad</b> and the <b>✋</b> button. Choose your device in the main menu.</li>
   <li>❗ Walk to a task point and press <b>E</b> – or tap it.</li>
   <li>📚 Well = maths (times tables, division, addition, subtraction), Mailbox = Finnish language, Chalkboard = English, Apple tree = science, Signpost = history & geography.</li>
   <li>🏠 Go to the main menu any time with the 🏠 button at the top or Esc.</li>
@@ -1536,7 +1581,7 @@ function startDodge(){
   const setT=e=>{if(!dodge)return;const r=c.getBoundingClientRect();dodge.target={x:(e.clientX-r.left)/r.width*200,y:(e.clientY-r.top)/r.height*150};};
   c.addEventListener('pointerdown',e=>{setT(e);try{c.setPointerCapture(e.pointerId);}catch(_){}});
   c.addEventListener('pointermove',e=>{if(e.buttons)setT(e);});
-  c.addEventListener('pointerup',()=>{if(dodge)dodge.target=null;});
+  // Napautus: taimi liikkuu napautettuun kohtaan (ei pysähdy, kun sormi nousee).
 }
 function dSpawn(k,x,y,vx,vy){const sz={fry:[2,7],pot:[6,5],mash:[3,3]}[k];dodge.bul.push({k,x,y,vx,vy,w:sz[0],h:sz[1]});}
 function dRing(n,speed){const off=(rand()-.5)*.3;for(let i=0;i<n;i++){const a=Math.PI*(.1+.8*i/(n-1))+off;dSpawn('mash',100,DB.y-4,Math.cos(a)*speed,Math.sin(a)*speed);}}
@@ -1558,6 +1603,7 @@ function updateDodge(dt){
     let mx=0,my=0;
     if(keys.has('arrowleft')||keys.has('a'))mx--;if(keys.has('arrowright')||keys.has('d'))mx++;
     if(keys.has('arrowup')||keys.has('w'))my--;if(keys.has('arrowdown')||keys.has('s'))my++;
+    if(mx||my)d.target=null;
     if(!mx&&!my&&d.target){const vx=d.target.x-d.px,vy=d.target.y-d.py,dd=Math.hypot(vx,vy);if(dd>1.5){mx=vx/dd;my=vy/dd;}}
     const ml=Math.hypot(mx,my);if(ml){d.px+=mx/ml*72*dt;d.py+=my/ml*72*dt;}
     d.px=Math.max(DB.x+3,Math.min(DB.x+DB.w-3,d.px));d.py=Math.max(DB.y+3,Math.min(DB.y+DB.h-3,d.py));
@@ -1776,6 +1822,7 @@ function renderPrompt(){
   else if(st.id==='boss'){pr.innerHTML=`<span>👑 ${L2(st.name)}</span><button>${state.boss==='beaten'?L('Uusintaottelu!','Rematch!'):L('Taistele!','Fight!')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
   else if(state.last===st.id)pr.innerHTML=`<span>${L2(st.name)} ${L('lepää 💤 – kokeile toista pistettä','is resting 💤 – try another point')}</span>`;
   else{pr.innerHTML=`<span>${st.icon} ${L2(st.subject)}</span><button>${L('Tee tehtävä','Do the task')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
+  if(isPhone())pr.innerHTML=pr.innerHTML.replace(' [E]',' ✋');
   pr.hidden=false;
   // Vinkki heti kohteen yläpuolelle. Jos se ei mahdu (kaivo, liitutaulu), se tulee heti pelaajan jalkojen alle.
   const sw=$('#stage').clientWidth,half=pr.offsetWidth/2;
@@ -1787,6 +1834,29 @@ function renderPrompt(){
 addEventListener('resize',()=>{if(nearSt)renderPrompt();});
 
 const SECRET_PX={x:104,y:199,armed:true};
+/* ---------- PUHELINTUKI ---------- */
+function applyDevice(){
+  const ph=isPhone();document.body.classList.toggle('phone',ph);
+  // Puhelimella ikkunat koko näytön kokoisina, tietokoneella pelialueen sisällä
+  const m=$('#modal');if(ph&&m.parentElement!==document.body)document.body.append(m);else if(!ph&&m.parentElement===document.body)$('#stage').append(m);
+  applyLang();if(nearSt)renderPrompt();
+}
+(function(){
+  const pad=$('#dpad'),knob=pad.querySelector('.knob'),DIRS=['arrowup','arrowdown','arrowleft','arrowright'];
+  let pid=null;
+  const clear=()=>{DIRS.forEach(k=>keys.delete(k));knob.style.transform='translate(-50%,-50%)';};
+  const set=e=>{const r=pad.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=e.clientX-cx,dy=e.clientY-cy;const d=Math.hypot(dx,dy),max=r.width/2-20;
+    if(d>max){dx*=max/d;dy*=max/d;}knob.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
+    DIRS.forEach(k=>keys.delete(k));if(d<12)return;const a=Math.atan2(dy,dx);
+    if(Math.abs(Math.cos(a))>.38)keys.add(dx>0?'arrowright':'arrowleft');if(Math.abs(Math.sin(a))>.38)keys.add(dy>0?'arrowdown':'arrowup');
+    P.target=null;P.autoSt=null;};
+  pad.addEventListener('pointerdown',e=>{e.preventDefault();initAudio();pid=e.pointerId;try{pad.setPointerCapture(pid);}catch(_){}set(e);});
+  pad.addEventListener('pointermove',e=>{if(e.pointerId===pid)set(e);});
+  for(const ev of ['pointerup','pointercancel','lostpointercapture'])pad.addEventListener(ev,e=>{if(e.pointerId===pid){pid=null;clear();}});
+  $('#actBtn').addEventListener('click',()=>{initAudio();
+    if(modalType)return;
+    if(nearSt)openStation(nearSt);else{toast(L('Kävele ❗-merkin luo ja paina ✋','Walk to a ❗ sign and press ✋'));sfx.deny();}});
+})();
 function goFarm(n){
   if(n===2&&!state.farm2)return;initAudio();
   state.farm=n;P.target=null;P.autoSt=null;keys.clear();
@@ -1871,7 +1941,7 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 addEventListener('pagehide',()=>{if(started)save();});
-rebuildAnimals();applyVolumes();applyLang();showTitle();requestAnimationFrame(loop);
+rebuildAnimals();applyVolumes();applyDevice();showTitle();requestAnimationFrame(loop);
 </script>
 </body>
 </html>

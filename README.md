@@ -9,6 +9,7 @@ Retrotyylinen selainpeli 3.–6.-luokkalaisille. Tee koulutehtäviä 2D-farmilla
 ## Pelin idea
 
 - Kävele farmilla nuolinäppäimillä, WASD-näppäimillä tai napauttamalla.
+- **Puhelintuki:** valitse aloitusvalikosta *Laite: 📱 Puhelin*, niin saat ruudulle ristiohjaimen ja ✋-napin. Peli toimii pysty- ja vaaka-asennossa. Peli arvaa laitteen itse, mutta valintaa voi vaihtaa.
 - Tehtäväpisteet on merkitty ❗-merkillä. Paina **E** tai napauta pistettä.
 - Saat tehtävästä arkun, kun vastaat **3 kysymykseen oikein**. Jokaisessa kysymyksessä on 4 vaihtoehtoa.
 - Käytössäsi on **3 yritystä**. Väärän vastauksen jälkeen kysymys vaihtuu. Jos kaikki yritykset menevät, tehtävä alkaa alusta.
