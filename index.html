@@ -105,6 +105,9 @@ body.phone #bossCv,body.phone #dodgeCv{width:min(100%,460px)}
   body.phone #foot{display:none}
 }
 #foot{color:#e8f5d0;text-align:center;font-size:20px;text-shadow:1px 1px 0 #000}
+label.rpick{display:block;text-align:left;padding:.25em .4em;margin:.15em 0;border:2px solid #c9a46a;border-radius:4px;background:#fff8e6;cursor:pointer;font-size:.85em;line-height:1.25}
+label.rpick:has(input:checked){background:#ffe08a;border-color:#8a5a2b}.rcols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (max-width:560px){.rcols{grid-template-columns:1fr}}
 #bLang{font-family:'Press Start 2P',monospace;font-size:10px}
 .lives{letter-spacing:2px;white-space:nowrap}
 .lives .lost{filter:grayscale(1);opacity:.35}
@@ -1129,7 +1132,7 @@ function exitTask(){
   let progress=false;
   if(modalType==='quiz'&&quiz)progress=quiz.done>0||quiz.mistakes>0;
   else if(modalType==='boss'&&fight){if(fight.phase!=='q')return;progress=fight.hp<BOSS_HP||fight.hearts<BOSS_HEARTS;}
-  else if(modalType==='dodge'&&dodge){if(dodge.phase!=='play')return;progress=dodge.t>2;}
+  else if(modalType==='dodge'&&dodge){if(dodge.phase!=='play'||dodge.forced)return;progress=dodge.t>2;}
   else return;
   const xb=panel.querySelector('.xbtn');
   if(progress&&!exitSure){exitSure=true;sfx.deny();if(xb){xb.classList.add('sure');xb.textContent=L('✕ Poistu? Edistys menetetään','✕ Leave? Progress is lost');}
@@ -1562,7 +1565,7 @@ addEventListener('keydown',e=>{
   if(e.target&&(e.target.id==='cmdIn'||e.target.tagName==='INPUT'))return;
   const k=e.key.toLowerCase();
   if(modalType){
-    if(k==='escape'){if(modalType==='title'&&started&&ACC){closeModal();e.preventDefault();return;}if(['quiz','boss','dodge'].includes(modalType))exitTask();else if(['help','bossintro','board','admin'].includes(modalType))(started?closeModal():showTitle());e.preventDefault();return;}
+    if(k==='escape'){if(modalType==='title'&&started&&ACC){closeModal();e.preventDefault();return;}if(['quiz','boss','dodge'].includes(modalType))exitTask();else if(['help','bossintro','board','admin'].includes(modalType)){if(modalType==='bossintro'&&robotForced()){e.preventDefault();return;}(started?closeModal():showTitle());}e.preventDefault();return;}
     if(modalType==='dodge'&&['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(k)){keys.add(k);e.preventDefault();return;}
     if(modalType==='quiz'&&quiz){
       if(['1','2','3','4'].includes(k)&&!quiz.answered){answer(+k-1);e.preventDefault();}
@@ -1664,7 +1667,8 @@ function startDodge(mode){
   closeCmd();if(modalType)closeModal();started=true;initAudio();setMusic(mode);sfx.bossRoar();
   dodge={mode,cfg,t:0,hp:cfg.hp,inv:0,px:DB.x+DB.w/2,py:DB.y+DB.h-10,bul:[],spawn:0,spawn2:0,ring:0,wall:0,laser:0,hom:0,phase:'play',end:0,lastWave:-1,target:null};
   const robot=mode==='robot';
-  openModal('dodge',`${exitBtn()}<h2>${robot?'🤖 PERUNAATTORI 2000':L('Perunapomon viimeinen muoto','The Potato Boss: Final Form')}</h2>
+  const forced=robot&&robotForced();dodge.forced=forced;
+  openModal('dodge',`${forced?'':exitBtn()}<h2>${robot?'🤖 PERUNAATTORI 2000':L('Perunapomon viimeinen muoto','The Potato Boss: Final Form')}</h2>
   <div class="bars"><span>💚 ${L('Sinä','You')}</span><div class="bar"><div id="dHp" style="width:100%;background:#6fcf4f"></div></div>
   <span>⏱️ <b id="dT">${cfg.time}</b> s</span><div class="bar"><div id="dBar" style="width:100%;background:${robot?'#e9654f':'#4fa3e8'}"></div></div></div>
   <canvas id="dodgeCv" width="200" height="150"></canvas>
@@ -1753,6 +1757,11 @@ function drawDodge(){
 }
 function dodgeLose(){
   if(modalType!=='dodge')return;setMusic('farm');const mode=dodge?dodge.mode:'final';
+  if(mode==='robot'&&dodge&&dodge.forced&&robotOn()){const pu=rPun(state.robot.pun)||R_PUN[0];state.robot=null;state.robotLosses=(state.robotLosses||0)+1;applyPunish(pu.id);
+    openModal('result',`<div class="redo">🤖💥</div><h2>${L('Perunaattori 2000 voitti!','Perunaattori 2000 won!')}</h2>
+    <p>${L(`Selvisit ${Math.floor(dodge.t)} / 90 sekuntia.`,`You survived ${Math.floor(dodge.t)} / 90 seconds.`)}</p>
+    <p class="fact">💀 ${L('Rangaistus','Penalty')}: <b>${pu.e} ${L2(pu.d)}</b></p>
+    <div class="row"><button class="btn big" id="dBack">${L('Takaisin farmille','Back to the farm')}</button></div>`);bind('dBack',closeModal);return;}
   if(mode==='robot'){openModal('result',`<div class="redo">🤖💥</div><h2>${L('Perunaattori 2000 voitti tällä kertaa','Perunaattori 2000 won this time')}</h2>
     <p>${L(`Selvisit ${Math.floor(dodge?dodge.t:0)} / 90 sekuntia. Robotti jää farmille odottamaan – yritä uudelleen!`,`You survived ${Math.floor(dodge?dodge.t:0)} / 90 seconds. The robot waits on the farm – try again!`)}</p>
     <div class="row"><button class="btn big" id="dRe">${L('Yritä uudelleen','Try again')}</button><button class="btn" id="dBack">${L('Takaisin farmille','Back to the farm')}</button></div>`);
@@ -1773,6 +1782,44 @@ function dodgeWin(){
   bind('dRe',()=>startDodge('final'));bind('dBack',closeModal);
 }
 // ---- Perunaattori 2000: kutsuminen, farmilla näkyminen ja palkinto ----
+const R_PUN=[
+ {id:'animals',e:'🏃',n:['Eläimet karkaavat','Animals run away'],d:['Kaikki eläimet karkaavat farmilta','All animals run away from the farm']},
+ {id:'potatoes',e:'🥔',n:['Perunat varastetaan','Potatoes stolen'],d:['Kulta- ja hopeaperunat viedään','Golden and silver potatoes are taken']},
+ {id:'time',e:'⏱️',n:['+5 min peliaikaa','+5 min play time'],d:['Peliaikaan lisätään 5 minuuttia','5 minutes are added to the play time']},
+ {id:'slow',e:'🐌',n:['Etanakävely','Snail walk'],d:['Kävelet puolella nopeudella 10 min','You walk at half speed for 10 min']},
+ {id:'gray',e:'🌫️',n:['Harmaa farmi','Grey farm'],d:['Farmi on mustavalkoinen 10 min','The farm is black and white for 10 min']},
+ {id:'scare',e:'👻',n:['Jumpscare','Jumpscare'],d:['Robotti säikäyttää sinut','The robot jumpscares you']}];
+const R_REW=[
+ {id:'golden',e:'✨',n:['Kultainen peruna','Golden potato'],d:['Kultainen peruna (tai 3 hopeaperunaa, jos on jo)','The golden potato (or 3 silver ones if you have it)']},
+ {id:'silver',e:'🥈',n:['5 hopeaperunaa','5 silver potatoes'],d:['Ladosta tulee 5 hopeaperunaa','5 silver potatoes come out of the barn']},
+ {id:'animals',e:'🐾',n:['Kaikki eläimet','All animals'],d:['Saat kaikki kuusi eläintä','You get all six animals']},
+ {id:'time',e:'⏪',n:['−2 min peliaikaa','−2 min play time'],d:['Peliajasta vähennetään 2 minuuttia','2 minutes are taken off the play time']},
+ {id:'horse',e:'🐴',n:['Hevonen','Horse'],d:['Hevonen juoksee ulos ladosta','A horse runs out of the barn']},
+ {id:'crown',e:'👑',n:['Kruunu','Crown'],d:['Saat pysyvän kruunun päähäsi','You get a permanent crown on your head']}];
+const rPun=id=>R_PUN.find(x=>x.id===id),rRew=id=>R_REW.find(x=>x.id===id);
+// Pakotettu taistelu: ylläpitäjä kutsui robotin toisen pelaajan peliin. Pelaajan omalla laitteella sitä ei voi ohittaa.
+function robotForced(){return !!(robotOn()&&state.robot.forced&&!ADMIN);}
+function fxOn(k){return !!(state.fx&&state.fx[k]&&state.fx[k]>Date.now());}
+function applyPunish(id){
+  state.fx=state.fx||{};const now=Date.now();
+  if(id==='animals'){state.owned={};if(state.boss==='awake')state.boss='none';}
+  else if(id==='potatoes'){state.golden=false;state.silver=0;}
+  else if(id==='time')state.time=(state.time||0)+300;
+  else if(id==='slow')state.fx.slow=now+600000;
+  else if(id==='gray')state.fx.gray=now+600000;
+  else if(id==='scare')setTimeout(potatoScare,600);
+  rebuildAnimals();save();updateHUD();
+}
+function applyReward(id){
+  if(id==='golden'){if(!state.golden)state.golden=true;else state.silver=(state.silver||0)+3;}
+  else if(id==='silver')state.silver=(state.silver||0)+5;
+  else if(id==='animals'){ANIMALS.forEach(a=>{if(!state.owned[a.id])state.owned[a.id]=1;});if(state.boss==='none')state.boss='awake';bossRise=1;}
+  else if(id==='time')state.time=Math.max(0,(state.time||0)-120);
+  else if(id==='crown')state.crown=true;
+  rebuildAnimals();
+  if(id==='horse'){if(!state.horse){state.horse=true;horseFromBarn();}else state.silver=(state.silver||0)+2,rebuildAnimals();}
+  save();updateHUD();
+}
 const ROBOT={id:'robot',name:['Perunaattori 2000','Perunaattori 2000'],x:34,y:120,h:40};
 function robotOn(){return !!(state.robot&&state.robot.on);}
 function robotPos(){if(state.farm===2){ROBOT.x=160;ROBOT.y=150;}else{ROBOT.x=34;ROBOT.y=120;}return ROBOT;}
@@ -1782,19 +1829,26 @@ function robotAlarm(){
   initAudio();[0,.25,.5,.75].forEach(t=>tone({f:880,f2:440,d:.22,v:.22,type:'square',t}));
   toast(L('⚠️ PERUNAATTORI 2000 saapui farmille! Kävele sen luo ja taistele.','⚠️ PERUNAATTORI 2000 arrived on the farm! Walk to it and fight.'));
 }
-function checkRobotArrival(){if(robotOn()&&state.robot.at!==robotAnnounced&&started){robotAnnounced=state.robot.at;robotRise=0;robotAlarm();}}
+function checkRobotArrival(){
+  if(robotOn()&&state.robot.at!==robotAnnounced&&(started||robotForced())){robotAnnounced=state.robot.at;robotRise=0;robotAlarm();}
+  if(robotForced()&&ACC&&!['quiz','chest','boss','dodge','result','bossintro'].includes(modalType)){closeCmd();$('#tirppa').hidden=true;started=true;showRobotIntro();}
+}
 function showRobotIntro(){
   setMusic('robot');sfx.bossRoar();
   openModal('bossintro',`<h2>🤖 PERUNAATTORI 2000</h2><canvas id="robotCv" width="60" height="44" style="width:min(30%,170px);image-rendering:pixelated;display:block;margin:0 auto"></canvas>
   <p>${L('Ylläpitäjä kutsui farmille superrobotin! Se on kolme kertaa vaikeampi kuin Perunapomon viimeinen muoto.','The admin summoned a super robot to the farm! It is three times harder than the Potato Boss’s final form.')}</p>
+  ${robotForced()?`<p class="fact" style="text-align:left">🔒 <b>${L('leetu1234 määräsi tämän taistelun – sitä ei voi ohittaa!','leetu1234 ordered this fight – it can’t be skipped!')}</b><br>
+   🏆 ${L('Jos voitat','If you win')}: <b>${rRew(state.robot.rew).e} ${L2(rRew(state.robot.rew).d)}</b><br>
+   💀 ${L('Jos häviät','If you lose')}: <b>${rPun(state.robot.pun).e} ${L2(rPun(state.robot.pun).d)}</b></p>`:''}
   <p style="font-size:.85em">${L('⏱️ Selviä 90 sekuntia · 🔴 varo lasereita (vilkkuva viiva = laser tulossa) · 🎯 ohjautuvat perunat seuraavat sinua','⏱️ Survive 90 seconds · 🔴 watch out for lasers (blinking line = laser coming) · 🎯 homing potatoes follow you')}</p>
-  <div class="row"><button class="btn big" id="rbGo">${L('Taistele! ⚔️','Fight! ⚔️')}</button><button class="btn" id="rbLater">${L('Myöhemmin','Later')}</button></div>`);
+  <div class="row"><button class="btn big" id="rbGo">${L('Taistele! ⚔️','Fight! ⚔️')}</button>${robotForced()?'':`<button class="btn" id="rbLater">${L('Myöhemmin','Later')}</button>`}</div>`);
   const c=$('#robotCv').getContext('2d');c.imageSmoothingEnabled=false;c.drawImage(SPR.robot.c,12,3,36,38);
   bind('rbGo',()=>startDodge('robot'));bind('rbLater',closeModal);
 }
 function robotWin(){
-  state.robotWins=(state.robotWins||0)+1;state.robot=null;
-  let reward;if(!state.golden){state.golden=true;reward=L('✨ kultainen peruna','✨ the golden potato');}else{state.silver=(state.silver||0)+3;reward=L('🥈 3 hopeaperunaa','🥈 3 silver potatoes');}
+  state.robotWins=(state.robotWins||0)+1;const rw=dodge&&dodge.forced&&state.robot&&rRew(state.robot.rew);state.robot=null;
+  let reward;if(rw){const had=state.golden&&rw.id==='golden';applyReward(rw.id);reward=rw.e+' '+(had?L('3 hopeaperunaa','3 silver potatoes'):L2(rw.n));}
+  else if(!state.golden){state.golden=true;reward=L('✨ kultainen peruna','✨ the golden potato');}else{state.silver=(state.silver||0)+3;reward=L('🥈 3 hopeaperunaa','🥈 3 silver potatoes');}
   rebuildAnimals();save();updateHUD();setMusic('farm');
   for(let i=0;i<160;i++)parts.push({x:rand()*W,y:-rand()*40,vx:(rand()-.5)*30,vy:20+rand()*40,life:4,max:4,kind:'confetti',color:pick(['#e8435a','#ffd34d','#6fcf4f','#4fa3e8','#b97ae8','#9aa4ae'])});
   openModal('result',`<div class="redo">🤖🏆</div><h2>${L('PERUNAATTORI 2000 KAATUI!','PERUNAATTORI 2000 IS DOWN!')}</h2>
@@ -1924,6 +1978,7 @@ $('#bLang').onclick=()=>{if(['quiz','chest','result','boss','bossintro'].include
 let menuSure=0;
 function goMenu(){
   if(modalType==='title')return;
+  if(robotForced()&&['dodge','bossintro'].includes(modalType)){sfx.deny();toast(L('🔒 Perunaattori 2000 -taistelua ei voi ohittaa!','🔒 The Perunaattori 2000 fight can’t be skipped!'));return;}
   if(modalType==='chest'){toast(L('Avaa arkku ensin! 🎁','Open the chest first! 🎁'));return;}
   const busy=(modalType==='quiz'&&quiz&&(quiz.done||quiz.mistakes))||(modalType==='boss'&&fight&&fight.phase==='q')||(modalType==='dodge'&&dodge&&dodge.phase==='play');
   if(busy&&performance.now()-menuSure>3000){menuSure=performance.now();sfx.deny();
@@ -1951,7 +2006,7 @@ function update(dt){
       if(d<1.5){P.target=null;if(P.autoSt){const s=P.autoSt;P.autoSt=null;openStation(s);}}else{dx=vx/d;dy=vy/d;}}
     const len=Math.hypot(dx,dy);
     if(len&&!modalType){
-      dx/=len;dy/=len;const sp=64*SPEED*dt,nx=P.x+dx*sp,ny=P.y+dy*sp;let moved=false;
+      dx/=len;dy/=len;const sp=64*SPEED*(fxOn('slow')?.5:1)*dt,nx=P.x+dx*sp,ny=P.y+dy*sp;let moved=false;
       if(!blocked(nx,P.y)){P.x=nx;moved=moved||Math.abs(dx)>.05;}
       if(!blocked(P.x,ny)){P.y=ny;moved=moved||Math.abs(dy)>.05;}
       if(Math.abs(dx)>.1)P.flip=dx<0;P.walkT+=dt;P.moving=true;
@@ -1997,6 +2052,7 @@ function renderPrompt(){
 addEventListener('resize',()=>{if(nearSt)renderPrompt();});
 
 const SECRET_PX={x:104,y:199,armed:true};
+function drawCrown(x,y){x=Math.round(x);R(ctx,x-3,y-3,7,3,'#ffd34d');R(ctx,x-3,y-5,1,2,'#ffd34d');R(ctx,x,y-5,1,2,'#ffd34d');R(ctx,x+3,y-5,1,2,'#ffd34d');R(ctx,x-1,y-2,3,1,'#e8435a');R(ctx,x-3,y,7,1,'#b8860b');}
 function pushRobot(ents,tt){
   if(!robotOn())return;const r=robotPos(),s=SPR.robot;robotRise=Math.min(1,robotRise+1/60);
   const hgt=Math.round(s.h*2*robotRise),bob=Math.round(Math.sin(tt*6)*1.5);
@@ -2011,7 +2067,7 @@ const nameHTML=(n,id)=>{const c=cleanName(n)||id||'?';return (id===ADMIN_ID||c.t
 const cleanName=v=>String(v||'').replace(/[<>"&]/g,'').replace(/\s+/g,' ').trim().slice(0,16);
 const fmtClock=t=>{t=Math.floor(t);const h=Math.floor(t/3600),m=Math.floor(t%3600/60),sec=t%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(sec).padStart(2,'0');};
 function updateTimeHUD(){const el=$('#stTime');if(el){el.textContent='⏱️ '+fmtClock(state.time||0);el.title=L('Peliaika (tulostaulua varten)','Play time (for the leaderboard)');}}
-setInterval(()=>{if(started)updateTimeHUD();renderControl();checkRobotArrival();},1000);
+setInterval(()=>{if(started)updateTimeHUD();renderControl();checkRobotArrival();cv.style.filter=fxOn('gray')?'grayscale(1)':'';},1000);
 function needLogin(){
   sfx.deny();const ni=$('#pName'),pn=$('#pPin');
   if(!ACCDB){toast(L('Hetki, ladataan…','One moment, loading…'));return;}
@@ -2328,12 +2384,27 @@ async function admRenderUsers(){
     body.querySelectorAll('tr[data-id]').forEach(tr=>{const id=tr.dataset.id;tr.querySelectorAll('[data-a]').forEach(btn=>btn.onclick=()=>{initAudio();admAction(id,btn.dataset.a,btn,tr);});});
   }catch(e){if($('#admBody'))body.innerHTML=`<p class="lbNote">${L('Käyttäjälistaa ei saatu ladattua.','Couldn’t load the user list.')}</p>`;}
 }
+// Ylläpitäjä valitsee rangaistuksen ja palkinnon ennen kuin robotti lähetetään toisen pelaajan peliin.
+function admRobotPicker(who,done){
+  const body=$('#admBody');let pun=R_PUN[0].id,rew=R_REW[0].id;
+  const list=(arr,k,cur)=>arr.map(x=>`<label class="rpick"><input type="radio" name="${k}" value="${x.id}" ${x.id===cur?'checked':''}> ${x.e} <b>${L2(x.n)}</b><br><small>${L2(x.d)}</small></label>`).join('');
+  body.innerHTML=`<h3 style="margin:.2em 0">🤖 ${L('Lähetä Perunaattori 2000 pelaajalle','Send Perunaattori 2000 to')} ${nameHTML(who.name,who.id)}</h3>
+   <p class="lbNote">🔒 ${L('Pelaaja ei voi ohittaa taistelua. Valitse, mitä tapahtuu:','The player can’t skip the fight. Choose what happens:')}</p>
+   <div class="rcols"><div><p><b>💀 ${L('Jos hän häviää','If they lose')}</b></p>${list(R_PUN,'rpun',pun)}</div><div><p><b>🏆 ${L('Jos hän voittaa','If they win')}</b></p>${list(R_REW,'rrew',rew)}</div></div>
+   <div class="row"><button class="btn big" id="rpGo">🤖 ${L('Lähetä!','Send!')}</button><button class="btn" id="rpNo">${L('Peruuta','Cancel')}</button></div>`;
+  bind('rpNo',()=>done(null));
+  bind('rpGo',()=>done({pun:body.querySelector('[name=rpun]:checked').value,rew:body.querySelector('[name=rrew]:checked').value}));
+}
 async function admAction(id,a,btn,tr){
   try{
     if(a==='go'){switchToAccount(id);return;}
     if(a==='robot'){const info=await admGetSave(id),sv=info.save,on=!(sv.robot&&sv.robot.on);
-      sv.robot=on?{on:true,by:ADMIN_ID,at:Date.now()}:null;await admPutSave(id,info,sv);if(ACC&&ACC.id===id&&on){robotAnnounced=0;}
-      sfx.ok();toast(on?L('🤖 Perunaattori 2000 kutsuttu pelaajan peliin!','🤖 Perunaattori 2000 summoned into the player’s game!'):L('🤖 Perunaattori 2000 poistettu.','🤖 Perunaattori 2000 removed.'));admRenderUsers();return;}
+      const send=async opt=>{try{sv.robot=opt?{on:true,by:ADMIN_ID,at:Date.now(),...opt}:null;await admPutSave(id,info,sv);if(ACC&&ACC.id===id){state.robot=sv.robot;robotAnnounced=0;}
+        sfx.ok();toast(opt?(opt.forced?L('🤖 Perunaattori 2000 lähetetty! Pelaaja ei voi ohittaa taistelua.','🤖 Perunaattori 2000 sent! The player can’t skip the fight.'):L('🤖 Perunaattori 2000 kutsuttu!','🤖 Perunaattori 2000 summoned!')):L('🤖 Perunaattori 2000 poistettu.','🤖 Perunaattori 2000 removed.'));admRenderUsers();}catch(e){admErr(e);}};
+      if(!on)return send(null);
+      if(id===ADMIN_ID)return send({});
+      const r=(await admUsers()).find(x=>x.id===id)||{id,name:(sv.name||id)};
+      admRobotPicker(r,opt=>opt?send({...opt,forced:true}):admRenderUsers());return;}
     if(a==='animals'){const info=await admGetSave(id),sv=info.save;sv.owned=sv.owned||{};ANIMALS.forEach(x=>{if(!sv.owned[x.id])sv.owned[x.id]=1;});sv.cheated=true;
       await admPutSave(id,info,sv);sfx.ok();toast(L('🐾 Kaikki eläimet annettu.','🐾 All animals given.'));admRenderUsers();return;}
     if(a==='reset'){sureClick(btn,async()=>{try{const info=await admGetSave(id),sv=Object.assign(freshState(info.save.level),{name:info.save.name||'',owner:id});
@@ -2371,7 +2442,11 @@ function admRenderGame(){
   </div>`;
   $('#admBody').querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{initAudio();
     const g=b.dataset.g;
-    if(g==='robot'){if(robotOn()){state.robot=null;save();toast(L('🤖 Perunaattori 2000 poistettu.','🤖 Perunaattori 2000 removed.'));}else{closeModal();started=true;summonRobot(ADMIN_ID);}admRenderGame&&modalType==='admin'&&admRenderGame();return;}
+    if(g==='robot'){if(robotOn()){state.robot=null;save();toast(L('🤖 Perunaattori 2000 poistettu.','🤖 Perunaattori 2000 removed.'));admRenderGame();}
+      else if(inOthersGame())admRobotPicker({id:ACC.id,name:state.name||ACC.name},opt=>{if(!opt)return admRenderGame();
+        state.robot={on:true,by:ADMIN_ID,at:Date.now(),...opt,forced:true};save();robotAnnounced=state.robot.at;sfx.ok();
+        toast(L('🤖 Perunaattori 2000 lähetetty! Pelaaja ei voi ohittaa taistelua.','🤖 Perunaattori 2000 sent! The player can’t skip the fight.'));admRenderGame();});
+      else{closeModal();started=true;summonRobot(ADMIN_ID);}return;}
     state.cheated=true;
     if(g==='animals'){ANIMALS.forEach(a=>{if(!state.owned[a.id])state.owned[a.id]=1;});rebuildAnimals();if(state.boss==='none')state.boss='awake';bossRise=1;}
     if(g==='crops'){CROPS.forEach(c=>{if(!state.crops[c.id])state.crops[c.id]=1;});state.farm2=true;}
@@ -2496,7 +2571,7 @@ function drawFarm2(){
   const ents=[];
   for(const st of STATIONS2)ents.push({y:st.y,d:()=>{shadow(st.x,st.y+1,st.kind==='tractor'?22:12);ctx.drawImage(st.img,st.x-20,st.y-42);}});
   pushRobot(ents,tt);
-  ents.push({y:P.y,d:()=>{const fr=P.moving?(Math.floor(P.walkT*8)%2?1:2):0,s=SPR.player[fr],px=Math.round(P.x-s.w/2),py=Math.round(P.y-s.h);shadow(P.x,P.y,s.w);ctx.drawImage(P.flip?s.f:s.c,px,py);if(TIR.big)bigHead(s,'player',P.flip,px,py);}});
+  ents.push({y:P.y,d:()=>{const fr=P.moving?(Math.floor(P.walkT*8)%2?1:2):0,s=SPR.player[fr],px=Math.round(P.x-s.w/2),py=Math.round(P.y-s.h);shadow(P.x,P.y,s.w);ctx.drawImage(P.flip?s.f:s.c,px,py);if(TIR.big)bigHead(s,'player',P.flip,px,py);if(state.crown)drawCrown(P.x,py-(TIR.big?9:0));}});
   ents.sort((a,b)=>a.y-b.y).forEach(e=>e.d());
   if(started)for(const st of STATIONS2){if(st===nearSt&&!modalType)continue;
     if(state.last===st.id){const z=Math.floor(tt*2)%2;R(ctx,st.x+6,st.y-st.h-6-z*2,3,1,'#ffffff');R(ctx,st.x+7,st.y-st.h-5-z*2,1,1,'#ffffff');R(ctx,st.x+6,st.y-st.h-4-z*2,3,1,'#ffffff');continue;}
@@ -2534,7 +2609,7 @@ function draw(){
   if(bossOnFarm()){bossRise=Math.min(1,bossRise+1/60);const s=SPR.boss,bob=Math.round(Math.sin(tt*3)*1.5),hgt=Math.round(s.h*2*bossRise);
     ents.push({y:BOSS.y,d:()=>{shadow(BOSS.x,BOSS.y,s.w*2);ctx.drawImage(s.c,0,0,s.w,hgt/2,BOSS.x-s.w,BOSS.y-hgt+bob,s.w*2,hgt);}});}
   ents.push({y:P.y,d:()=>{const fr=P.moving?(Math.floor(P.walkT*8)%2?1:2):0,s=SPR.player[fr],px=Math.round(P.x-s.w/2),py=Math.round(P.y-s.h);shadow(P.x,P.y,s.w);ctx.drawImage(P.flip?s.f:s.c,px,py);
-    if(TIR.big)bigHead(s,'player',P.flip,px,py);}});
+    if(TIR.big)bigHead(s,'player',P.flip,px,py);if(state.crown)drawCrown(P.x,py-(TIR.big?9:0));}});
   R(ctx,SECRET_PX.x-1,SECRET_PX.y-1,3,3,'#64a344');
   ents.sort((a,b)=>a.y-b.y).forEach(e=>e.d());
   if(started)for(const st of STATIONS){if(st===nearSt&&!modalType)continue;if(state.last===st.id){const z=Math.floor(tt*2)%2;R(ctx,st.x+6,st.y-st.h-6-z*2,3,1,'#ffffff');R(ctx,st.x+7,st.y-st.h-5-z*2,1,1,'#ffffff');R(ctx,st.x+6,st.y-st.h-4-z*2,3,1,'#ffffff');continue;}
