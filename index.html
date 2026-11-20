@@ -342,9 +342,10 @@ let settings={music:true,sfx:true,lang:'fi',device:null,name:'',admin:null,devId
 try{const s=JSON.parse(localStorage.getItem(OKEY));if(s)settings=Object.assign(settings,s);}catch(e){}
 // Tämän laitteen tunniste: sen avulla peli tunnistaa muiden laitteiden (esim. ylläpitäjän) tekemät muutokset.
 function devId(){if(!settings.devId){settings.devId=Math.random().toString(36).slice(2,10);saveSettings();}return settings.devId;}
-function saveSettings(){try{localStorage.setItem(OKEY,JSON.stringify(settings));}catch(e){}}
+function saveSettings(){try{localStorage.setItem(OKEY,JSON.stringify(settings));}catch(e){}audShare();}
 function initAudio(){
-  if(AC){if(AC.state==='suspended')AC.resume();return;}
+  audWanted=true;audActive();
+  if(AC){if(AC.state==='suspended'&&!document.hidden)AC.resume();return;}
   try{
     AC=new (window.AudioContext||window.webkitAudioContext)();
     master=AC.createGain();master.gain.value=.8;master.connect(AC.destination);
@@ -353,6 +354,16 @@ function initAudio(){
     applyVolumes();startMusic();
   }catch(e){AC=null;}
 }
+// Vain yksi pelin kopio soittaa ääniä kerrallaan (esim. jos peli on auki kahdessa välilehdessä).
+const AUD_ID=Math.random().toString(36).slice(2);let audBC=null;
+try{audBC=new BroadcastChannel('farmikoulu-aani');audBC.onmessage=e=>{const m=e.data||{};
+  if(m.t==='active'&&m.id!==AUD_ID&&AC&&AC.state==='running')AC.suspend();
+  if(m.t==='settings'&&m.id!==AUD_ID){Object.assign(settings,m.s);applyVolumes();}};}catch(e){}
+function audActive(){try{if(audBC)audBC.postMessage({t:'active',id:AUD_ID});}catch(e){}}
+function audShare(){try{if(audBC)audBC.postMessage({t:'settings',id:AUD_ID,s:{music:settings.music,sfx:settings.sfx,vol:settings.vol}});}catch(e){}}
+addEventListener('storage',e=>{if(e.key===OKEY&&e.newValue){try{const n=JSON.parse(e.newValue);settings.music=n.music;settings.sfx=n.sfx;settings.vol=n.vol;applyVolumes();}catch(_){}}});
+document.addEventListener('visibilitychange',()=>{if(!AC)return;if(document.hidden)AC.suspend();else if(audWanted)AC.resume();});
+let audWanted=false;
 function applyVolumes(){
   if(AC){musicGain.gain.value=settings.music?.33:0;sfxGain.gain.value=settings.sfx?.55:0;master.gain.value=Math.max(0,Math.min(100,settings.vol==null?80:settings.vol))/100;}
   document.body.classList.toggle('noshake',settings.shake===false);
@@ -383,7 +394,7 @@ const MEL=("G4 G4 B4 D5 E5 D5 B4 G4 A4 A4 C5 E5 D5 C5 B4 A4 G4 G4 B4 D5 G5 E5 D5
 const BASS=['G2','A2','G2','D2','D2','C2','G2','D2'];
 const STEP=.19;
 const FARM_TRACK={mel:MEL,bass:BASS,step:STEP};
-const GAME_VERSION='v52 · 20.11.2026';
+const GAME_VERSION='v53 · 20.11.2026';
 const farmTrack=()=>FARM_TRACK;
 const BOSS_TRACK={step:.15,bass:['E2','A2','E2','B1','G2','C2','G2','B1'],
   mel:("E4 E4 G4 E4 B4 A4 G4 F#4 E4 E4 G4 E4 C5 B4 A4 B4 E4 E4 G4 E4 B4 A4 G4 F#4 G4 F#4 E4 D4 E4 - E4 - "+
