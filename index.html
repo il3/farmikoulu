@@ -414,7 +414,7 @@ const MEL=("G4 G4 B4 D5 E5 D5 B4 G4 A4 A4 C5 E5 D5 C5 B4 A4 G4 G4 B4 D5 G5 E5 D5
 const BASS=['G2','A2','G2','D2','D2','C2','G2','D2'];
 const STEP=.19;
 const FARM_TRACK={mel:MEL,bass:BASS,step:STEP};
-const GAME_VERSION='v60 · 21.11.2026';
+const GAME_VERSION='v61 · 21.11.2026';
 const farmTrack=()=>FARM_TRACK;
 const BOSS_TRACK={step:.15,bass:['E2','A2','E2','B1','G2','C2','G2','B1'],
   mel:("E4 E4 G4 E4 B4 A4 G4 F#4 E4 E4 G4 E4 C5 B4 A4 B4 E4 E4 G4 E4 B4 A4 G4 F#4 G4 F#4 E4 D4 E4 - E4 - "+
@@ -1602,6 +1602,7 @@ function showHelp(){
   <li>📜 <b>Kampanja</b> (aloitusvalikosta): isäntä Heikki opastaa sinut farmin läpi yhdeksässä luvussa. Nykyinen tavoite näkyy pelikentän vasemmassa yläkulmassa.</li>
   <li>🏗️ Perunapomon voiton jälkeen 🚜-napista pääset farmille 2 ja <b>talotyömaalle (farmi 3)</b>. Työmaalla jokainen tehtäväpiste antaa yhden <b>talon osan</b>. Kun olet kerännyt kaikki viisi, rakenna talo rakennuspaikalla!</li>
   <li>👑 Kun kaikki eläimet on kerätty, pellolta nousee <b>Perunapomo</b>. Pomotaistelussa jokaisessa kysymyksessä on <b>20 sekunnin aikaraja</b>. Oikea vastaus tekee vahinkoa (nopea vastaus tekee enemmän), väärä vastaus tai loppunut aika vie sydämen. Voita pomo, niin voitat pelin!</li>
+  <li>🪨 Kun Perunapomo on voitettu, sen paikalle pellolle nousee <b>haastekivi</b>. Kävele kiven luo, niin voit haastaa pomon uusintaotteluun milloin tahansa.</li>
   <li>🔁 Voiton jälkeen Perunapomo jää pellolle, ja voit haastaa sen <b>uusintaotteluun</b> milloin vain. Yritä rikkoa ennätyksesi!</li>
   <li>🪨 Kun olet saanut arkun jokaiselta viideltä pisteeltä, farmin keskelle nousee <b>salaperäinen kivi</b>. Sitä klikkaamalla voit nostaa tehtävät <b>7.–8. luokan</b> tasolle.</li>
   <li>🚜 Perunapomon voitettuasi pääset <b>seuraavalle farmille</b>, jossa on iso lato ja paljon peltoa. Siellä arkuista tulee kasveja: kasvata kaikki kuusi peltoa täyteen! Farmia vaihdetaan yläpalkin 🚜-napista.</li>
@@ -1622,6 +1623,7 @@ function showHelp(){
   <li>📜 <b>Campaign</b> (from the main menu): Farmer Heikki guides you through the farm in nine chapters. Your current goal is shown in the top-left corner.</li>
   <li>🏗️ After beating the Potato Boss, the 🚜 button takes you to farm 2 and the <b>house site (farm 3)</b>. There every task point gives one <b>house part</b>. Collect all five and build the house at the building site!</li>
   <li>👑 When you have every animal, the <b>Potato Boss</b> rises from the field. In the boss fight every question has a <b>20-second time limit</b>. A right answer deals damage (fast answers deal more); a wrong answer or running out of time costs a heart. Beat the boss to win the game!</li>
+  <li>🪨 After you beat the Potato Boss, a <b>challenge stone</b> rises in its place on the field. Walk to the stone to challenge the boss to a rematch any time.</li>
   <li>🔁 After you win, the Potato Boss stays in the field and you can challenge it to a <b>rematch</b> any time. Try to beat your record!</li>
   <li>🪨 Once you have earned a chest at all five points, a <b>mysterious stone</b> rises in the middle of the farm. Click it to raise the tasks to <b>grade 7–8</b>.</li>
   <li>🚜 After beating the Potato Boss you can move to the <b>next farm</b> with a big barn and lots of fields. There, chests give crops: fill all six fields! Switch farms with the 🚜 button at the top.</li>
@@ -1779,6 +1781,16 @@ function drawChest(dt){
 /* ---------- SALAPERÄINEN KIVI (7.–8. luokan taso) ---------- */
 const STONE={id:'stone',x:152,y:122,h:16};
 let stoneRise=1;
+// Haastekiven kuva: harmaa kivi, johon on kaiverrettu kultainen kruunu ja peruna
+const CHAL_IMG=(()=>{const c=document.createElement('canvas');c.width=26;c.height=24;const g=c.getContext('2d');
+  const rows=[[8,10],[5,16],[3,20],[2,22],[1,24],[1,24],[0,26],[0,26],[0,26],[0,26],[0,26],[0,26],[0,26],[0,26],[0,26],[0,26],[1,24],[1,24],[1,24],[1,24],[1,24],[2,22],[2,22],[3,20]];
+  rows.forEach(([x,w],y)=>{R(g,x,y,w,1,'#8a8a8a');R(g,x,y,1,1,'#5e5e5e');R(g,x+w-1,y,1,1,'#5e5e5e');});
+  R(g,2,22,22,2,'#5e5e5e');for(let y=2;y<12;y++)R(g,4,y,2,1,'#a8a8a8');R(g,8,0,10,1,'#a8a8a8');
+  // kruunu
+  R(g,8,5,10,4,'#d6a51f');R(g,8,3,2,2,'#d6a51f');R(g,12,2,2,3,'#d6a51f');R(g,16,3,2,2,'#d6a51f');R(g,9,6,8,2,'#ffd34d');R(g,12,6,2,1,'#e8435a');
+  // peruna
+  R(g,9,11,8,8,'#6b4a26');R(g,10,10,6,10,'#6b4a26');R(g,10,12,6,6,'#b98a52');R(g,11,11,4,8,'#b98a52');R(g,11,13,1,1,'#3a2414');R(g,14,13,1,1,'#3a2414');R(g,12,16,2,1,'#3a2414');
+  for(const [x,y] of [[3,15],[21,9],[19,19],[5,20]])R(g,x,y,2,1,'#6e6e6e');return c;})();
 const STONE_IMG=(()=>{const c=document.createElement('canvas');c.width=22;c.height=18;const g=c.getContext('2d');
   fillCircle(g,11,11,8,'#6f7176');fillCircle(g,8,9,6,'#8d8f94');fillCircle(g,14,12,6,'#7c7e83');fillCircle(g,10,8,4,'#a3a5aa');
   R(g,3,16,17,2,'#5a5c60');R(g,6,3,6,1,'#6fa84a');R(g,5,4,3,1,'#5f9a3f');R(g,13,5,3,1,'#6fa84a');R(g,16,13,1,2,'#5a5c60');R(g,5,12,2,1,'#5a5c60');return c;})();
@@ -1811,7 +1823,7 @@ const baseStations=()=>[...STATIONS,...(bossOnFarm()?[BOSS]:[]),...(state.stone?
 function showBossIntro(first){
   setMusic('boss');sfx.bossRoar();
   fight={phase:'intro',t:0,hp:BOSS_HP,hearts:BOSS_HEARTS,anims:[],bossFlash:0,lunge:0,hurt:0};
-  openModal('bossintro',`<h2>${state.boss==='beaten'?L('Uusintaottelu!','Rematch!'):L('Perunapomo heräsi!','The Potato Boss awakens!')}</h2><canvas id="bossCv" width="160" height="56"></canvas>
+  openModal('bossintro',`<h2>${state.boss==='beaten'?L('🪨 Haastekivi: uusintaottelu!','🪨 Challenge stone: rematch!'):L('Perunapomo heräsi!','The Potato Boss awakens!')}</h2><canvas id="bossCv" width="160" height="56"></canvas>
   <p>${first?L('Pellon alta kuuluu jyrinää… Valtava <b>Perunapomo</b> haluaa viedä kaikki eläimesi!','The field rumbles… The giant <b>Potato Boss</b> wants to take all your animals!'):(state.boss==='beaten'?L(`Perunapomo haluaa <b>uusintaottelun</b>! Pomovoittoja: ${state.bossWins||1} · paras tulos: ${state.bestHearts?state.bestHearts+' ❤️':'–'}`,`The Potato Boss wants a <b>rematch</b>! Boss wins: ${state.bossWins||1} · best: ${state.bestHearts?state.bestHearts+' ❤️':'–'}`):L('Perunapomo odottaa pellolla.','The Potato Boss is waiting in the field.'))}</p>
   <p>${L('⏱️ 20 s / kysymys · ✅ oikein = vahinkoa (nopea = enemmän) · ❤️ väärin tai aika loppuu = −1 sydän (5 sydäntä)','⏱️ 20 s per question · ✅ right = damage (fast = more) · ❤️ wrong or time’s up = −1 heart (5 hearts)')}</p>
   <div class="row"><button class="btn big" id="bGo">${L('Taistele! ⚔️','Fight! ⚔️')}</button><button class="btn" id="bLater">${L('Myöhemmin','Later')}</button></div>`);
@@ -1875,7 +1887,7 @@ function bossLose(){
 }
 function bossWin(){
   const first=state.boss!=='beaten',hearts=fight.hearts;
-  state.boss='beaten';state.won=true;state.farm2=true;state.bossWins=(state.bossWins||0)+1;
+  state.boss='beaten';state.won=true;state.farm2=true;state.bossWins=(state.bossWins||0)+1;bossRise=0;
   const record=hearts>(state.bestHearts||0);if(record)state.bestHearts=hearts;
   state.silver=(state.silver||0)+1;
   lastBossResult={hearts,record,first};save();closeModal();silverFromBarn();updateHUD();
@@ -2467,7 +2479,7 @@ function renderPrompt(){
   const st=nearSt;pr.style.left=(st.x/W*100)+'%';
   if(st.id==='robot'){pr.innerHTML=`<span>🤖 PERUNAATTORI 2000</span><button>${L('Taistele!','Fight!')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
   else if(st.id==='stone'){pr.innerHTML=`<span>🪨 ${L('Salaperäinen kivi','Mysterious stone')}</span><button>${L('Tutki','Inspect')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
-  else if(st.id==='boss'){pr.innerHTML=`<span>👑 ${L2(st.name)}</span><button>${state.boss==='beaten'?L('Uusintaottelu!','Rematch!'):L('Taistele!','Fight!')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
+  else if(st.id==='boss'){pr.innerHTML=state.boss==='beaten'?`<span>🪨 ${L('Haastekivi','Challenge stone')}</span><button>👑 ${L('Haasta Perunapomo!','Challenge the Potato Boss!')} [E]</button>`:`<span>👑 ${L2(st.name)}</span><button>${L('Taistele!','Fight!')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
   else if(st.id==='build'){pr.innerHTML=`<span>🏗️ ${L2(st.name)} (${parts3Count()}/${PARTS3.length})</span><button>${house3Done()?L('Katso taloa','View house'):parts3Count()===PARTS3.length?L('Rakenna!','Build!'):L('Katso','Look')} [E]</button>`;pr.querySelector('button').onclick=()=>openStation(st);}
   else if(state.farm===3&&PART3[st.id]&&has3(PART3[st.id].id))pr.innerHTML=`<span>✅ ${PART3[st.id].e} ${L2(PART3[st.id].n)} ${L('saatu','collected')}</span>`;
   else if(state.last===st.id&&state.farm!==3)pr.innerHTML=`<span>${L2(st.name)} ${L('lepää 💤 – kokeile toista pistettä','is resting 💤 – try another point')}</span>`;
@@ -3445,7 +3457,13 @@ function draw(){
         if(Math.floor(tt*5)%4===0)R(ctx,STONE.x+ri(-7,7),STONE.y-ri(2,14),1,1,'#d8fbff');}}});
     if(stoneRise<1&&Math.floor(tt*20)%2)R(ctx,STONE.x+ri(-10,10),STONE.y-ri(0,4),2,1,'#8a6a3a');}
   pushRobot(ents,tt);
-  if(bossOnFarm()){bossRise=Math.min(1,bossRise+1/60);const s=SPR.boss,bob=Math.round(Math.sin(tt*3)*1.5),hgt=Math.round(s.h*2*bossRise);
+  if(state.boss==='beaten'){bossRise=Math.min(1,bossRise+1/60);const r=bossRise;
+    // Haastekivi: voitetun Perunapomon paikalle noussut kivi, josta pomon voi haastaa uudelleen
+    ents.push({y:BOSS.y,d:()=>{const hgt=Math.round(CHAL_IMG.height*r);shadow(BOSS.x,BOSS.y,CHAL_IMG.width);
+      ctx.drawImage(CHAL_IMG,0,CHAL_IMG.height-hgt,CHAL_IMG.width,hgt,BOSS.x-CHAL_IMG.width/2,BOSS.y-hgt,CHAL_IMG.width,hgt);
+      if(r<1&&Math.floor(tt*20)%2)R(ctx,BOSS.x+ri(-14,14),BOSS.y-ri(0,3),2,1,'#8a7a5a');
+      if(r>=1&&Math.floor(tt*2.5)%3===0)R(ctx,BOSS.x-4+Math.floor(tt*7)%9,BOSS.y-CHAL_IMG.height+5,1,1,'#fff6a0');}});}
+  else if(bossOnFarm()){bossRise=Math.min(1,bossRise+1/60);const s=SPR.boss,bob=Math.round(Math.sin(tt*3)*1.5),hgt=Math.round(s.h*2*bossRise);
     ents.push({y:BOSS.y,d:()=>{shadow(BOSS.x,BOSS.y,s.w*2);ctx.drawImage(s.c,0,0,s.w,hgt/2,BOSS.x-s.w,BOSS.y-hgt+bob,s.w*2,hgt);}});}
   ents.push({y:P.y,d:()=>{const fr=P.moving?(Math.floor(P.walkT*8)%2?1:2):0,s=SPR.player[fr],px=Math.round(P.x-s.w/2),py=Math.round(P.y-s.h);shadow(P.x,P.y,s.w);ctx.drawImage(P.flip?s.f:s.c,px,py);
     if(TIR.big)bigHead(s,'player',P.flip,px,py);if(state.crown)drawCrown(P.x,py-(TIR.big?9:0));}});
@@ -3454,7 +3472,7 @@ function draw(){
   if(started)for(const st of STATIONS){if(st===nearSt&&!modalType)continue;if(state.last===st.id){const z=Math.floor(tt*2)%2;R(ctx,st.x+6,st.y-st.h-6-z*2,3,1,'#ffffff');R(ctx,st.x+7,st.y-st.h-5-z*2,1,1,'#ffffff');R(ctx,st.x+6,st.y-st.h-4-z*2,3,1,'#ffffff');continue;}
     const y=Math.round(st.y-st.h-14+Math.sin(tt*4+st.x)*1.5);R(ctx,st.x-3,y-1,7,11,'#3a2414');R(ctx,st.x-2,y,5,9,'#fff6d5');R(ctx,st.x-1,y+1,3,4,'#d6332b');R(ctx,st.x-1,y+6,3,2,'#d6332b');}
   if(state.stone&&!state.stoneSeen&&stoneRise>=1){const y=Math.round(STONE.y-STONE.h-14+Math.sin(tt*5)*2);R(ctx,STONE.x-3,y-1,7,11,'#3a2414');R(ctx,STONE.x-2,y,5,9,'#8ff0ff');R(ctx,STONE.x-1,y+1,3,4,'#1b4a6a');R(ctx,STONE.x-1,y+6,3,2,'#1b4a6a');}
-  if(bossOnFarm()&&started&&bossRise>=1){const y=Math.round(BOSS.y-BOSS.h-16+Math.sin(tt*5)*2);R(ctx,BOSS.x-3,y-1,7,11,'#3a2414');R(ctx,BOSS.x-2,y,5,9,'#ffd34d');R(ctx,BOSS.x-1,y+1,3,4,'#d6332b');R(ctx,BOSS.x-1,y+6,3,2,'#d6332b');}
+  if(state.boss==='awake'&&started&&bossRise>=1){const y=Math.round(BOSS.y-BOSS.h-16+Math.sin(tt*5)*2);R(ctx,BOSS.x-3,y-1,7,11,'#3a2414');R(ctx,BOSS.x-2,y,5,9,'#ffd34d');R(ctx,BOSS.x-1,y+1,3,4,'#d6332b');R(ctx,BOSS.x-1,y+6,3,2,'#d6332b');}
   if(P.target&&!modalType){const b=Math.floor(tt*6)%2;R(ctx,P.target.x-2-b,P.target.y,2,1,'#fff6d5');R(ctx,P.target.x+1+b,P.target.y,2,1,'#fff6d5');}
   for(const p of parts){const al=Math.min(1,p.life/p.max*1.5);ctx.globalAlpha=al;
     if(p.kind==='heart')ctx.drawImage(SPR.heart.c,Math.round(p.x-2),Math.round(p.y));
