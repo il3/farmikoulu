@@ -241,6 +241,11 @@ body.phone #admBody{--ms:min(30px,calc((100vw - 70px)/9))}
 .stats div{font-size:.85em;overflow-wrap:anywhere}
 .panel.boss .qtext{min-height:1.2em;margin:.2em 0 .4em}
 .shake{animation:shake .35s}body.noshake .shake{animation:none}
+#campBox{position:absolute;top:6px;left:6px;z-index:11;max-width:46%;background:rgba(255,248,230,.92);color:#3a2414;border:3px solid #8a5a2b;padding:3px 8px;font-size:12px;line-height:1.35;text-align:left;cursor:pointer;box-shadow:0 2px 0 #5e3a17}
+body.phone #campBox{font-size:10px;max-width:58%}
+.campTalk{display:flex;gap:10px;align-items:flex-start;text-align:left;background:#fff8e6;border:3px solid var(--wood2);padding:.4em .6em;margin:.3em 0}.campTalk p{margin:0}.campFace{font-size:2.4em;line-height:1}
+.campStars{font-size:1.4em;letter-spacing:2px;margin:.2em 0}.campStars span{color:#c9b48a}.campStars span.on{color:#f0b020;text-shadow:0 1px 0 #8a5a2b}
+.campList{text-align:left;font-size:.8em;margin:.3em auto;max-width:520px;padding-left:1.6em}.campList li{margin:.15em 0}.campList li small{display:block;opacity:.7;margin-left:1.6em}.campList li.cur{background:#ffe9a8}
 #srBox{position:absolute;top:6px;right:6px;z-index:11;pointer-events:none;background:rgba(20,14,6,.78);color:#fff3d0;border:2px solid #ffd34d;padding:3px 7px;font-family:'Press Start 2P',ui-monospace,monospace;text-align:right;min-width:9em}
 #srT{font-size:14px;letter-spacing:1px}#srT.done{color:#7dff6a}#srS{font-size:9px;line-height:1.5}#srS .ahead{color:#7dff6a}#srS .behind{color:#ff7a6a}
 body.phone #srT{font-size:11px}body.phone #srS{font-size:8px}
@@ -274,6 +279,7 @@ body.phone #srT{font-size:11px}body.phone #srS{font-size:8px}
     <canvas id="cv" width="320" height="208"></canvas>
     <div id="prompt" hidden></div>
     <div id="toast"></div>
+    <div id="campBox" hidden title="Kampanja"></div>
     <div id="srBox" hidden><div id="srT">0:00.00</div><div id="srS"></div></div>
     <div id="ctrlBan" hidden>👑 <span class="adminName">leetu</span> is now on control</div>
     <div id="cmd" hidden><div id="cmdLog"></div><div class="cmdrow"><span>&gt;</span><input id="cmdIn" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Komento"><button id="cmdX" title="Sulje">✕</button></div></div>
@@ -407,7 +413,7 @@ const MEL=("G4 G4 B4 D5 E5 D5 B4 G4 A4 A4 C5 E5 D5 C5 B4 A4 G4 G4 B4 D5 G5 E5 D5
 const BASS=['G2','A2','G2','D2','D2','C2','G2','D2'];
 const STEP=.19;
 const FARM_TRACK={mel:MEL,bass:BASS,step:STEP};
-const GAME_VERSION='v58 · 21.11.2026';
+const GAME_VERSION='v59 · 21.11.2026';
 const farmTrack=()=>FARM_TRACK;
 const BOSS_TRACK={step:.15,bass:['E2','A2','E2','B1','G2','C2','G2','B1'],
   mel:("E4 E4 G4 E4 B4 A4 G4 F#4 E4 E4 G4 E4 C5 B4 A4 B4 E4 E4 G4 E4 B4 A4 G4 F#4 G4 F#4 E4 D4 E4 - E4 - "+
@@ -1410,12 +1416,12 @@ function showTitle(){
   <canvas id="parade" width="160" height="26"></canvas>
   ${pickerHTML()}
   <div class="row">${has?`<button class="btn big" id="tCont">▶ ${L('Jatka peliä','Continue')}</button><button class="btn" id="tNew">${L('Uusi peli','New game')}</button>`:`<button class="btn big" id="tNew">▶ ${L('Aloita peli','Start game')}</button>`}
-  <button class="btn" id="tHelp">${L('Ohjeet','How to play')}</button><button class="btn" id="tBoard">🏆 ${L('Tulostaulu','Leaderboard')}</button><button class="btn" id="tSet">⚙️ ${L('Asetukset','Settings')}</button>${ACC?`<button class="btn" id="tSlots">💾 ${L('Tallennukset','Saves')}</button>`:''}</div>
+  ${ACC?`<button class="btn" id="tCamp">📜 ${L('Kampanja','Campaign')}</button>`:''}<button class="btn" id="tHelp">${L('Ohjeet','How to play')}</button><button class="btn" id="tBoard">🏆 ${L('Tulostaulu','Leaderboard')}</button><button class="btn" id="tSet">⚙️ ${L('Asetukset','Settings')}</button>${ACC?`<button class="btn" id="tSlots">💾 ${L('Tallennukset','Saves')}</button>`:''}</div>
   <p class="credit">${L('Tekijä','Made by')}: <b>leetu1234</b></p>`);
   bindPicker();
   const ni=$('#pName');ni.addEventListener('input',()=>{settings.name=cleanName(ni.value);saveSettings();});
   ni.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();($('#tCont')||$('#tNew')).click();}});
-  bind('tBoard',()=>showBoard(showTitle));bind('tSet',()=>showSettings(showTitle));bind('tSlots',()=>showSlots(showTitle));
+  bind('tBoard',()=>showBoard(showTitle));bind('tSet',()=>showSettings(showTitle));bind('tSlots',()=>showSlots(showTitle));bind('tCamp',()=>showCampMenu(showTitle));
   bind('aOut',logout);bind('adOpen',showAdmin);bind('adHome',()=>switchToAccount(ADMIN_ID));
   const pin=$('#pPin');
   const doLogin=async()=>{const m=$('#aMsg'),btn=$('#aIn');if(btn)btn.disabled=true;if(m)m.textContent=L('Kirjaudutaan…','Logging in…');
@@ -1430,6 +1436,95 @@ function showTitle(){
     {const ks=state.slots;state=freshState(pendingLevel);if(ks)state.slots=ks;}state.sr=!!settings.speedrun;state.srSplits={};srFlash=[];state.name=ACC?ACC.name:nm;settings.name=nm;saveSettings();state.unlocked78=pendingLevel===78;bossRise=0;rebuildAnimals();updateHUD();save();P.x=150;P.y=100;started=true;closeModal();sfx.ui();
     setTimeout(()=>toast(isPhone()?L('Kävele ❗-merkin luo ja paina ✋!','Walk to a ❗ sign and press ✋!'):L('Kävele ❗-merkin luo ja paina E!','Walk to a ❗ sign and press E!')),300);});
   bind('tHelp',showHelp);
+}
+/* ---------- KAMPANJA: tarinallinen pelimuoto, jossa edetään luku kerrallaan ---------- */
+const CAMP=[
+ {e:'🌅',n:['Tervetuloa farmille','Welcome to the farm'],
+  s:['Hei! Minä olen isäntä Heikki. Tämä farmi tarvitsee apulaista – ja sinä näytät juuri oikealta! Eläimet ovat karanneet ja piiloutuneet arkkuihin. Aloitetaan helposti.','Hi! I’m Farmer Heikki. This farm needs a helper – and you look just right! The animals have run off and hidden in chests. Let’s start easy.'],
+  g:['Tee yksi tehtävä millä tahansa ❗-pisteellä','Complete one task at any ❗ point'],prog:()=>[Math.min(1,state.tasks),1]},
+ {e:'🐾',n:['Ensimmäinen ystävä','The first friend'],
+  s:['Hienoa! Jokaisesta tehtävästä saat arkun, ja arkussa on aina eläin. Avaa arkku ja katso, kuka sieltä hyppää!','Great! Every task gives you a chest, and every chest holds an animal. Open one and see who jumps out!'],
+  g:['Saa ensimmäinen eläin farmille','Get your first animal'],prog:()=>[Math.min(1,ANIMALS.filter(a=>state.owned[a.id]).length),1]},
+ {e:'✨',n:['Tarkka tekijä','Sharp mind'],
+  s:['Tiesitkö, että jos teet tehtävän ilman yhtään virhettä, saat kultaisen arkun? Kokeillaanpa!','Did you know that if you finish a task without a single mistake, you get a golden chest? Let’s try!'],
+  g:['Tee tehtävä ilman virheitä','Finish a task with no mistakes'],prog:()=>[Math.min(1,state.goldTasks||0),1]},
+ {e:'📚',n:['Koko koulupäivä','A full school day'],
+  s:['Farmilla on viisi tehtäväpistettä: kaivo, postilaatikko, liitutaulu, omenapuu ja tienviitta. Hyvä apulainen osaa vähän kaikkea!','The farm has five task points: the well, the mailbox, the chalkboard, the apple tree and the signpost. A good helper knows a bit of everything!'],
+  g:['Tee tehtävä jokaisella viidellä pisteellä','Complete a task at all five points'],prog:()=>[STATIONS.filter(x=>(state.doneSt||[]).includes(x.id)).length,5]},
+ {e:'🐄',n:['Eläinkunta','The whole herd'],
+  s:['Farmi alkaa näyttää eloisalta! Vielä puuttuu muutama eläin. Kerää kaikki kuusi: sorsa, possu, kana, lehmä, lammas ja peruna.','The farm is coming alive! A few animals are still missing. Collect all six: the duck, pig, hen, cow, sheep and potato.'],
+  g:['Kerää kaikki kuusi eläintä','Collect all six animals'],prog:()=>[ANIMALS.filter(a=>state.owned[a.id]).length,6]},
+ {e:'👑',n:['Perunapomo','The Potato Boss'],
+  s:['Voi ei! Kun kaikki eläimet ovat koolla, pellolta nousee Perunapomo. Se haluaa farmin itselleen. Vastaa oikein ja pommita se pois!','Oh no! With all the animals home, the Potato Boss rises from the field. It wants the farm for itself. Answer correctly and blast it away!'],
+  g:['Voita Perunapomo','Defeat the Potato Boss'],prog:()=>[state.boss==='beaten'?1:0,1]},
+ {e:'🌻',n:['Sadonkorjuu','Harvest time'],
+  s:['Pomo on voitettu! Pellon takaa löytyi farmi 2, jossa on iso lato ja peltoja. Pääset sinne yläpalkin 🚜-napista. Kasvatetaan satoa!','The boss is beaten! Behind the field we found farm 2 with a big barn and fields. Use the 🚜 button at the top to get there. Let’s grow some crops!'],
+  g:['Kerää kaikki kuusi kasvia farmilla 2','Collect all six crops on farm 2'],prog:()=>[CROPS.filter(c=>(state.crops||{})[c.id]).length,6]},
+ {e:'🏡',n:['Oma koti','A home of your own'],
+  s:['Mahtava sato! Nyt ansaitset oman talon. Mene 🚜-napilla talotyömaalle (farmi 3). Jokainen tehtäväpiste antaa yhden talon osan.','What a harvest! Now you deserve a house of your own. Use the 🚜 button to go to the house site (farm 3). Each task point gives one house part.'],
+  g:['Rakenna talo farmilla 3','Build the house on farm 3'],prog:()=>[house3Done()?5:parts3Count(),5]},
+ {e:'💀',n:['Viimeinen muoto','The final form'],
+  s:['Juuri kun kaikki oli valmista, maa tärisee… Perunapomo palasi viimeisessä muodossaan! Nyt ei auta vastaaminen – sinun on väisteltävä sen hyökkäyksiä 45 sekuntia.','Just as everything was ready, the ground shakes… the Potato Boss is back in its final form! Answers won’t help now – you must dodge its attacks for 45 seconds.'],
+  g:['Selviä viimeisestä muodosta','Survive the final form'],prog:()=>[Math.min(1,state.finalWins||0),1],fight:true}];
+const campOn=()=>!!(state.camp&&!state.camp.done);
+const campCh=()=>CAMP[Math.min(CAMP.length-1,(state.camp&&state.camp.ch)||0)];
+const campDone=c=>{const [a,b]=c.prog();return a>=b;};
+function startCampaign(){
+  const ks=state.slots;state=freshState(pendingLevel);if(ks)state.slots=ks;state.name=ACC?ACC.name:(settings.name||'');
+  state.camp={ch:0,startedAt:Date.now(),seen:-1};state.unlocked78=pendingLevel===78;bossRise=0;rebuildAnimals();updateHUD();P.x=150;P.y=100;save();
+  started=true;closeModal();setTimeout(()=>showCampChapter(),300);
+}
+function campGoalHTML(c){const [a,b]=c.prog();return `🎯 <b>${L2(c.g)}</b>${b>1?` (${Math.min(a,b)}/${b})`:''}`;}
+function showCampChapter(){
+  if(!state.camp)return;const i=state.camp.ch,c=campCh();state.camp.seen=i;save();sfx.fanfare();
+  openModal('result',`<p class="lbNote" style="margin:0">📜 ${L('Kampanja','Campaign')} · ${L('Luku','Chapter')} ${i+1}/${CAMP.length}</p>
+   <h2>${c.e} ${L2(c.n)}</h2>
+   <div class="campTalk"><span class="campFace">👨‍🌾</span><p>${L2(c.s)}</p></div>
+   <p class="fact">${campGoalHTML(c)}</p>
+   <div class="row">${c.fight?`<button class="btn big" id="cpFight">⚔️ ${L('Taistele!','Fight!')}</button><button class="btn" id="cpOk">${L('Myöhemmin','Later')}</button>`:`<button class="btn big" id="cpOk">${L('Selvä! ▶','Got it! ▶')}</button>`}</div>`);
+  bind('cpOk',closeModal);bind('cpFight',()=>startDodge('final'));
+}
+function campCheck(){
+  if(!campOn()||!started||modalType)return;
+  const c=campCh();
+  if(state.camp.seen!==state.camp.ch)return showCampChapter();
+  if(!campDone(c))return;
+  const i=state.camp.ch;state.camp.ch++;
+  if(state.camp.ch>=CAMP.length){state.camp.done=true;state.camp.time=state.time||0;save();return showCampWin();}
+  save();sfx.win();for(let k=0;k<60;k++)parts.push({x:rand()*W,y:-rand()*30,vx:(rand()-.5)*30,vy:20+rand()*40,life:3,max:3,kind:'confetti',color:pick(['#ffd34d','#6fcf4f','#4fa3e8','#e8435a'])});
+  openModal('result',`<div class="redo">⭐</div><h2>${L('Luku','Chapter')} ${i+1} ${L('valmis!','complete!')}</h2><p>${c.e} <b>${L2(c.n)}</b></p>
+   <div class="campStars">${CAMP.map((_,k)=>`<span class="${k<=i?'on':''}">★</span>`).join('')}</div>
+   <div class="row"><button class="btn big" id="cpNext">${L('Seuraava luku ▶','Next chapter ▶')}</button></div>`);
+  bind('cpNext',showCampChapter);
+}
+function showCampWin(){
+  sfx.win();const t=state.camp.time||0,rec=!state.cheated&&exBest('campBest:'+(ACC?ACC.id:'_')+'@'+state.level,Math.round(t),true);
+  for(let i=0;i<160;i++)parts.push({x:rand()*W,y:-rand()*40,vx:(rand()-.5)*30,vy:20+rand()*40,life:4,max:4,kind:'confetti',color:pick(['#e8435a','#ffd34d','#6fcf4f','#4fa3e8','#b97ae8'])});
+  openModal('win',`<div class="logo small">${L('KAMPANJA LÄPÄISTY!','CAMPAIGN COMPLETE!')}</div>
+   <div class="campTalk"><span class="campFace">👨‍🌾</span><p>${L('Kiitos, apulainen! Pelastit farmin, keräsit eläimet, korjasit sadon, rakensit talon ja voitit Perunapomon kahdesti. Olet farmin sankari!','Thank you, helper! You saved the farm, gathered the animals, harvested the crops, built a house and beat the Potato Boss twice. You’re the hero of the farm!')}</p></div>
+   <div class="campStars">${CAMP.map(()=>'<span class="on">★</span>').join('')}</div>
+   <p class="fact">⏱️ ${L('Kampanjan aika','Campaign time')}: <b>${fmtClock(t)}</b>${rec?` · 🏅 ${L('uusi ennätys!','new record!')}`:''} · 📝 ${L('tehtäviä','tasks')} ${state.tasks}</p>
+   <div class="row"><button class="btn big" id="cwOk">${L('Jatka farmilla','Keep playing')}</button></div>`);
+  bind('cwOk',closeModal);
+}
+function showCampMenu(back){
+  if(!ACC){needLogin();return;}
+  const cur=state.camp&&!state.camp.done?state.camp.ch:-1,best=exBest('campBest:'+ACC.id+'@'+pendingLevel);
+  openModal('board',`<h2>📜 ${L('Kampanja','Campaign')}</h2>
+   <p class="lbNote" style="margin:.2em 0">${L('Isäntä Heikki opastaa sinut farmin läpi luku kerrallaan. Jokaisessa luvussa on oma tavoite.','Farmer Heikki guides you through the farm chapter by chapter. Every chapter has its own goal.')}</p>
+   <ol class="campList">${CAMP.map((c,k)=>{const st=state.camp?(state.camp.done||k<state.camp.ch?'✅':k===cur?'▶':'🔒'):'🔒';
+     return `<li class="${k===cur?'cur':''}">${st} ${c.e} <b>${L2(c.n)}</b><small>${L2(c.g)}</small></li>`;}).join('')}</ol>
+   ${best!=null?`<p class="lbNote" style="margin:.1em 0">🏅 ${L('Paras kampanja-aika','Best campaign time')} (${esc(levelName(pendingLevel))}): <b>${fmtClock(best)}</b></p>`:''}
+   <div class="row">${cur>=0?`<button class="btn big" id="cmCont">▶ ${L('Jatka kampanjaa','Continue campaign')}</button>`:''}<button class="btn ${cur>=0?'':'big'}" id="cmNew">📜 ${L('Aloita uusi kampanja','Start a new campaign')}</button><button class="btn" id="cmBack">${L('Takaisin','Back')}</button></div>
+   <p class="lbNote" style="margin:.1em 0">${L('Uusi kampanja aloittaa uuden pelin tasolla','A new campaign starts a new game at level')} ${esc(levelName(pendingLevel))}. ${L('Tallennukset säilyvät.','Your saves are kept.')}</p>`);
+  bind('cmBack',()=>{sfx.ui();back?back():closeModal();});
+  bind('cmCont',()=>{started=true;closeModal();sfx.ui();state.camp.seen=-1;});
+  bind('cmNew',b=>{if(hasProgress()&&!b.dataset.sure){b.dataset.sure=1;b.textContent=L('Varmasti? Nykyinen peli nollataan','Sure? The current game resets');return;}sfx.ui();startCampaign();});
+}
+function renderCamp(){
+  const box=$('#campBox');if(!box)return;const show=campOn()&&started&&modalType!=='title';box.hidden=!show;if(!show)return;
+  const c=campCh(),[a,b]=c.prog(),txt=`📜 ${state.camp.ch+1}/${CAMP.length} ${c.e} ${L2(c.n)}|🎯 ${L2(c.g)}${b>1?` (${Math.min(a,b)}/${b})`:''}`;
+  if(box.dataset.t!==txt){box.dataset.t=txt;const [l1,l2]=txt.split('|');box.innerHTML=`<b>${esc(l1)}</b><br>${esc(l2)}`;}
 }
 /* ---------- ASETUKSET ---------- */
 function showSettings(back){
@@ -1503,6 +1598,7 @@ function showHelp(){
   <li>🎁 Jokaisessa arkussa on <b>1 eläin</b>. Ilman yhtään virhettä saat kultaisen arkun, josta tulee useammin uusi eläin.</li>
   <li>🔁 Sama piste ei anna arkkua kahdesti peräkkäin – vaihtele oppiaineita!</li>
   <li>🐾 Kerää <b>sorsa, possu, kana, lehmä, lammas ja peruna</b>. Tavallisissa tehtävissä ei ole aikarajaa.</li>
+  <li>📜 <b>Kampanja</b> (aloitusvalikosta): isäntä Heikki opastaa sinut farmin läpi yhdeksässä luvussa. Nykyinen tavoite näkyy pelikentän vasemmassa yläkulmassa.</li>
   <li>🏗️ Perunapomon voiton jälkeen 🚜-napista pääset farmille 2 ja <b>talotyömaalle (farmi 3)</b>. Työmaalla jokainen tehtäväpiste antaa yhden <b>talon osan</b>. Kun olet kerännyt kaikki viisi, rakenna talo rakennuspaikalla!</li>
   <li>👑 Kun kaikki eläimet on kerätty, pellolta nousee <b>Perunapomo</b>. Pomotaistelussa jokaisessa kysymyksessä on <b>20 sekunnin aikaraja</b>. Oikea vastaus tekee vahinkoa (nopea vastaus tekee enemmän), väärä vastaus tai loppunut aika vie sydämen. Voita pomo, niin voitat pelin!</li>
   <li>🔁 Voiton jälkeen Perunapomo jää pellolle, ja voit haastaa sen <b>uusintaotteluun</b> milloin vain. Yritä rikkoa ennätyksesi!</li>
@@ -1522,6 +1618,7 @@ function showHelp(){
   <li>🎁 Every chest holds <b>1 animal</b>. With no mistakes you get a golden chest, which gives a new animal more often.</li>
   <li>🔁 The same point won’t give a chest twice in a row – mix your subjects!</li>
   <li>🐾 Collect the <b>duck, pig, chicken, cow, sheep and potato</b>. Normal tasks have no time limit.</li>
+  <li>📜 <b>Campaign</b> (from the main menu): Farmer Heikki guides you through the farm in nine chapters. Your current goal is shown in the top-left corner.</li>
   <li>🏗️ After beating the Potato Boss, the 🚜 button takes you to farm 2 and the <b>house site (farm 3)</b>. There every task point gives one <b>house part</b>. Collect all five and build the house at the building site!</li>
   <li>👑 When you have every animal, the <b>Potato Boss</b> rises from the field. In the boss fight every question has a <b>20-second time limit</b>. A right answer deals damage (fast answers deal more); a wrong answer or running out of time costs a heart. Beat the boss to win the game!</li>
   <li>🔁 After you win, the Potato Boss stays in the field and you can challenge it to a <b>rematch</b> any time. Try to beat your record!</li>
@@ -1602,7 +1699,7 @@ function showRestart(){
 }
 function finishQuiz(){
   if(state.farm===3)return finishQuiz3();
-  const st=quiz.st,gold=quiz.mistakes===0;state.tasks++;state.last=st.id;
+  const st=quiz.st,gold=quiz.mistakes===0;state.tasks++;state.last=st.id;if(gold)state.goldTasks=(state.goldTasks||0)+1;
   state.doneSt=[...new Set([...(state.doneSt||[]),st.id])];
   let stoneNow=false;if(!state.stone&&STATIONS.every(x=>state.doneSt.includes(x.id))){state.stone=true;stoneRise=0;stoneNow=true;}
   openModal('result',`<h2>${L('Tehtävä suoritettu!','Task complete!')}</h2>${stoneNow?`<p class="fact">🪨 ${L('Olet tehnyt tehtävän jokaisella pisteellä! Farmin keskelle nousi <b>salaperäinen kivi</b>…','You have done a task at every point! A <b>mysterious stone</b> rose in the middle of the farm…')}</p>`:''}
@@ -2315,6 +2412,7 @@ function goMenu(){
   menuSure=0;initAudio();if(modalType)closeModal();closeCmd();$('#tirppa').hidden=true;save();sfx.ui();showTitle();
 }
 $('#bMenu').onclick=goMenu;
+$('#campBox').onclick=()=>{if(!modalType&&campOn()){initAudio();showCampChapter();}};
 $('#bSet').onclick=()=>{if(busyModal()||modalType==='admin')return toast(L('Avaa asetukset tehtävän jälkeen.','Open settings after the task.'));initAudio();const t=modalType==='title';showSettings(t?showTitle:null);};
 $('#bHelp').onclick=()=>{if(['quiz','chest','result','boss','bossintro'].includes(modalType))return;initAudio();showHelp();};
 
@@ -2400,7 +2498,7 @@ const nameHTML=(n,id)=>{const c=cleanName(n)||id||'?';return (id===ADMIN_ID||c.t
 const cleanName=v=>String(v||'').replace(/[<>"&]/g,'').replace(/\s+/g,' ').trim().slice(0,16);
 const fmtClock=t=>{t=Math.floor(t);const h=Math.floor(t/3600),m=Math.floor(t%3600/60),sec=t%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(sec).padStart(2,'0');};
 function updateTimeHUD(){const el=$('#stTime');if(el){el.textContent='⏱️ '+fmtClock(state.time||0);el.title=L('Peliaika (tulostaulua varten)','Play time (for the leaderboard)');}}
-setInterval(()=>{if(started)updateTimeHUD();renderControl();checkRobotArrival();cv.style.filter=fxOn('gray')?'grayscale(1)':'';},1000);
+setInterval(()=>{if(started)updateTimeHUD();renderControl();checkRobotArrival();campCheck();cv.style.filter=fxOn('gray')?'grayscale(1)':'';},1000);
 function needLogin(){
   sfx.deny();const ni=$('#pName'),pn=$('#pPin');
   if(!ACCDB){toast(L('Hetki, ladataan…','One moment, loading…'));return;}
@@ -3368,7 +3466,7 @@ function loop(now){
   updateHouse3(dt);
   if(modalType==='dodge')updateDodge(dt);
   if(modalType==='title'||modalType==='win')drawParade();
-  renderSr();
+  renderSr();renderCamp();
   requestAnimationFrame(loop);
 }
 addEventListener('pagehide',()=>{if(started)save();flushCloud();});
