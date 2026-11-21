@@ -242,6 +242,8 @@ body.phone #admBody{--ms:min(30px,calc((100vw - 70px)/9))}
 .stats div{font-size:.85em;overflow-wrap:anywhere}
 .panel.boss .qtext{min-height:1.2em;margin:.2em 0 .4em}
 .shake{animation:shake .35s}body.noshake .shake{animation:none}
+#codeBtn{position:absolute;left:50%;bottom:14%;transform:translateX(-50%);z-index:11;font:inherit;font-size:15px;background:#4fa3e8;color:#fff;border:3px solid #1b4a6a;box-shadow:0 3px 0 #1b4a6a;padding:.2em .8em;cursor:pointer;animation:codePulse 1.2s infinite}
+@keyframes codePulse{50%{transform:translateX(-50%) scale(1.08)}}
 #campBox{position:absolute;top:6px;left:6px;z-index:11;max-width:46%;background:rgba(255,248,230,.92);color:#3a2414;border:3px solid #8a5a2b;padding:3px 8px;font-size:12px;line-height:1.35;text-align:left;cursor:pointer;box-shadow:0 2px 0 #5e3a17}
 body.phone #campBox{font-size:10px;max-width:58%}
 .campTalk{display:flex;gap:10px;align-items:flex-start;text-align:left;background:#fff8e6;border:3px solid var(--wood2);padding:.4em .6em;margin:.3em 0}.campTalk p{margin:0}.campFace{font-size:2.4em;line-height:1}
@@ -281,6 +283,7 @@ body.phone #srT{font-size:11px}body.phone #srS{font-size:8px}
     <div id="prompt" hidden></div>
     <div id="toast"></div>
     <div id="campBox" hidden title="Kampanja"></div>
+    <button id="codeBtn" hidden>🔢 Koodi</button>
     <div id="srBox" hidden><div id="srT">0:00.00</div><div id="srS"></div></div>
     <div id="ctrlBan" hidden>👑 <span class="adminName">leetu</span> is now on control</div>
     <div id="cmd" hidden><div id="cmdLog"></div><div class="cmdrow"><span>&gt;</span><input id="cmdIn" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Komento"><button id="cmdX" title="Sulje">✕</button></div></div>
@@ -414,7 +417,7 @@ const MEL=("G4 G4 B4 D5 E5 D5 B4 G4 A4 A4 C5 E5 D5 C5 B4 A4 G4 G4 B4 D5 G5 E5 D5
 const BASS=['G2','A2','G2','D2','D2','C2','G2','D2'];
 const STEP=.19;
 const FARM_TRACK={mel:MEL,bass:BASS,step:STEP};
-const GAME_VERSION='v62 · 21.11.2026';
+const GAME_VERSION='v63 · 21.11.2026';
 const farmTrack=()=>FARM_TRACK;
 const BOSS_TRACK={step:.15,bass:['E2','A2','E2','B1','G2','C2','G2','B1'],
   mel:("E4 E4 G4 E4 B4 A4 G4 F#4 E4 E4 G4 E4 C5 B4 A4 B4 E4 E4 G4 E4 B4 A4 G4 F#4 G4 F#4 E4 D4 E4 - E4 - "+
@@ -1017,6 +1020,98 @@ const nextQ=id=>id==='mat'?mathQ():(state.level===78?bankQ78(id):state.level===3
 
 /* ---------- MAAILMA ---------- */
 const POND={cx:58,cy:162,rx:38,ry:24};
+/* ---------- UINTI JA PERUNANUKE ----------
+   Kun farmilla on vähintään 5 sorsaa, järveen voi mennä uimaan. Järvessä näkyy koodinappi:
+   koodi "nuke" avaa järven pohjan, josta nousee perunanuke. Se räjähtää taivaalla ja
+   sataa farmin täyteen perunoita (perunat heräävät eläviksi). */
+const SWIM_DUCKS=5;
+const canSwim=()=>state.farm===1&&(state.owned.sorsa||0)>=SWIM_DUCKS&&!NUKE;
+function inPondAt(x,y){const dx=(x-POND.cx)/(POND.rx-2),dy=(y-POND.cy)/(POND.ry-2);return dx*dx+dy*dy<1;}
+const swimming=()=>state.farm===1&&inPondAt(P.x,P.y);
+let NUKE=null;
+function showCodeModal(){
+  if(modalType)return;initAudio();sfx.ui();
+  openModal('result',`<h2>🔢 ${L('Salainen koodi','Secret code')}</h2><p>${L('Kirjoita koodi. Järven pohjassa voi olla jotain…','Type a code. There might be something at the bottom of the pond…')}</p>
+   <input id="codeIn" class="nameIn" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" style="font-size:1.2em;text-align:center;letter-spacing:2px">
+   <p id="codeMsg" style="min-height:1.2em;margin:.2em 0"></p>
+   <div class="row"><button class="btn big" id="codeOk">${L('OK','OK')}</button><button class="btn" id="codeNo">${L('Peruuta','Cancel')}</button></div>`);
+  const inp=$('#codeIn');setTimeout(()=>inp.focus(),50);
+  const go=()=>{const v=inp.value.trim().toLowerCase();
+    if(v==='nuke'){closeModal();startNuke();}
+    else{sfx.deny();$('#codeMsg').innerHTML=`<span class="bad">❌ ${L('Väärä koodi','Wrong code')}</span>`;inp.select();}};
+  inp.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();go();}if(e.key==='Escape')closeModal();});
+  bind('codeOk',go);bind('codeNo',closeModal);
+}
+function startNuke(){
+  // pelaaja nousee rannalle ennen kuin järvi aukeaa
+  P.x=POND.cx+POND.rx+9;P.y=POND.cy+2;P.target=null;
+  NUKE={t:0,stage:0,rain:[],smoke:[]};
+  noise({d:1.6,v:.35,f:160});tone({f:60,f2:40,d:1.6,v:.3,type:'sawtooth'});
+  toast(L('🌊 Järvi aukeaa…!','🌊 The pond is opening…!'));
+}
+function nukeShake(){const pn=$('#stage')||document.body;pn.classList.remove('shake');void pn.offsetWidth;pn.classList.add('shake');}
+function updateNuke(dt){
+  if(!NUKE)return;const n=NUKE,t0=n.t;n.t+=dt;const t=n.t;
+  if(t<1.6&&Math.floor(t0*3)!==Math.floor(t*3))nukeShake();
+  if(n.stage===0&&t>=1.6){n.stage=1;tone({f:180,f2:1400,d:2,v:.25,type:'sawtooth'});noise({d:2,v:.2,f:900});}
+  if(n.stage===1){const my=nukeY();if(Math.floor(t0*20)!==Math.floor(t*20))n.smoke.push({x:POND.cx+(rand()-.5)*4,y:my+14,r:2,life:1.4});}
+  if(n.stage===1&&t>=3.7){n.stage=2;noise({d:1.4,v:.55,f:260});tone({f:90,f2:28,d:1.4,v:.45,type:'sine'});nukeShake();
+    for(let i=0;i<240;i++){const tx=8+rand()*304,ty=40+rand()*160;n.rain.push({x:tx+(rand()-.5)*60,y:-10-rand()*260,ty,tx,vy:70+rand()*70,landed:false,rot:rand()<.5});}}
+  for(const s of n.smoke){s.life-=dt;s.r+=dt*5;s.y-=dt*4;}n.smoke=n.smoke.filter(s=>s.life>0);
+  if(n.stage>=2)for(const r of n.rain){if(r.landed)continue;r.y+=r.vy*dt;r.x+=(r.tx-r.x)*Math.min(1,dt*1.2);r.vy+=60*dt;
+    if(r.y>=r.ty){r.y=r.ty;r.landed=true;if(rand()<.08)tone({f:300+rand()*200,d:.05,v:.05,type:'square'});}}
+  if(n.stage===2&&t>=8.5){n.stage=3;
+    // pellolle jääneet perunat jäävät farmille pysyvästi
+    state.spuds=(state.spuds||[]).concat(n.rain.filter(r=>!inPondAt(r.x,r.y)&&!SOLIDS.some(o=>r.x>o.x-3&&r.x<o.x+o.w+3&&r.y>o.y-4&&r.y<o.y+o.h+2)).map(r=>[Math.round(r.x),Math.round(r.y),r.rot?1:0])).slice(-300);
+    const before=state.owned.peruna||0;state.owned.peruna=Math.min(60,before+20);state.nukes=(state.nukes||0)+1;rebuildAnimals();save();updateHUD();
+    sfx.fanfare();toast(L(`🥔 Perunanuke! Farmilla on nyt ${state.owned.peruna} perunaa – ja ne heräsivät henkiin!`,`🥔 Potato nuke! The farm now has ${state.owned.peruna} potatoes – and they came alive!`));}
+  if(t>=10.5)NUKE=null;
+}
+const nukeY=()=>{const t=Math.max(0,NUKE.t-1.6);return POND.cy-6-t*t*48;};
+// Järven aukko piirretään taustan päälle
+function drawSpuds(){const sp=state.spuds;if(!sp||!sp.length)return;
+  for(const [x,y,r] of sp){R(ctx,x-2,y+2,5,1,'rgba(0,0,0,.18)');R(ctx,x-2,y-1,5,3,'#7a5430');R(ctx,x-1,y-2,3,5,'#7a5430');R(ctx,x-1,y-1,3,3,'#c49558');if(r)R(ctx,x,y-1,1,1,'#dcb07a');}}
+function drawNukeGround(){
+  if(!NUKE)return;const t=NUKE.t,k=t<1.6?t/1.6:t<8.5?1:Math.max(0,1-(t-8.5)/2);if(k<=0)return;
+  const rx=POND.rx*.62*k,ry=POND.ry*.62*k;
+  ctx.fillStyle='#2f6fa8';ctx.beginPath();ctx.ellipse(POND.cx,POND.cy,rx+3,ry+2,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#132233';ctx.beginPath();ctx.ellipse(POND.cx,POND.cy,rx,ry,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#0a1420';ctx.beginPath();ctx.ellipse(POND.cx,POND.cy+2,rx*.6,ry*.55,0,0,Math.PI*2);ctx.fill();
+  // putoava vesi reunoilta
+  for(let i=0;i<10;i++){const a=i/10*Math.PI*2+t;R(ctx,POND.cx+Math.cos(a)*rx,POND.cy+Math.sin(a)*ry,1,3,'#bfe6ff');}
+  if(NUKE.stage>=1&&NUKE.t<4.5){const gl=Math.min(1,(NUKE.t-1.2)*2);if(gl>0){ctx.globalAlpha=gl*.6;R(ctx,POND.cx-3,POND.cy-2,6,3,'#ffb030');ctx.globalAlpha=1;}}
+}
+// Ohjus, savu, räjähdys ja perunasade piirretään kaiken päälle
+function drawNukeSky(){
+  if(!NUKE)return;const n=NUKE,t=n.t,tt=performance.now()/1000;
+  for(const s of n.smoke){ctx.globalAlpha=Math.max(0,s.life/1.4)*.7;ctx.fillStyle='#d8d8d8';ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
+  if(n.stage<=1&&t>1.0){const y=n.stage===0?POND.cy-6+(1.6-t)*20:nukeY(),x=POND.cx;
+    // liekki
+    const fl=Math.floor(tt*20)%2;R(ctx,x-2,y+13,5,4+fl*2,'#ffb030');R(ctx,x-1,y+13,3,6+fl*2,'#fff3a0');
+    // evät
+    R(ctx,x-6,y+8,3,6,'#8a8a96');R(ctx,x+4,y+8,3,6,'#8a8a96');R(ctx,x-1,y+9,3,5,'#6e6e7a');
+    // perunarunko
+    R(ctx,x-4,y-2,9,14,'#7a5430');R(ctx,x-3,y-4,7,18,'#7a5430');R(ctx,x-3,y-1,7,12,'#c49558');R(ctx,x-2,y-3,5,16,'#c49558');R(ctx,x-2,y,2,3,'#dcb07a');
+    R(ctx,x-1,y+3,1,1,'#7a5430');R(ctx,x+2,y+6,1,1,'#7a5430');R(ctx,x,y+9,1,1,'#7a5430');
+    // nokka ja varoituskolmio
+    R(ctx,x-2,y-7,5,3,'#d6332b');R(ctx,x-1,y-9,3,2,'#d6332b');R(ctx,x,y-10,1,1,'#ff8a80');R(ctx,x-2,y+5,5,1,'#ffd34d');}
+  if(n.stage>=2){const k=(t-3.7);
+    // räjähdyspilvi ylhäällä
+    if(k<1.6){const r=8+k*55;ctx.globalAlpha=Math.max(0,1-k/1.6);ctx.fillStyle='#ffd34d';ctx.beginPath();ctx.arc(W/2,24,r,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#c49558';ctx.beginPath();ctx.arc(W/2,24,r*.65,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff3a0';ctx.beginPath();ctx.arc(W/2,24,r*.3,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}
+    // perunasade
+    if(n.stage===2){for(const r of n.rain){const x=Math.round(r.x),y=Math.round(r.y);
+      if(r.landed)R(ctx,x-2,y+2,5,1,'rgba(0,0,0,.18)');
+      R(ctx,x-2,y-1,5,3,'#7a5430');R(ctx,x-1,y-2,3,5,'#7a5430');R(ctx,x-1,y-1,3,3,'#c49558');if(r.rot)R(ctx,x,y-1,1,1,'#dcb07a');}}
+    // valkoinen välähdys
+    if(k<.8){ctx.globalAlpha=Math.max(0,.9-k*1.1);R(ctx,0,0,W,H,'#ffffff');ctx.globalAlpha=1;}}
+}
+let swimHintAt=0;
+function renderSwim(){
+  const b=$('#codeBtn');if(!b)return;const show=started&&!modalType&&!NUKE&&swimming()&&(state.owned.sorsa||0)>=SWIM_DUCKS;b.hidden=!show;
+  if(started&&canSwim()&&!state.swimHint&&!modalType){state.swimHint=true;save();toast(L(`🦆 Sinulla on ${SWIM_DUCKS} sorsaa! Nyt voit mennä uimaan järveen.`,`🦆 You have ${SWIM_DUCKS} ducks! Now you can go swimming in the pond.`));}
+}
+
 const SOLIDS=[{x:14,y:14,w:68,h:50},{x:230,y:10,w:76,h:56}];
 const STATIONS=[
  {id:'mat',name:['Kaivo','Well'],subject:['Matematiikka','Maths'],icon:'🔢',x:120,y:58,kind:'well',h:34},
@@ -2444,6 +2539,7 @@ function goMenu(){
   menuSure=0;initAudio();if(modalType)closeModal();closeCmd();$('#tirppa').hidden=true;save();sfx.ui();showTitle();
 }
 $('#bMenu').onclick=goMenu;
+$('#codeBtn').onclick=showCodeModal;
 $('#campBox').onclick=()=>{if(!modalType&&campOn()){initAudio();showCampChapter();}};
 $('#bSet').onclick=()=>{if(busyModal()||modalType==='admin')return toast(L('Avaa asetukset tehtävän jälkeen.','Open settings after the task.'));initAudio();const t=modalType==='title';showSettings(t?showTitle:null);};
 $('#bHelp').onclick=()=>{if(['quiz','chest','result','boss','bossintro'].includes(modalType))return;initAudio();showHelp();};
@@ -2454,7 +2550,8 @@ function blocked(x,y){
   if(state.farm===3){for(const s of SOLIDS3)if(x>s.x&&x<s.x+s.w&&y>s.y&&y<s.y+s.h)return true;return false;}
   if(state.farm===2){for(const s of SOLIDS2)if(x>s.x&&x<s.x+s.w&&y>s.y&&y<s.y+s.h)return true;return false;}
   for(const s of SOLIDS)if(x>s.x&&x<s.x+s.w&&y>s.y&&y<s.y+s.h)return true;
-  const dx=(x-POND.cx)/(POND.rx-2),dy=(y-POND.cy)/(POND.ry-2);return dx*dx+dy*dy<1;
+  // järveen voi mennä uimaan, kun sorsia on tarpeeksi (paitsi kun järvi on auki)
+  return inPondAt(x,y)&&!((state.owned.sorsa||0)>=SWIM_DUCKS&&!NUKE);
 }
 function update(dt){
   if(started&&!state.won&&!['title','help','board','settings','extras'].includes(modalType)){state.time=(state.time||0)+dt;}
@@ -3461,6 +3558,7 @@ function draw(){
   for(let i=0;i<4;i++){const k=(tt*.35+i/4)%1,sy=9-k*26,sx=63+Math.sin(k*6+i)*3+k*6,sz=2+Math.round(k*3);
     ctx.globalAlpha=.75*(1-k);R(ctx,sx-sz/2,sy-sz/2,sz,sz,'#e8e8e8');}ctx.globalAlpha=1;
   for(let i=0;i<6;i++){const a=tt*.4+i*1.7;R(ctx,POND.cx+Math.cos(a*1.3+i)*POND.rx*.55,POND.cy+Math.sin(a+i*2)*POND.ry*.5,2,1,'#bfe6ff');}
+  drawSpuds();drawNukeGround();
   const ents=[];
   for(const st of STATIONS)ents.push({y:st.y,d:()=>{shadow(st.x,st.y+1,st.kind==='tree'?14:12);ctx.drawImage(st.img,st.x-20,st.y-42);}});
   for(const a of animals)ents.push({y:a.y,d:()=>{
@@ -3490,7 +3588,9 @@ function draw(){
       for(let k=0;k<5;k++){const ph=(tt*.45+k/5)%1,px=x0+5+((k*7+Math.floor(tt*.45+k/5)*5)%24),py=y0+26-ph*34;ctx.globalAlpha=1-ph;R(ctx,px,py,1,1,k%2?'#ffd34d':'#fff6a0');}ctx.globalAlpha=1;}});}
   else if(bossOnFarm()){bossRise=Math.min(1,bossRise+1/60);const s=SPR.boss,bob=Math.round(Math.sin(tt*3)*1.5),hgt=Math.round(s.h*2*bossRise);
     ents.push({y:BOSS.y,d:()=>{shadow(BOSS.x,BOSS.y,s.w*2);ctx.drawImage(s.c,0,0,s.w,hgt/2,BOSS.x-s.w,BOSS.y-hgt+bob,s.w*2,hgt);}});}
-  ents.push({y:P.y,d:()=>{const fr=P.moving?(Math.floor(P.walkT*8)%2?1:2):0,s=SPR.player[fr],px=Math.round(P.x-s.w/2),py=Math.round(P.y-s.h);shadow(P.x,P.y,s.w);ctx.drawImage(P.flip?s.f:s.c,px,py);
+  ents.push({y:P.y,d:()=>{const fr=P.moving?(Math.floor(P.walkT*8)%2?1:2):0,s=SPR.player[fr],px=Math.round(P.x-s.w/2),py=Math.round(P.y-s.h);
+    if(swimming()){ctx.save();ctx.beginPath();ctx.rect(px-4,py-30,s.w+8,s.h+24);ctx.clip();ctx.drawImage(P.flip?s.f:s.c,px,py+3);ctx.restore();const wv=Math.floor(tt*4)%2;R(ctx,px-2,P.y-3,s.w+4,1,'#bfe6ff');R(ctx,px-3+wv,P.y-2,2,1,'#e8f6ff');R(ctx,px+s.w+wv,P.y-2,2,1,'#e8f6ff');}
+    else{shadow(P.x,P.y,s.w);ctx.drawImage(P.flip?s.f:s.c,px,py);}
     if(TIR.big)bigHead(s,'player',P.flip,px,py);if(state.crown)drawCrown(P.x,py-(TIR.big?9:0));}});
   R(ctx,SECRET_PX.x-1,SECRET_PX.y-1,3,3,'#64a344');
   ents.sort((a,b)=>a.y-b.y).forEach(e=>e.d());
@@ -3502,6 +3602,7 @@ function draw(){
   for(const p of parts){const al=Math.min(1,p.life/p.max*1.5);ctx.globalAlpha=al;
     if(p.kind==='heart')ctx.drawImage(SPR.heart.c,Math.round(p.x-2),Math.round(p.y));
     else if(p.kind==='confetti')R(ctx,p.x,p.y,2,1,p.color);else R(ctx,p.x,p.y,1,1,p.color);ctx.globalAlpha=1;}
+  drawNukeSky();
 }
 let last=performance.now();
 function loop(now){
@@ -3509,7 +3610,7 @@ function loop(now){
   update(dt);draw();
   if(modalType==='chest')drawChest(dt);
   if(modalType==='boss'||modalType==='bossintro')updateFight(dt);
-  updateHouse3(dt);
+  updateHouse3(dt);updateNuke(dt);renderSwim();
   if(modalType==='dodge')updateDodge(dt);
   if(modalType==='title'||modalType==='win')drawParade();
   renderSr();renderCamp();
