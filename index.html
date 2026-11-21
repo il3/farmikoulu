@@ -414,7 +414,7 @@ const MEL=("G4 G4 B4 D5 E5 D5 B4 G4 A4 A4 C5 E5 D5 C5 B4 A4 G4 G4 B4 D5 G5 E5 D5
 const BASS=['G2','A2','G2','D2','D2','C2','G2','D2'];
 const STEP=.19;
 const FARM_TRACK={mel:MEL,bass:BASS,step:STEP};
-const GAME_VERSION='v61 · 21.11.2026';
+const GAME_VERSION='v62 · 21.11.2026';
 const farmTrack=()=>FARM_TRACK;
 const BOSS_TRACK={step:.15,bass:['E2','A2','E2','B1','G2','C2','G2','B1'],
   mel:("E4 E4 G4 E4 B4 A4 G4 F#4 E4 E4 G4 E4 C5 B4 A4 B4 E4 E4 G4 E4 B4 A4 G4 F#4 G4 F#4 E4 D4 E4 - E4 - "+
@@ -1781,16 +1781,35 @@ function drawChest(dt){
 /* ---------- SALAPERÄINEN KIVI (7.–8. luokan taso) ---------- */
 const STONE={id:'stone',x:152,y:122,h:16};
 let stoneRise=1;
-// Haastekiven kuva: harmaa kivi, johon on kaiverrettu kultainen kruunu ja peruna
-const CHAL_IMG=(()=>{const c=document.createElement('canvas');c.width=26;c.height=24;const g=c.getContext('2d');
-  const rows=[[8,10],[5,16],[3,20],[2,22],[1,24],[1,24],[0,26],[0,26],[0,26],[0,26],[0,26],[0,26],[0,26],[0,26],[0,26],[0,26],[1,24],[1,24],[1,24],[1,24],[1,24],[2,22],[2,22],[3,20]];
-  rows.forEach(([x,w],y)=>{R(g,x,y,w,1,'#8a8a8a');R(g,x,y,1,1,'#5e5e5e');R(g,x+w-1,y,1,1,'#5e5e5e');});
-  R(g,2,22,22,2,'#5e5e5e');for(let y=2;y<12;y++)R(g,4,y,2,1,'#a8a8a8');R(g,8,0,10,1,'#a8a8a8');
-  // kruunu
-  R(g,8,5,10,4,'#d6a51f');R(g,8,3,2,2,'#d6a51f');R(g,12,2,2,3,'#d6a51f');R(g,16,3,2,2,'#d6a51f');R(g,9,6,8,2,'#ffd34d');R(g,12,6,2,1,'#e8435a');
+// Haastekiven kuva: sammaloitunut kivimonoliitti jalustalla, kaiverrettu kultainen kruunu jalokivineen ja peruna
+const CHAL_IMG=(()=>{const W2=34,H2=36,c=document.createElement('canvas');c.width=W2;c.height=H2;const g=c.getContext('2d');const rn=mulberry32(77);
+  // jalusta
+  R(g,1,30,32,6,'#4a4a52');R(g,2,30,30,1,'#8a8a96');R(g,1,35,32,1,'#2e2e34');for(let x=3;x<31;x+=6)R(g,x,31,1,4,'#3a3a42');
+  R(g,3,28,28,2,'#5a5a64');R(g,4,28,26,1,'#9a9aa6');
+  // monoliitti: pyöristetty yläosa, valo vasemmalta ylhäältä
+  const cx=17,top=1,bot=28,hw=12;
+  for(let y=top;y<bot;y++){const t=(y-top)/(bot-top),half=y<top+9?Math.round(hw*Math.sqrt(1-Math.pow(1-(y-top+1)/9,2))):hw+(t>.8?1:0);
+    for(let x=cx-half;x<cx+half;x++){const u=(x-(cx-half))/(2*half);let col;
+      const n=rn();col=u<.18?(n<.5?'#b4b4c0':'#a6a6b2'):u<.6?(n<.5?'#9090a0':'#868696'):u<.85?(n<.5?'#747484':'#6c6c7c'):(n<.5?'#5a5a68':'#525260');
+      R(g,x,y,1,1,col);}
+    R(g,cx-half,y,1,1,'#3e3e4a');R(g,cx+half-1,y,1,1,'#34343e');}
+  R(g,cx-6,top,12,1,'#3e3e4a');
+  // halkeamat
+  for(const [x,y,l,d] of [[8,14,5,1],[26,9,6,-1],[24,20,4,1]])for(let k=0;k<l;k++)R(g,x+(k%2?d:0),y+k,1,1,'#3a3a46');
+  // sammal
+  for(const [x,y,w] of [[5,26,6],[6,25,3],[5,22,2],[27,26,3],[28,24,2],[9,27,4]]){R(g,x,y,w,1,'#4f8a3a');R(g,x,y-1,Math.max(1,w-2),1,'#6fae4a');}
+  // kaiverrettu paneeli
+  R(g,10,6,14,20,'#5c5c6c');R(g,11,7,12,18,'#6a6a7a');R(g,10,6,14,1,'#3e3e4a');R(g,10,6,1,20,'#3e3e4a');R(g,23,6,1,20,'#a6a6b2');R(g,10,25,14,1,'#a6a6b2');
+  // kruunu jalokivineen
+  R(g,12,10,10,4,'#c8901a');R(g,12,8,2,2,'#c8901a');R(g,16,7,2,3,'#c8901a');R(g,20,8,2,2,'#c8901a');
+  R(g,12,10,10,1,'#ffe27a');R(g,12,8,1,1,'#ffe27a');R(g,16,7,1,1,'#ffe27a');R(g,20,8,1,1,'#ffe27a');R(g,12,13,10,1,'#8a6010');
+  R(g,13,11,2,2,'#e8435a');R(g,16,11,2,2,'#4fa3e8');R(g,19,11,2,2,'#6fcf4f');R(g,13,11,1,1,'#ff9aa8');R(g,16,11,1,1,'#bfe6ff');R(g,19,11,1,1,'#c8ffb0');
   // peruna
-  R(g,9,11,8,8,'#6b4a26');R(g,10,10,6,10,'#6b4a26');R(g,10,12,6,6,'#b98a52');R(g,11,11,4,8,'#b98a52');R(g,11,13,1,1,'#3a2414');R(g,14,13,1,1,'#3a2414');R(g,12,16,2,1,'#3a2414');
-  for(const [x,y] of [[3,15],[21,9],[19,19],[5,20]])R(g,x,y,2,1,'#6e6e6e');return c;})();
+  R(g,13,16,8,8,'#7a5430');R(g,14,15,6,10,'#7a5430');R(g,14,16,6,7,'#c49558');R(g,15,15,4,9,'#c49558');R(g,14,16,2,2,'#dcb07a');
+  R(g,15,18,1,1,'#2a1a0e');R(g,18,18,1,1,'#2a1a0e');R(g,15,21,4,1,'#2a1a0e');R(g,16,22,2,1,'#e8435a');
+  return c;})();
+// Hehkuvat riimut kiven kyljissä (piirretään erikseen, jotta ne voivat sykkiä)
+const CHAL_RUNES=[[7,9],[7,13],[7,17],[27,10],[27,14],[27,18]];
 const STONE_IMG=(()=>{const c=document.createElement('canvas');c.width=22;c.height=18;const g=c.getContext('2d');
   fillCircle(g,11,11,8,'#6f7176');fillCircle(g,8,9,6,'#8d8f94');fillCircle(g,14,12,6,'#7c7e83');fillCircle(g,10,8,4,'#a3a5aa');
   R(g,3,16,17,2,'#5a5c60');R(g,6,3,6,1,'#6fa84a');R(g,5,4,3,1,'#5f9a3f');R(g,13,5,3,1,'#6fa84a');R(g,16,13,1,2,'#5a5c60');R(g,5,12,2,1,'#5a5c60');return c;})();
@@ -3459,10 +3478,16 @@ function draw(){
   pushRobot(ents,tt);
   if(state.boss==='beaten'){bossRise=Math.min(1,bossRise+1/60);const r=bossRise;
     // Haastekivi: voitetun Perunapomon paikalle noussut kivi, josta pomon voi haastaa uudelleen
-    ents.push({y:BOSS.y,d:()=>{const hgt=Math.round(CHAL_IMG.height*r);shadow(BOSS.x,BOSS.y,CHAL_IMG.width);
-      ctx.drawImage(CHAL_IMG,0,CHAL_IMG.height-hgt,CHAL_IMG.width,hgt,BOSS.x-CHAL_IMG.width/2,BOSS.y-hgt,CHAL_IMG.width,hgt);
-      if(r<1&&Math.floor(tt*20)%2)R(ctx,BOSS.x+ri(-14,14),BOSS.y-ri(0,3),2,1,'#8a7a5a');
-      if(r>=1&&Math.floor(tt*2.5)%3===0)R(ctx,BOSS.x-4+Math.floor(tt*7)%9,BOSS.y-CHAL_IMG.height+5,1,1,'#fff6a0');}});}
+    ents.push({y:BOSS.y,d:()=>{const I=CHAL_IMG,hgt=Math.round(I.height*r),x0=Math.round(BOSS.x-I.width/2),y0=BOSS.y+4-I.height;shadow(BOSS.x,BOSS.y+4,I.width);
+      // kultainen hehku sykkii kiven ympärillä
+      ctx.save();if(r>=1){ctx.shadowColor='rgba(255,211,77,'+(.55+.35*Math.sin(tt*2.2)).toFixed(2)+')';ctx.shadowBlur=5+3*Math.sin(tt*2.2);}
+      ctx.drawImage(I,0,I.height-hgt,I.width,hgt,x0,BOSS.y+4-hgt,I.width,hgt);ctx.restore();
+      if(r<1){if(Math.floor(tt*20)%2)for(let k=0;k<3;k++)R(ctx,BOSS.x+ri(-16,16),BOSS.y+4-ri(0,4),2,1,pick(['#8a7a5a','#a8956a','#6e6e7a']));return;}
+      // riimut syttyvät vuorotellen
+      CHAL_RUNES.forEach(([rx,ry],k)=>{const a=.35+.65*Math.max(0,Math.sin(tt*2.5-k*.9));ctx.globalAlpha=a;R(ctx,x0+rx,y0+ry,1,3,'#8ff0ff');R(ctx,x0+rx-1,y0+ry+1,3,1,'#8ff0ff');ctx.globalAlpha=1;});
+      // jalokivien välke ja ylös leijuvat kultahiukkaset
+      if(Math.floor(tt*3)%4===0)R(ctx,x0+13+((Math.floor(tt*3)/4|0)%3)*3,y0+11,1,1,'#ffffff');
+      for(let k=0;k<5;k++){const ph=(tt*.45+k/5)%1,px=x0+5+((k*7+Math.floor(tt*.45+k/5)*5)%24),py=y0+26-ph*34;ctx.globalAlpha=1-ph;R(ctx,px,py,1,1,k%2?'#ffd34d':'#fff6a0');}ctx.globalAlpha=1;}});}
   else if(bossOnFarm()){bossRise=Math.min(1,bossRise+1/60);const s=SPR.boss,bob=Math.round(Math.sin(tt*3)*1.5),hgt=Math.round(s.h*2*bossRise);
     ents.push({y:BOSS.y,d:()=>{shadow(BOSS.x,BOSS.y,s.w*2);ctx.drawImage(s.c,0,0,s.w,hgt/2,BOSS.x-s.w,BOSS.y-hgt+bob,s.w*2,hgt);}});}
   ents.push({y:P.y,d:()=>{const fr=P.moving?(Math.floor(P.walkT*8)%2?1:2):0,s=SPR.player[fr],px=Math.round(P.x-s.w/2),py=Math.round(P.y-s.h);shadow(P.x,P.y,s.w);ctx.drawImage(P.flip?s.f:s.c,px,py);
