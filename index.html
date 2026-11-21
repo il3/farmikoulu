@@ -186,6 +186,7 @@ body.phone #admBody{--ms:min(30px,calc((100vw - 70px)/9))}
 .panel.admin .lbTabs{flex-wrap:wrap;gap:.3em}.panel.admin .lbTabs .btn{font-size:.85em;padding:.05em .5em}
 .panel.admin .admGrid .btn{font-size:.85em;padding:.1em .4em}
 .panel.admin h2{margin:.2em 0 .4em}
+.modName{color:#2a6fd6;font-weight:bold;text-shadow:0 0 1px rgba(42,111,214,.35)}
 .adminName{color:#d6201a;font-weight:bold;text-shadow:0 0 1px rgba(214,32,26,.35)}
 #ctrlBan{position:absolute;left:50%;bottom:4%;transform:translateX(-50%);z-index:12;background:#2b1d0e;color:#fff3d0;border:3px solid #d6201a;box-shadow:0 0 0 3px #2b1d0e,0 0 14px rgba(214,32,26,.7);
   padding:.15em .8em;font-family:'Press Start 2P',monospace;font-size:clamp(9px,1.7cqw,15px);white-space:nowrap;pointer-events:none;animation:ctrlPulse 1.2s ease-in-out infinite}
@@ -269,6 +270,7 @@ body.phone #srT{font-size:11px}body.phone #srS{font-size:8px}
     <div id="stats"><span id="stTasks" title="Tehtyjä tehtäviä">📝 0</span><span id="stAcc" title="Oikeat vastaukset">✔ –</span><span id="stTime" title="Peliaika">⏱️ 0:00</span><span id="stWho" hidden></span></div>
     <div id="btns">
       <button class="ib" id="bAdmin" title="Admin-paneeli" hidden>👑</button>
+      <button class="ib" id="bMod" title="Mod-paneeli" hidden>🛡️</button>
       <button class="ib" id="bMenu" title="Aloitusvalikko">🏠</button>
       <button class="ib" id="bMusic" title="Musiikki päälle/pois">♪</button>
       <button class="ib" id="bSfx" title="Äänet päälle/pois">🔊</button>
@@ -417,7 +419,7 @@ const MEL=("G4 G4 B4 D5 E5 D5 B4 G4 A4 A4 C5 E5 D5 C5 B4 A4 G4 G4 B4 D5 G5 E5 D5
 const BASS=['G2','A2','G2','D2','D2','C2','G2','D2'];
 const STEP=.19;
 const FARM_TRACK={mel:MEL,bass:BASS,step:STEP};
-const GAME_VERSION='v64 · 21.11.2026';
+const GAME_VERSION='v65 · 21.11.2026';
 const farmTrack=()=>FARM_TRACK;
 const BOSS_TRACK={step:.15,bass:['E2','A2','E2','B1','G2','C2','G2','B1'],
   mel:("E4 E4 G4 E4 B4 A4 G4 F#4 E4 E4 G4 E4 C5 B4 A4 B4 E4 E4 G4 E4 B4 A4 G4 F#4 G4 F#4 E4 D4 E4 - E4 - "+
@@ -1499,7 +1501,7 @@ function updateHUD(){
   ANIMALS.forEach(a=>{const n=state.owned[a.id]||0;a.slot.classList.toggle('miss',!n);a.cnt.textContent=n>1?'×'+n:'';a.slot.title=n?L2(a.name):L('??? – vielä löytämättä','??? – not found yet');});
   $('#stTasks').textContent='📝 '+state.tasks;
   updateTimeHUD();if(typeof renderControl==='function')renderControl();
-  {const ab=$('#bAdmin');if(ab)ab.hidden=!(typeof isAdmin==='function'&&isAdmin());}
+  {const ab=$('#bAdmin');if(ab)ab.hidden=!(typeof isAdmin==='function'&&isAdmin());}renderModUI();
   {const w=$('#stWho');if(w){w.hidden=!(ADMIN&&ACC);if(ADMIN&&ACC){w.textContent='👑→'+ACC.name;w.title=L('Ylläpitäjä pelaa tämän pelaajan peliä','Admin is playing this player’s game');}}}
   $('#stAcc').textContent='✔ '+(state.answered?Math.round(state.correct/state.answered*100)+' %':'–');
 }
@@ -1568,7 +1570,7 @@ function showTitle(){
   const pin=$('#pPin');
   const doLogin=async()=>{const m=$('#aMsg'),btn=$('#aIn');if(btn)btn.disabled=true;if(m)m.textContent=L('Kirjaudutaan…','Logging in…');
     const r=await login(ni.value,pin.value);if(!$('#aMsg'))return;
-    if(r.ok){sfx.ok();toast(r.msg);showTitle();}else{sfx.deny();$('#aMsg').innerHTML=`<span class="bad">${esc(r.msg)}</span>`;if(btn)btn.disabled=false;}};
+    if(r.ok){sfx.ok();toast(r.msg);showTitle();loadMods();}else{sfx.deny();$('#aMsg').innerHTML=`<span class="bad">${esc(r.msg)}</span>`;if(btn)btn.disabled=false;}};
   if(pin){bind('aIn',doLogin);pin.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doLogin();}});}
   bind('tCont',()=>{if(!ACC){needLogin();return;}const nm=cleanName(ni.value);if(nm){state.name=nm;save();}else if(!state.name){needName();return;}started=true;closeModal();sfx.ui();});
   bind('tNew',b=>{
@@ -2669,7 +2671,40 @@ function pushRobot(ents,tt){
 }
 /* ---------- PELAAJANIMI JA TULOSTAULU ---------- */
 // leetu1234:n nimi näkyy punaisena kaikkialla
-const nameHTML=(n,id)=>{const c=cleanName(n)||id||'?';return (id===ADMIN_ID||c.toLowerCase()==='leetu1234')?`<span class="adminName">${esc(c)}</span>`:esc(c);};
+const nameHTML=(n,id)=>{const c=cleanName(n)||id||'?';if(id===ADMIN_ID||c.toLowerCase()==='leetu1234')return `<span class="adminName">${esc(c)}</span>`;
+  return MODS.has(id||accId(c))?`<span class="modName" title="Mod">🛡️${esc(c)}</span>`:esc(c);};
+/* ---------- MODIT: leetu1234 voi antaa ja poistaa mod-statuksen ----------
+   Modilista on yhteinen kaikille (sininen nimi näkyy kaikille). Supabasessa se on pelaajataulun is_mod-sarakkeessa,
+   muuten tilien kokoelman erityisdokumentissa "_mods" (tunnus, jota mikään pelaajanimi ei voi saada). */
+let MODS=new Set();const MODS_DOC='accounts/_mods';
+async function loadMods(){try{
+  if(SUPA){const r=await rpc('fk_mods',{});if(Array.isArray(r))MODS=new Set(r);}
+  else if(ACCDB){const sn=await ACCDB.doc(MODS_DOC).get();MODS=new Set(sn.exists?(sn.data().ids||[]):[]);}
+  }catch(e){}renderModUI();return MODS;}
+async function setMod(id,on){
+  if(SUPA){const r=await rpc('fk_admin_set_mod',{p_admin_token:adminToken(),p_id:id,p_mod:on});if(!r||!r.ok)throw new Error(r&&r.err||'mod');}
+  else{const sn=await ACCDB.doc(MODS_DOC).get();const ids=new Set(sn.exists?(sn.data().ids||[]):[]);on?ids.add(id):ids.delete(id);await ACCDB.doc(MODS_DOC).set({name:'_mods',ids:[...ids]});}
+  await loadMods();}
+const isMod=()=>!!(ACC&&!ADMIN&&ACC.id!==ADMIN_ID&&MODS.has(ACC.id));
+function renderModUI(){const b=$('#bMod');if(b)b.hidden=!isMod();}
+function showModPanel(){
+  if(!isMod())return;initAudio();
+  openModal('admin',`<h2>🛡️ ${L('Mod-paneeli','Mod panel')}</h2><p class="lbNote" style="margin:.2em 0">${L('Olet modi! leetu1234 antoi sinulle nämä toiminnot omaan peliisi.','You’re a mod! leetu1234 gave you these powers for your own game.')}</p>
+   <div class="admGrid">
+    <button class="btn" data-m="boss">👑 ${L('Herätä Perunapomo','Wake the Potato Boss')}</button>
+    <button class="btn" data-m="farms">🚜 ${L('Avaa farmit 2–3','Unlock farms 2–3')}</button>
+    <button class="btn" data-m="animals">🐾 ${L('Kaikki eläimet','All animals')}</button>
+    <button class="btn" data-m="rest">💤 ${L('Kaikki pisteet käyttöön','All points usable')}</button></div>
+   <p class="lbNote" style="margin:.2em 0">${L('Huom: mod-toimintojen jälkeen peliä ei lasketa tulostaululle.','Note: after using mod powers, the game won’t count on the leaderboard.')}</p>
+   <div class="row"><button class="btn big" id="modClose">${L('Sulje','Close')}</button></div>`);
+  bind('modClose',closeModal);
+  panel.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{initAudio();const m=b.dataset.m;state.cheated=true;
+    if(m==='boss'){if(state.boss==='none')state.boss='awake';bossRise=1;}
+    if(m==='farms')state.farm2=true;
+    if(m==='animals'){ANIMALS.forEach(a=>{if(!state.owned[a.id])state.owned[a.id]=1;});rebuildAnimals();if(state.boss==='none')state.boss='awake';bossRise=1;}
+    if(m==='rest')state.last=null;
+    save();updateHUD();sfx.ok();toast('🛡️ '+b.textContent.trim());});
+}
 const cleanName=v=>String(v||'').replace(/[<>"&]/g,'').replace(/\s+/g,' ').trim().slice(0,16);
 const fmtClock=t=>{t=Math.floor(t);const h=Math.floor(t/3600),m=Math.floor(t%3600/60),sec=t%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(sec).padStart(2,'0');};
 function updateTimeHUD(){const el=$('#stTime');if(el){el.textContent='⏱️ '+fmtClock(state.time||0);el.title=L('Peliaika (tulostaulua varten)','Play time (for the leaderboard)');}}
@@ -2833,6 +2868,7 @@ function applyRemote(rs){
 }
 let syncBusy=false;
 async function syncNow(){
+  if(Date.now()-(window._modsAt||0)>30000){window._modsAt=Date.now();loadMods();}
   if(syncBusy||cloudBusy||!ACC||!ACCDB||(!SUPA&&ACCDB===LOCALDB))return;
   syncBusy=true;
   try{const rs=await fetchRemote();if(isForeignNewer(rs))applyRemote(rs);}catch(e){}
@@ -2857,6 +2893,7 @@ async function flushCloud(){
 }
 // Automaattinen kirjautuminen samalla laitteella ja uudemman tallennuksen valinta.
 ACCS.then(async d=>{
+  setTimeout(loadMods,500);
   const acc=settings.account;
   if(SUPA){
     if(acc&&acc.mode==='supa'&&acc.token){try{
@@ -2941,7 +2978,7 @@ async function showAdminOld(){
     if(SUPA){const r=await rpc('fk_admin_list',{p_admin_token:(ADMIN||ACC).token});if(!r||!r.ok)throw new Error('list');
       rows=(r.users||[]).map(u=>({id:u.id,name:u.name,updated:u.updated,save:{owned:u.owned||{},boss:u.boss}}));}
     else{const all=await Promise.race([ACCDB.collection('accounts').limit(500).get(),new Promise((_,j)=>setTimeout(()=>j(new Error('t')),10000))]);
-      rows=all.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>(b.updated||0)-(a.updated||0));}
+      rows=all.docs.filter(x=>x.id!=='_mods').map(x=>({id:x.id,...x.data()})).sort((a,b)=>(b.updated||0)-(a.updated||0));}
     const body=$('#lbBody');if(!body)return;
     if(!rows.length){body.innerHTML=`<p>${L('Ei vielä käyttäjiä.','No users yet.')}</p>`;return;}
     body.innerHTML=`<table class="lb"><tr><th>${L('Käyttäjä','User')}</th><th>${L('Eläimet','Animals')}</th><th>${L('Pomo','Boss')}</th><th>${L('Päivitetty','Updated')}</th><th></th></tr>`+
@@ -2959,7 +2996,7 @@ async function admUsers(){
   if(SUPA){const r=await rpc('fk_admin_list',{p_admin_token:adminToken()});if(!r||!r.ok)throw new Error('list');
     return (r.users||[]).map(u=>({id:u.id,name:u.name,updated:u.updated,save:{owned:u.owned||{},boss:u.boss}}));}
   const all=await ACCDB.collection('accounts').limit(500).get();
-  return all.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>(b.updated||0)-(a.updated||0));
+  return all.docs.filter(x=>x.id!=='_mods').map(x=>({id:x.id,...x.data()})).sort((a,b)=>(b.updated||0)-(a.updated||0));
 }
 async function admGetSave(id){
   if(SUPA){const r=await rpc('fk_admin_open',{p_admin_token:adminToken(),p_id:id});if(!r||!r.ok)throw new Error('open');return {save:hasSave(r.save)?r.save:freshState(),token:r.token};}
@@ -3367,16 +3404,17 @@ function raceDraw(){const c=$('#rcCv');if(!c||!RC)return;const g=c.getContext('2
   const b=$('#rcGo');if(b)b.textContent=r.phase==='play'?'🏁 '+Math.round(r.speed)+' km/h':r.phase==='crash'?L('Uudestaan 🔄','Again 🔄'):L('Aja! 🏁','Drive! 🏁');}
 
 async function admRenderUsers(){
+  await loadMods();
   const body=$('#admBody');
   try{
     const rows=await admUsers();if(!$('#admBody')||admTab!=='users')return;
     body.innerHTML=`<p class="lbNote" style="margin:.1em 0">🤖 = ${L('kutsu / poista Perunaattori 2000','summon / remove Perunaattori 2000')}</p><label class="pick" style="cursor:pointer"><input type="checkbox" id="admAnn" ${settings.announce!==false?'checked':''}> 📢 ${L('Ilmoita haltuunotosta:','Announce takeover:')} <b>”<span class="adminName">leetu</span> is now on control”</b></label>
-    <p class="lbNote">${L('▶ = siirry peliin · 🐾 = anna kaikki eläimet · 🔄 = nollaa peli · 🔑 = vaihda PIN · 🗑️ = poista','▶ = enter game · 🐾 = give all animals · 🔄 = reset game · 🔑 = change PIN · 🗑️ = delete')}</p>
+    <p class="lbNote">${L('▶ = siirry peliin · 🐾 = anna kaikki eläimet · 🔄 = nollaa peli · 🔑 = vaihda PIN · 🛡️ = anna / poista mod-status · 🗑️ = poista','▶ = enter game · 🐾 = give all animals · 🔄 = reset game · 🔑 = change PIN · 🛡️ = give / remove mod status · 🗑️ = delete')}</p>
     <table class="lb adm"><tr><th>${L('Käyttäjä','User')}</th><th>🐾</th><th>👑</th><th>${L('Päiv.','Upd.')}</th><th></th></tr>`+
       rows.map(r=>{const sv=r.save||{},n=ANIMALS.filter(a=>(sv.owned||{})[a.id]).length,cur=ACC&&ACC.id===r.id,adm=r.id===ADMIN_ID;
         return `<tr class="${cur?'me':''}" data-id="${esc(r.id)}"><td>${adm?'👑 ':''}${nameHTML(r.name,r.id)}</td><td>${n}/6</td><td>${sv.boss==='beaten'?'✅':'–'}</td>
         <td>${r.updated?esc(shortDate(new Date(r.updated).toISOString())):'–'}</td>
-        <td class="acts">${cur?`<b>${L('nyt','now')}</b> `:`<button class="btn" data-a="go" title="${L('Siirry peliin','Enter game')}">▶</button>`}<button class="btn" data-a="animals" title="${L('Anna kaikki eläimet','Give all animals')}">🐾</button><button class="btn" data-a="reset" title="${L('Nollaa peli','Reset game')}">🔄</button><button class="btn" data-a="pin" title="${L('Vaihda PIN','Change PIN')}">🔑</button><button class="btn" data-a="robot" title="${L('Kutsu / poista Perunaattori 2000','Summon / remove Perunaattori 2000')}">🤖${(sv.robot&&sv.robot.on)?'✓':''}</button>${adm||cur?'':`<button class="btn" data-a="del" title="${L('Poista käyttäjä','Delete user')}">🗑️</button>`}</td></tr>`;}).join('')+'</table>';
+        <td class="acts">${cur?`<b>${L('nyt','now')}</b> `:`<button class="btn" data-a="go" title="${L('Siirry peliin','Enter game')}">▶</button>`}<button class="btn" data-a="animals" title="${L('Anna kaikki eläimet','Give all animals')}">🐾</button><button class="btn" data-a="reset" title="${L('Nollaa peli','Reset game')}">🔄</button><button class="btn" data-a="pin" title="${L('Vaihda PIN','Change PIN')}">🔑</button>${adm?'':`<button class="btn ${MODS.has(r.id)?'modOn':''}" data-a="mod" title="${MODS.has(r.id)?L('Poista mod-status','Remove mod status'):L('Tee modiksi','Make mod')}">🛡️${MODS.has(r.id)?'✓':''}</button>`}<button class="btn" data-a="robot" title=""${L('Kutsu / poista Perunaattori 2000','Summon / remove Perunaattori 2000')}">🤖${(sv.robot&&sv.robot.on)?'✓':''}</button>${adm||cur?'':`<button class="btn" data-a="del" title="${L('Poista käyttäjä','Delete user')}">🗑️</button>`}</td></tr>`;}).join('')+'</table>';
     $('#admAnn').onchange=e=>{settings.announce=e.target.checked;saveSettings();
       if(inOthersGame()){if(e.target.checked)takeControl();else{state.control=null;save();renderControl();}}};
     body.querySelectorAll('tr[data-id]').forEach(tr=>{const id=tr.dataset.id;tr.querySelectorAll('[data-a]').forEach(btn=>btn.onclick=()=>{initAudio();admAction(id,btn.dataset.a,btn,tr);});});
@@ -3399,6 +3437,8 @@ function admRobotPicker(who,done){
 async function admAction(id,a,btn,tr){
   try{
     if(a==='go'){switchToAccount(id);return;}
+    if(a==='mod'){const on=!MODS.has(id);await setMod(id,on);sfx.ok();
+      toast(on?L(`🛡️ ${id} on nyt modi!`,`🛡️ ${id} is now a mod!`):L(`🛡️ Mod-status poistettu käyttäjältä ${id}.`,`🛡️ Mod status removed from ${id}.`));admRenderUsers();return;}
     if(a==='robot'){const info=await admGetSave(id),sv=info.save,on=!(sv.robot&&sv.robot.on);
       const send=async opt=>{try{sv.robot=opt?{on:true,by:ADMIN_ID,at:Date.now(),...opt}:null;await admPutSave(id,info,sv);if(ACC&&ACC.id===id){state.robot=sv.robot;robotAnnounced=0;}
         sfx.ok();toast(opt?(opt.forced?L('🤖 Perunaattori 2000 lähetetty! Pelaaja ei voi ohittaa taistelua.','🤖 Perunaattori 2000 sent! The player can’t skip the fight.'):L('🤖 Perunaattori 2000 kutsuttu!','🤖 Perunaattori 2000 summoned!')):L('🤖 Perunaattori 2000 poistettu.','🤖 Perunaattori 2000 removed.'));admRenderUsers();}catch(e){admErr(e);}};
@@ -3471,6 +3511,7 @@ async function admRenderStats(){
   }catch(e){if($('#admBody'))body.innerHTML=`<p class="lbNote">${L('Tilastoja ei saatu ladattua.','Couldn’t load stats.')}</p>`;}
 }
 $('#bAdmin').onclick=()=>{if(busyModal())return;initAudio();showAdminPanel(admTab);};
+$('#bMod').onclick=()=>{if(busyModal())return;showModPanel();};
 async function submitScore(){
   if(state.cheated)return null;
   const acc=ACC?ACC.id:'',rec={name:state.name||'?',time:Math.round(state.time||0),level:state.level,date:new Date().toISOString().slice(0,10),acc};if(state.sr)rec.sr=true;
