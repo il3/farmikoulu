@@ -234,6 +234,7 @@ body.phone #admBody{--ms:min(30px,calc((100vw - 70px)/9))}
 .panel.win .row{margin:.3em 0 .1em}
 .panel{position:relative}
 .panel.quiz,.panel.boss,.panel.dodge{padding-top:2em}
+.panel.extras .exQuick{position:sticky;float:right;top:0;z-index:6;margin:-.2em -.2em 0 0;background:#ffd34d;font-size:.85em}
 .xbtn{position:absolute;top:.35em;right:.4em;font:inherit;font-size:.8em;background:#fff8e1;color:var(--ink);border:2px solid var(--wood2);box-shadow:0 2px 0 var(--wood2);padding:0 .45em;cursor:pointer}
 .xbtn:hover{background:#ffe0d0}.xbtn.sure{background:#e9654f;color:#fff}
 .panel.bossintro{font-size:clamp(14px,2.7cqw,24px)}
@@ -413,7 +414,7 @@ const MEL=("G4 G4 B4 D5 E5 D5 B4 G4 A4 A4 C5 E5 D5 C5 B4 A4 G4 G4 B4 D5 G5 E5 D5
 const BASS=['G2','A2','G2','D2','D2','C2','G2','D2'];
 const STEP=.19;
 const FARM_TRACK={mel:MEL,bass:BASS,step:STEP};
-const GAME_VERSION='v59 · 21.11.2026';
+const GAME_VERSION='v60 · 21.11.2026';
 const farmTrack=()=>FARM_TRACK;
 const BOSS_TRACK={step:.15,bass:['E2','A2','E2','B1','G2','C2','G2','B1'],
   mel:("E4 E4 G4 E4 B4 A4 G4 F#4 E4 E4 G4 E4 C5 B4 A4 B4 E4 E4 G4 E4 B4 A4 G4 F#4 G4 F#4 E4 D4 E4 - E4 - "+
@@ -1969,7 +1970,7 @@ addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
   if(modalType){
     if(k==='escape'){if(modalType==='title'&&started&&ACC){closeModal();e.preventDefault();return;}if(['quiz','boss','dodge'].includes(modalType))exitTask();else if(modalType==='settings'){const b=$('#sOk');if(b)b.click();}
-    else if(modalType==='extras'){const b=$('#exClose');if(b)b.click();}
+    else if(modalType==='extras'){const b=$('#exQuick');if(b)b.click();}
     else if(['help','bossintro','board','admin'].includes(modalType)){if(modalType==='bossintro'&&robotForced()){e.preventDefault();return;}(started?closeModal():showTitle());}e.preventDefault();return;}
     if(modalType==='dodge'&&['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(k)){keys.add(k);e.preventDefault();return;}
     if(modalType==='quiz'&&quiz){
@@ -2905,8 +2906,10 @@ const exEl=()=>$('#exBody');
 const exOn=id=>(modalType==='extras'||(admTab==='extra'&&modalType==='admin'))&&EX.game===id&&!!exEl();
 // Komentopaneelin "extrat": samat minipelit kenelle tahansa, omassa ikkunassaan
 function showExtras(){initAudio();EX.game=null;
-  openModal('extras',`<h2>🎲 ${L('Extrat','Extras')}</h2><div id="admBody"></div><div class="row"><button class="btn big" id="exClose">${L('Sulje','Close')}</button></div>`);
-  bind('exClose',()=>{exStop();closeModal();if(!started)showTitle();});admRenderExtra();}
+  openModal('extras',`<button class="xbtn exQuick" id="exQuick" title="${L('Takaisin peliin (Esc)','Back to the game (Esc)')}">✕ ${L('Takaisin peliin','Back to game')}</button><h2>🎲 ${L('Extrat','Extras')}</h2><div id="admBody"></div><div class="row"><button class="btn big" id="exClose">🚜 ${L('Takaisin peliin','Back to the game')}</button></div>`);
+  // Nopea sulkeminen: suoraan takaisin farmille, mistä tahansa minipelistä
+  const quick=()=>{exStop();EX.game=null;initAudio();sfx.ui();closeModal();if(ACC){started=true;}else showTitle();};
+  bind('exQuick',quick);bind('exClose',quick);admRenderExtra();}
 function admRenderExtra(){
   const body=$('#admBody');exStop();
   if(!EX.game){
